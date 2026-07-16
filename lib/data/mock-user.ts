@@ -3,6 +3,13 @@ import type { AuthUser } from "@/lib/types";
 /** Mock Discord user used until real OAuth is wired. */
 export const MOCK_AUTH_USER: AuthUser = {
   username: "Alex",
+  displayName: "Alex",
+  bio: "Building welcoming Discord communities and useful bots.",
+  socials: {
+    x: "alexnexus",
+    github: "alexnexus",
+    roblox: "AlexNexus",
+  },
   avatarUrl: null,
   discordId: "mock_discord_user_123",
 };

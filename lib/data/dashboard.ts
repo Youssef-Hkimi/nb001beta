@@ -1,11 +1,14 @@
-import type { ActivityItem, ChartPoint, DashboardListing } from "@/lib/types";
+import type {
+  ActivityItem,
+  ChartPoint,
+  DashboardListing,
+} from "@/lib/types";
 
 export const DASHBOARD_STATS = [
-  { id: "views", label: "Total Views", value: "124.8K", delta: "+12.4%", tone: "up" as const },
-  { id: "joins", label: "Join Clicks", value: "18.2K", delta: "+8.1%", tone: "up" as const },
-  { id: "invites", label: "Bot Invites", value: "7.4K", delta: "+5.6%", tone: "up" as const },
-  { id: "votes", label: "Votes", value: "42.1K", delta: "+15.2%", tone: "up" as const },
-  { id: "conversion", label: "Conversion Rate", value: "14.6%", delta: "+1.2%", tone: "up" as const },
+  { id: "listings", label: "Total Listings", value: "8", delta: "+1", tone: "up" as const },
+  { id: "views", label: "Total Views", value: "179.2K", delta: "+12.4%", tone: "up" as const },
+  { id: "interactions", label: "Total Interactions", value: "26.1K", delta: "+8.1%", tone: "up" as const },
+  { id: "live", label: "Live Listings", value: "4", delta: "+1", tone: "up" as const },
 ];
 
 export const DASHBOARD_LISTINGS: DashboardListing[] = [
@@ -20,6 +23,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Music",
     description: "Chill beats and study rooms for the community.",
     bannerHue: "280",
+    safetyStatus: "SAFE",
   },
   {
     id: "reactflux",
@@ -32,6 +36,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Tech",
     description: "React and Next.js builders shipping in public.",
     bannerHue: "195",
+    safetyStatus: "PENDING_REVIEW",
   },
   {
     id: "shield-mod",
@@ -44,6 +49,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Moderation",
     description: "Raid protection and trust scoring for safer servers.",
     bannerHue: "0",
+    safetyStatus: "PENDING_REVIEW",
   },
   {
     id: "nexus-hub",
@@ -56,6 +62,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Social",
     description: "Official home for Nexus creators and communities.",
     bannerHue: "220",
+    safetyStatus: "SAFE",
   },
   {
     id: "helper-ai",
@@ -68,6 +75,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "AI",
     description: "Smart onboarding and FAQ automation.",
     bannerHue: "185",
+    safetyStatus: "PENDING_REVIEW",
   },
   {
     id: "economy-pro",
@@ -80,6 +88,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Economy",
     description: "Currency, shops, and mini-games for communities.",
     bannerHue: "45",
+    safetyStatus: "SUSPENDED",
   },
   {
     id: "minecraft",
@@ -92,9 +101,10 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Gaming",
     description: "Survival, builds, and weekly community events.",
     bannerHue: "145",
+    safetyStatus: "PAUSED",
   },
   {
-    id: "ticket-bot",
+    id: "ticket-tool",
     name: "Ticket Desk",
     type: "bot",
     status: "Paused",
@@ -104,6 +114,7 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
     category: "Tickets",
     description: "Support tickets and staff routing for busy servers.",
     bannerHue: "200",
+    safetyStatus: "PAUSED",
   },
 ];
 

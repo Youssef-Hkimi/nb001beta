@@ -32,6 +32,7 @@ import {
   TRENDING_TAGS,
 } from "@/lib/data/categories";
 import { BOTS } from "@/lib/data/bots";
+import { isPubliclyDiscoverable } from "@/lib/listing-safety";
 
 const defaultFilters: FilterState = {
   categories: [],
@@ -59,14 +60,14 @@ export default function BotsPage() {
   }, [search, category, sort, filters]);
 
   const filtered = useMemo(() => {
-    let list = [...BOTS];
+    let list = BOTS.filter(isPubliclyDiscoverable);
 
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
         (b) =>
           b.name.toLowerCase().includes(q) ||
-          b.description.toLowerCase().includes(q) ||
+          b.shortDescription.toLowerCase().includes(q) ||
           b.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }

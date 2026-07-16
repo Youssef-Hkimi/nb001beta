@@ -1,10 +1,12 @@
 "use client";
 
 import { Avatar, Button, Card, Chip, toast } from "@heroui/react";
-import { BadgeCheck, Eye, Users } from "lucide-react";
+import { Eye, Users } from "lucide-react";
 
+import { ListingActionGuard, ListingStatusChip } from "@/components/listing/listing-safety";
 import { GradientBanner } from "@/components/ui/gradient-banner";
 import { LinkButton } from "@/components/ui/link-button";
+import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { formatCount, initials } from "@/lib/format";
 import type { ServerListing } from "@/lib/types";
 
@@ -28,20 +30,13 @@ export function ServerCard({
             </Avatar.Fallback>
           </Avatar>
         </div>
-        {server.verified ? (
-          <div className="absolute top-3 right-3">
-            <Chip color="accent" size="sm" variant="soft" className="backdrop-blur-sm">
-              <BadgeCheck className="size-3.5" />
-              <Chip.Label>Verified</Chip.Label>
-            </Chip>
-          </div>
-        ) : null}
       </div>
 
       <Card.Header className="mt-8 gap-1 px-4 pt-0">
         <div className="flex items-center gap-2">
           <Card.Title className="text-base">{server.name}</Card.Title>
-          {server.verified ? <BadgeCheck className="size-4 text-accent" /> : null}
+          {server.verified ? <VerifiedBadgeIcon className="size-4 text-accent" /> : null}
+          <ListingStatusChip status={server.safetyStatus} />
         </div>
         <Card.Description className="line-clamp-2 text-sm leading-relaxed">
           {server.description}
@@ -73,16 +68,15 @@ export function ServerCard({
       </Card.Content>
 
       <Card.Footer className="gap-2 px-4 pb-4">
-        <Button
+        <ListingActionGuard
+          status={server.safetyStatus}
           className="min-w-[7.5rem] px-4"
           onPress={() =>
             toast.success(`Opening invite for ${server.name}`, {
               description: "Invite flow is mocked in this demo.",
             })
           }
-        >
-          Join Server
-        </Button>
+        >Join Server</ListingActionGuard>
         {server.id === "preview" ? (
           <Button variant="secondary" isDisabled>
             <Eye className="size-4" />
@@ -130,6 +124,8 @@ export function ServerPreviewCard({
     language: "English",
     activity: "medium",
     bannerHue,
+    communityFeatures: [],
+    safetyStatus: "PENDING_REVIEW",
   };
 
   return <ServerCard server={preview} />;

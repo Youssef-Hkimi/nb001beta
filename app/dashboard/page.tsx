@@ -1,93 +1,58 @@
 "use client";
 
-import { Button, Card } from "@heroui/react";
-import {
-  BarChart3,
-  Bot,
-  Plus,
-  Server,
-  UserRound,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { BotOwnerDashboard } from "@/components/dashboard/bot-owner-dashboard";
 import { DashboardNav } from "@/components/dashboard/dashboard-sidebar";
-import { ListingsTable } from "@/components/dashboard/listings-table";
-import { PerformanceChart } from "@/components/dashboard/performance-chart";
-import { StatsGrid } from "@/components/dashboard/stats-grid";
+import { OverviewDashboard } from "@/components/dashboard/overview-dashboard";
+import { ServerOwnerDashboard } from "@/components/dashboard/server-owner-dashboard";
+import { UserSettings } from "@/components/dashboard/user-settings";
+import { LinkButton } from "@/components/ui/link-button";
 import { useAuth } from "@/lib/auth/auth-context";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { user, requireAuth } = useAuth();
+type DashboardSection = "overview" | "servers" | "bots" | "settings";
 
-  function goCreate() {
-    requireAuth(() => router.push("/dashboard/new"));
-  }
+export default function DashboardPage() {
+  const [section, setSection] = useState<DashboardSection>("overview");
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const sync = () => {
+      const hash = window.location.hash.slice(1);
+      setSection(hash === "servers" || hash === "bots" || hash === "settings" ? hash : "overview");
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
 
   return (
     <div className="space-y-8">
-      <div className="lg:hidden">
-        <DashboardNav />
-      </div>
+      <div className="lg:hidden"><DashboardNav /></div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Welcome back, {user?.username ?? "Alex"}
-          </h1>
-          <p className="mt-1 text-muted">
-            Manage your servers, bots, and community growth.
-          </p>
+      {section === "overview" ? (
+        <OverviewDashboard username={user?.displayName ?? user?.username ?? "Alex"} />
+      ) : null}
+
+      {section === "servers" ? (
+        <ServerOwnerDashboard />
+      ) : null}
+
+      {section === "bots" ? (
+        <BotOwnerDashboard />
+      ) : null}
+
+      {section === "settings" ? (
+        <div id="settings" className="space-y-6">
+          <PageHeader title="Settings" description="Manage how your profile appears across Nexus." />
+          <UserSettings />
         </div>
-        <Button onPress={goCreate}>
-          <Plus className="size-4" />
-          Create New Listing
-        </Button>
-      </div>
-
-      <StatsGrid />
-
-      <ListingsTable />
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <PerformanceChart />
-        <ActivityFeed />
-      </div>
-
-      <Card className="nexus-card gap-4" id="settings">
-        <Card.Header>
-          <Card.Title>Quick Actions</Card.Title>
-          <Card.Description>Jump into the workflows you use most</Card.Description>
-        </Card.Header>
-        <Card.Content className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Button variant="secondary" className="justify-start" onPress={goCreate}>
-            <Server className="size-4" />
-            Add Server
-          </Button>
-          <Button variant="secondary" className="justify-start" onPress={goCreate}>
-            <Bot className="size-4" />
-            Add Bot
-          </Button>
-          <Button variant="secondary" className="justify-start">
-            <UserRound className="size-4" />
-            Edit Profile
-          </Button>
-          <Button
-            variant="secondary"
-            className="justify-start"
-            onPress={() => {
-              document.getElementById("analytics")?.scrollIntoView({ behavior: "smooth" });
-            }}
-          >
-            <BarChart3 className="size-4" />
-            View Analytics
-          </Button>
-        </Card.Content>
-      </Card>
-
-      <div id="bots" className="scroll-mt-28" />
-      <div id="reviews" className="scroll-mt-28" />
+      ) : null}
     </div>
   );
+}
+
+function PageHeader({ title, description, actionLabel, actionHref }: { title: string; description: string; actionLabel?: string; actionHref?: string }) {
+  return <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1><p className="mt-1 max-w-3xl text-muted">{description}</p></div>{actionLabel && actionHref ? <LinkButton href={actionHref}><Plus className="size-4" />{actionLabel}</LinkButton> : null}</div>;
 }

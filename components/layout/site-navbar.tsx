@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageCircle,
   PlusCircle,
   Search,
   Sparkles,
@@ -16,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { IconifyIcon } from "@/components/ui/iconify-icon";
 import { useAuth } from "@/lib/auth/auth-context";
 import { initials } from "@/lib/format";
 
@@ -34,7 +34,8 @@ export function SiteNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAuthenticated, requireAuth, logout, setLoginModalOpen } = useAuth();
+  const { user, isAuthenticated, requireAuth, logout } = useAuth();
+  const accountName = user?.displayName ?? user?.username;
 
   function goDashboard() {
     requireAuth(() => router.push("/dashboard"));
@@ -102,11 +103,11 @@ export function SiteNavbar() {
               >
                 <Avatar className="size-8">
                   <Avatar.Fallback className="bg-accent/20 text-xs font-bold text-accent">
-                    {initials(user.username)}
+                    {initials(accountName ?? user.username)}
                   </Avatar.Fallback>
                 </Avatar>
                 <span className="max-w-[7rem] truncate text-sm font-medium text-foreground">
-                  {user.username}
+                  {accountName}
                 </span>
               </Dropdown.Trigger>
               <Dropdown.Popover placement="bottom end">
@@ -137,8 +138,8 @@ export function SiteNavbar() {
               </Dropdown.Popover>
             </Dropdown>
           ) : (
-            <Button className="hidden sm:inline-flex" onPress={() => setLoginModalOpen(true)}>
-              <MessageCircle className="size-4" />
+            <Button className="hidden sm:inline-flex" onPress={() => router.push("/login")}>
+              <IconifyIcon icon="ic:baseline-discord" className="size-4" />
               Login with Discord
             </Button>
           )}
@@ -199,7 +200,7 @@ export function SiteNavbar() {
                   <>
                     <div className="mt-3 flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
                       <UserRound className="size-4 text-accent" />
-                      <span className="text-sm font-medium">{user.username}</span>
+                      <span className="text-sm font-medium">{accountName}</span>
                     </div>
                     <Button
                       className="mt-2 w-full"
@@ -231,10 +232,10 @@ export function SiteNavbar() {
                     className="mt-3 w-full"
                     onPress={() => {
                       setMobileOpen(false);
-                      setLoginModalOpen(true);
+                      router.push("/login");
                     }}
                   >
-                    <MessageCircle className="size-4" />
+                    <IconifyIcon icon="ic:baseline-discord" className="size-4" />
                     Login with Discord
                   </Button>
                 )}

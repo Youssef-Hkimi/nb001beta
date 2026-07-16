@@ -1,20 +1,54 @@
 "use client";
 
 import { Avatar, Button, Card, Chip, toast } from "@heroui/react";
-import { BadgeCheck, Bot, Eye, Server, ThumbsUp, TrendingUp } from "lucide-react";
+import { Bot, Eye, Server, ThumbsUp, TrendingUp } from "lucide-react";
 
-import { GradientBanner } from "@/components/ui/gradient-banner";
+import { LinkButton } from "@/components/ui/link-button";
+import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
+import { ListingActionGuard, ListingStatusChip } from "@/components/listing/listing-safety";
+import { getBotBannerUrl } from "@/lib/bot-visuals";
+import { getBotFeatureOptions } from "@/lib/data/bot-features";
 import { formatCount, initials } from "@/lib/format";
 import type { BotListing } from "@/lib/types";
 
-export function BotCard({ bot }: { bot: BotListing }) {
+type BotCardModel = Pick<
+  BotListing,
+  | "id"
+  | "slug"
+  | "name"
+  | "shortDescription"
+  | "servers"
+  | "votes"
+  | "category"
+  | "tags"
+  | "botFeatures"
+  | "verified"
+  | "bannerHue"
+  | "avatar"
+  | "banner"
+  | "rank"
+  | "premium"
+  | "safetyStatus"
+>;
+
+export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPreview?: boolean }) {
+  const features = getBotFeatureOptions(bot.botFeatures);
+
   return (
-    <Card className="nexus-card hover-lift group overflow-hidden p-0">
+    <Card className="server-listing-card nexus-card hover-lift group overflow-hidden p-0">
       <div className="relative">
-        <GradientBanner hue={bot.bannerHue} className="h-28" />
+        <div className="server-listing-banner">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bot.banner || getBotBannerUrl(bot.slug, bot.bannerHue)}
+            alt=""
+            className="block h-28 w-full object-cover"
+          />
+        </div>
         <div className="absolute -bottom-7 left-4">
-          <Avatar className="size-14 rounded-2xl border-2 border-background shadow-md">
-            <Avatar.Fallback className="rounded-2xl bg-accent/20 text-sm font-bold text-accent">
+          <Avatar className="server-listing-icon size-14 border-2 border-background shadow-md">
+            {bot.avatar ? <Avatar.Image src={bot.avatar} alt="" className="h-full w-full object-cover" /> : null}
+            <Avatar.Fallback className="server-listing-icon bg-accent/20 text-sm font-bold text-accent">
               {initials(bot.name)}
             </Avatar.Fallback>
           </Avatar>
@@ -28,7 +62,7 @@ export function BotCard({ bot }: { bot: BotListing }) {
           ) : null}
           {bot.verified ? (
             <Chip color="accent" size="sm" variant="soft" className="backdrop-blur-sm">
-              <BadgeCheck className="size-3.5" />
+              <VerifiedBadgeIcon className="size-3.5 text-accent" />
               <Chip.Label>Verified</Chip.Label>
             </Chip>
           ) : null}
@@ -42,9 +76,10 @@ export function BotCard({ bot }: { bot: BotListing }) {
             <Bot className="size-3.5" />
             <Chip.Label>BOT</Chip.Label>
           </Chip>
+          <ListingStatusChip status={bot.safetyStatus} />
         </div>
         <Card.Description className="line-clamp-2 text-sm leading-relaxed">
-          {bot.description}
+          {bot.shortDescription}
         </Card.Description>
       </Card.Header>
 
@@ -59,48 +94,32 @@ export function BotCard({ bot }: { bot: BotListing }) {
             {formatCount(bot.votes)} votes
           </span>
         </div>
-
         <div className="flex flex-wrap gap-1.5">
-          <Chip size="sm" variant="soft" color="accent">
-            <Chip.Label>{bot.category}</Chip.Label>
-          </Chip>
-          {bot.tags.slice(0, 2).map((tag) => (
-            <Chip key={tag} size="sm" variant="soft">
-              <Chip.Label>{tag}</Chip.Label>
-            </Chip>
+          <Chip size="sm" variant="soft" color="accent"><Chip.Label>{bot.category}</Chip.Label></Chip>
+          {features.slice(0, 2).map((feature) => (
+            <Chip key={feature.id} size="sm" variant="soft"><Chip.Label>{feature.label}</Chip.Label></Chip>
           ))}
         </div>
       </Card.Content>
 
       <Card.Footer className="flex-wrap gap-2 px-4 pb-4">
-        <Button
+        <ListingActionGuard
+          status={bot.safetyStatus}
           className="min-w-[7rem] flex-1"
-          onPress={() =>
-            toast.success(`Invite ready for ${bot.name}`, {
-              description: "Bot invite is mocked in this demo.",
-            })
-          }
-        >
-          Invite
-        </Button>
-        <Button
-          variant="secondary"
-          onPress={() =>
-            toast.info(`Viewing ${bot.name}`, {
-              description: "Public bot pages are mocked for now.",
-            })
-          }
-        >
-          <Eye className="size-4" />
-          View
-        </Button>
-        <Button
-          variant="tertiary"
-          onPress={() => toast.success(`Voted for ${bot.name}`)}
-        >
-          <ThumbsUp className="size-4" />
-          Vote
-        </Button>
+          onPress={() => toast.success(`Invite ready for ${bot.name}`, { description: "Bot invite is mocked in this demo." })}
+        >Invite</ListingActionGuard>
+        {isPreview ? (
+          <Button variant="secondary" onPress={() => toast.info("Bot page preview ready")}>
+            <Eye className="size-4" />View
+          </Button>
+        ) : (
+          <LinkButton variant="secondary" href={`/bots/${bot.slug}`}>
+            <Eye className="size-4" />View
+          </LinkButton>
+        )}
+        <ListingActionGuard status={bot.safetyStatus} variant="tertiary" onPress={() => toast.success(`Voted for ${bot.name}`)}>
+          <ThumbsUp className="size-4" />Vote
+        </ListingActionGuard>
       </Card.Footer>
     </Card>
   );
@@ -111,31 +130,42 @@ export function BotPreviewCard({
   description,
   category,
   tags,
+  botFeatures,
   servers,
   votes,
   verified,
+  avatar,
+  banner,
   bannerHue = "215",
 }: {
   name: string;
   description: string;
   category: string;
   tags: string[];
+  botFeatures: string[];
   servers: number;
   votes: number;
   verified?: boolean;
+  avatar?: string | null;
+  banner?: string | null;
   bannerHue?: string;
 }) {
-  const preview: BotListing = {
+  const preview: BotCardModel = {
     id: "preview",
+    slug: "preview",
     name: name || "Bot name",
-    description: description || "Your short description will appear here.",
+    shortDescription: description || "Your short description will appear here.",
     servers: servers || 0,
     votes: votes || 0,
     category: category || "Utility",
     tags: tags.length ? tags : ["Feature"],
+    botFeatures,
     verified: Boolean(verified),
     bannerHue,
+    avatar: avatar ?? null,
+    banner: banner ?? null,
+    safetyStatus: "PENDING_REVIEW",
   };
 
-  return <BotCard bot={preview} />;
+  return <BotCard bot={preview} isPreview />;
 }

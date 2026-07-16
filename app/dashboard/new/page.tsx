@@ -11,12 +11,12 @@ import {
   Modal,
   Select,
   Switch,
-  TextArea,
   TextField,
   toast,
 } from "@heroui/react";
-import { Bot, Eye, Plus, Save, Send, Server, Shield, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Bot, Clock3, Copy, Eye, Plus, Save, Send, Server, Shield, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import { DashboardNav } from "@/components/dashboard/dashboard-sidebar";
 import { PreviewPanel, type PreviewMode } from "@/components/dashboard/preview-panel";
@@ -27,6 +27,11 @@ import { UploadBox } from "@/components/forms/upload-box";
 import { UploadDropzone } from "@/components/forms/upload-dropzone";
 import { ListingTypeModal } from "@/components/listing/listing-type-modal";
 import { BotReviewModal } from "@/components/listing/bot-review-modal";
+import { ListingStatusChip } from "@/components/listing/listing-safety";
+import { LinkButton } from "@/components/ui/link-button";
+import { CommunityFeatureSelect } from "@/components/forms/community-feature-select";
+import { BotFeatureSelect } from "@/components/forms/bot-feature-select";
+import { RichDescriptionEditor } from "@/components/forms/rich-description-editor";
 import {
   ServerSetupModal,
   type ServerSetupMode,
@@ -38,6 +43,9 @@ import {
   LANGUAGES,
   SERVER_LISTING_TAGS,
 } from "@/lib/data/categories";
+import { DEFAULT_COMMUNITY_FEATURE_IDS } from "@/lib/data/community-features";
+import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
+import { getBotAvatarUrl, getBotBannerUrl, getBotGalleryImageUrl } from "@/lib/bot-visuals";
 import { writeStatusOverride } from "@/lib/listing-status";
 import type { BotCommand, DiscordServer, ListingType } from "@/lib/types";
 
@@ -67,6 +75,7 @@ type ServerForm = {
   iconPreview: string | null;
   bannerPreview: string | null;
   bannerHue: string;
+  communityFeatures: string[];
 };
 
 type BotForm = {
@@ -82,10 +91,17 @@ type BotForm = {
   websiteUrl: string;
   githubUrl: string;
   commands: BotCommand[];
+  botFeatures: string[];
   premium: boolean;
   verified: boolean;
   servers: string;
   votes: string;
+  monthlyGrowth: string;
+  createdAt: string;
+  developerName: string;
+  avatarPreview: string | null;
+  bannerPreview: string | null;
+  galleryImages: string[];
   statusLabel: string;
   bannerHue: string;
 };
@@ -112,6 +128,7 @@ const emptyServer = (): ServerForm => ({
   iconPreview: null,
   bannerPreview: null,
   bannerHue: "220",
+  communityFeatures: [],
 });
 
 const sampleServer = (): ServerForm => ({
@@ -133,34 +150,11 @@ const sampleServer = (): ServerForm => ({
   activity: "Very Active",
   visibility: "Public",
   featured: false,
-  verified: true,
+  verified: false,
   iconPreview: null,
   bannerPreview: null,
   bannerHue: "220",
-});
-
-const emptyBot = (): BotForm => ({
-  name: "",
-  clientId: "",
-  prefix: "/",
-  shortDescription: "",
-  fullDescription: "",
-  category: "Utility",
-  tags: [],
-  inviteUrl: "",
-  supportUrl: "",
-  websiteUrl: "",
-  githubUrl: "",
-  commands: [
-    { id: "c1", name: "", description: "" },
-    { id: "c2", name: "", description: "" },
-  ],
-  premium: false,
-  verified: false,
-  servers: "0",
-  votes: "0",
-  statusLabel: "",
-  bannerHue: "215",
+  communityFeatures: [...DEFAULT_COMMUNITY_FEATURE_IDS],
 });
 
 const sampleBot = (): BotForm => ({
@@ -180,10 +174,17 @@ const sampleBot = (): BotForm => ({
     { id: "c1", name: "/ban", description: "Ban a user from the server" },
     { id: "c2", name: "/setup", description: "Configure the bot for your server" },
   ],
+  botFeatures: [...DEFAULT_BOT_FEATURE_IDS, "ai-tools"],
   premium: false,
-  verified: true,
+  verified: false,
   servers: "890000",
   votes: "39200",
+  monthlyGrowth: "21",
+  createdAt: "October 2022",
+  developerName: "Nexus Labs",
+  avatarPreview: getBotAvatarUrl("Helper AI", "185"),
+  bannerPreview: getBotBannerUrl("helper-ai", "185"),
+  galleryImages: Array.from({ length: 4 }, (_, index) => getBotGalleryImageUrl("Helper AI", index, "185")),
   statusLabel: "",
   bannerHue: "185",
 });
@@ -221,19 +222,22 @@ function fromDiscordServer(ds: DiscordServer): ServerForm {
     activity: "Very Active",
     visibility: "Public",
     featured: false,
-    verified: ds.verified,
+    verified: false,
     iconPreview: null,
     bannerPreview: null,
     bannerHue: ds.bannerHue,
+    communityFeatures: [...DEFAULT_COMMUNITY_FEATURE_IDS],
   };
 }
 
 export default function NewListingPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"server" | "bot">("server");
   const [server, setServer] = useState(sampleServer);
   const [bot, setBot] = useState(sampleBot);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("listing");
   const [modalOpen, setModalOpen] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState<ListingType | null>(null);
 
   const [typeModalOpen, setTypeModalOpen] = useState(true);
   const [pendingType, setPendingType] = useState<ListingType | null>(null);
@@ -244,12 +248,6 @@ export default function NewListingPage() {
 
   const [reviewOpen, setReviewOpen] = useState(false);
   const [commandError, setCommandError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fresh visit always starts with type selection for beta flow
-    setTypeModalOpen(true);
-    setFlowReady(false);
-  }, []);
 
   const listingPreview = useMemo(
     () => ({
@@ -277,6 +275,7 @@ export default function NewListingPage() {
       monthlyGrowth: num(server.monthlyGrowth, 10),
       joinClicks: num(server.joinClicks),
       createdAt: server.createdAt,
+      communityFeatures: server.communityFeatures,
     }),
     [listingPreview, server],
   );
@@ -290,6 +289,9 @@ export default function NewListingPage() {
       servers: num(bot.servers),
       votes: num(bot.votes),
       verified: bot.verified,
+      botFeatures: bot.botFeatures,
+      avatarPreview: bot.avatarPreview,
+      bannerPreview: bot.bannerPreview,
       bannerHue: bot.bannerHue,
     }),
     [bot],
@@ -309,9 +311,16 @@ export default function NewListingPage() {
       websiteUrl: bot.websiteUrl,
       githubUrl: bot.githubUrl,
       commands: bot.commands,
+      botFeatures: bot.botFeatures,
       verified: bot.verified,
       servers: num(bot.servers),
       votes: num(bot.votes),
+      monthlyGrowth: num(bot.monthlyGrowth),
+      createdAt: bot.createdAt,
+      developerName: bot.developerName,
+      avatarPreview: bot.avatarPreview,
+      bannerPreview: bot.bannerPreview,
+      galleryImages: bot.galleryImages,
       bannerHue: bot.bannerHue,
       statusLabel: bot.statusLabel || undefined,
     }),
@@ -361,9 +370,19 @@ export default function NewListingPage() {
       });
       return;
     }
-    if (!bot.name.trim() || !bot.clientId.trim() || !bot.inviteUrl.trim()) {
+    if (
+      !bot.name.trim() ||
+      !bot.clientId.trim() ||
+      !bot.prefix.trim() ||
+      !bot.shortDescription.trim() ||
+      !bot.fullDescription.trim() ||
+      !bot.tags.length ||
+      !bot.inviteUrl.trim() ||
+      !bot.avatarPreview ||
+      !bot.bannerPreview
+    ) {
       toast.danger("Missing required fields", {
-        description: "Bot name, client ID, and invite URL are required.",
+        description: "Complete the required details, tags, invite URL, avatar, and banner.",
       });
       return;
     }
@@ -379,12 +398,14 @@ export default function NewListingPage() {
       name: bot.name || "Untitled Bot",
       type: "bot",
       status: "Live · Pending Review",
+      safetyStatus: "PENDING_REVIEW",
       updated: "Just now",
       category: bot.category,
       description: bot.shortDescription,
       bannerHue: bot.bannerHue,
     });
-    toast.success("Bot listing submitted for review");
+    setPublishSuccess("bot");
+    toast.success("Bot listing published");
   }
 
   function publishServer() {
@@ -399,12 +420,14 @@ export default function NewListingPage() {
       id,
       name: server.name,
       type: "server",
-      status: "Live",
+      status: "Live · Pending Review",
+      safetyStatus: "PENDING_REVIEW",
       updated: "Just now",
       category: server.category,
       description: server.shortDescription,
       bannerHue: server.bannerHue,
     });
+    setPublishSuccess("server");
     toast.success("Server listing published");
   }
 
@@ -559,13 +582,14 @@ export default function NewListingPage() {
                 <Input placeholder="One-line pitch for the listing card" />
               </TextField>
 
-              <TextField
-                value={server.fullDescription}
-                onChange={(v) => setServer((s) => ({ ...s, fullDescription: v }))}
-              >
-                <Label>Full description</Label>
-                <TextArea rows={4} placeholder="Shown on the public server page About section" />
-              </TextField>
+              <div className="space-y-2">
+                <div><p className="text-sm font-medium text-foreground">Full description</p><p className="text-xs text-muted">Format the public About section and preview it live.</p></div>
+                <RichDescriptionEditor
+                  value={server.fullDescription}
+                  onChange={(fullDescription) => setServer((current) => ({ ...current, fullDescription }))}
+                  placeholder="Describe your community, events, and what makes it special."
+                />
+              </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <TagMultiSelect
@@ -621,56 +645,18 @@ export default function NewListingPage() {
               </Select>
             </section>
 
+            <CommunityFeatureSelect
+              value={server.communityFeatures}
+              onChange={(communityFeatures) =>
+                setServer((current) => ({ ...current, communityFeatures }))
+              }
+            />
+
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Stats</h2>
-                <p className="text-xs text-muted">Demo metrics for listing previews</p>
+                <h2 className="text-sm font-semibold text-foreground">Listing preferences</h2>
+                <p className="text-xs text-muted">Member counts and server statistics are synced automatically from Discord.</p>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <TextField
-                  value={server.members}
-                  onChange={(v) => setServer((s) => ({ ...s, members: v }))}
-                >
-                  <Label>Member count</Label>
-                  <Input inputMode="numeric" placeholder="10000" />
-                </TextField>
-                <TextField
-                  value={server.online}
-                  onChange={(v) => setServer((s) => ({ ...s, online: v }))}
-                >
-                  <Label>Online count</Label>
-                  <Input inputMode="numeric" placeholder="1200" />
-                </TextField>
-                <TextField
-                  value={server.likes}
-                  onChange={(v) => setServer((s) => ({ ...s, likes: v }))}
-                >
-                  <Label>Likes</Label>
-                  <Input inputMode="numeric" />
-                </TextField>
-                <TextField
-                  value={server.monthlyGrowth}
-                  onChange={(v) => setServer((s) => ({ ...s, monthlyGrowth: v }))}
-                >
-                  <Label>Monthly growth %</Label>
-                  <Input inputMode="numeric" />
-                </TextField>
-                <TextField
-                  value={server.joinClicks}
-                  onChange={(v) => setServer((s) => ({ ...s, joinClicks: v }))}
-                >
-                  <Label>Join clicks</Label>
-                  <Input inputMode="numeric" />
-                </TextField>
-                <TextField
-                  value={server.createdAt}
-                  onChange={(v) => setServer((s) => ({ ...s, createdAt: v }))}
-                >
-                  <Label>Created</Label>
-                  <Input placeholder="March 2021" />
-                </TextField>
-              </div>
-
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Select
                   selectedKey={server.activity}
@@ -742,24 +728,7 @@ export default function NewListingPage() {
               </div>
             </section>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Verified badge</p>
-                  <p className="text-xs text-muted">Show verified trust signal</p>
-                </div>
-                <Switch
-                  aria-label="Verified"
-                  isSelected={server.verified}
-                  onChange={(v) => setServer((s) => ({ ...s, verified: v }))}
-                >
-                  <Switch.Content>
-                    <Switch.Control>
-                      <Switch.Thumb />
-                    </Switch.Control>
-                  </Switch.Content>
-                </Switch>
-              </div>
+            <div className="max-w-md">
               <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">Featured</p>
@@ -779,6 +748,10 @@ export default function NewListingPage() {
               </div>
             </div>
 
+            <Alert status="warning" className="rounded-2xl">
+              <Alert.Indicator><Clock3 className="size-4" /></Alert.Indicator>
+              <Alert.Content><Alert.Description>New server listings go live with a Pending Review status. Nexus will review the listing for safety and platform compliance.</Alert.Description></Alert.Content>
+            </Alert>
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 variant="secondary"
@@ -834,9 +807,7 @@ export default function NewListingPage() {
             </Alert>
 
             {bot.statusLabel ? (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-foreground">
-                Status: {bot.statusLabel}
-              </div>
+              <ListingStatusChip status="PENDING_REVIEW" livePrefix />
             ) : null}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -861,7 +832,7 @@ export default function NewListingPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TextField value={bot.prefix} onChange={(v) => setBot((s) => ({ ...s, prefix: v }))}>
+              <TextField isRequired value={bot.prefix} onChange={(v) => setBot((s) => ({ ...s, prefix: v }))}>
                 <Label>Bot prefix</Label>
                 <Input placeholder="/" />
               </TextField>
@@ -897,22 +868,25 @@ export default function NewListingPage() {
               <Input placeholder="One-line pitch" />
             </TextField>
 
-            <TextField
-              value={bot.fullDescription}
-              onChange={(v) => setBot((s) => ({ ...s, fullDescription: v }))}
-            >
-              <Label>Long description</Label>
-              <TextArea rows={5} placeholder="Features, setup, and examples" />
-              <Description>
-                Use markdown to format your bot features, setup instructions, and command examples.
-              </Description>
-            </TextField>
+            <div className="space-y-2">
+              <div><p className="text-sm font-medium text-foreground">Long description</p><p className="text-xs text-muted">Format features, setup instructions, and command examples with a live preview.</p></div>
+              <RichDescriptionEditor
+                value={bot.fullDescription}
+                onChange={(fullDescription) => setBot((current) => ({ ...current, fullDescription }))}
+                placeholder="Describe features, setup instructions, and command examples."
+              />
+            </div>
 
             <TagMultiSelect
               value={bot.tags}
               options={BOT_LISTING_TAGS}
               onChange={(tags) => setBot((s) => ({ ...s, tags }))}
               placeholder="Select up to 3 tags"
+            />
+
+            <BotFeatureSelect
+              value={bot.botFeatures}
+              onChange={(botFeatures) => setBot((current) => ({ ...current, botFeatures }))}
             />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -928,7 +902,7 @@ export default function NewListingPage() {
                 value={bot.supportUrl}
                 onChange={(v) => setBot((s) => ({ ...s, supportUrl: v }))}
               >
-                <Label>Support server URL</Label>
+                <Label>Support server URL (Optional)</Label>
                 <Input placeholder="https://discord.gg/..." />
               </TextField>
             </div>
@@ -1034,24 +1008,43 @@ export default function NewListingPage() {
               </p>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <UploadDropzone
-                  title="Bot avatar"
+                  title="Bot avatar *"
                   hint="Drag & drop or click"
                   sizeHint="Recommended 512×512"
+                  selectedLabel={bot.avatarPreview ? "Mock avatar ready · click to remove" : undefined}
+                  onPress={() => setBot((current) => ({ ...current, avatarPreview: current.avatarPreview ? null : getBotAvatarUrl(current.name || "Bot", current.bannerHue) }))}
                 />
                 <UploadDropzone
-                  title="Banner"
+                  title="Bot banner *"
                   hint="Drag & drop or click"
                   sizeHint="Recommended 960×320"
+                  selectedLabel={bot.bannerPreview ? "Mock banner ready · click to remove" : undefined}
+                  onPress={() => setBot((current) => ({ ...current, bannerPreview: current.bannerPreview ? null : getBotBannerUrl(slugify(current.name || "bot"), current.bannerHue) }))}
                 />
                 <UploadDropzone
-                  title="Gallery"
+                  title="Preview gallery"
                   hint="Add up to 6 images"
                   sizeHint="Recommended 1200×675"
+                  selectedLabel={bot.galleryImages.length ? `${bot.galleryImages.length}/6 mock previews added` : undefined}
+                  onPress={() => setBot((current) => {
+                    if (current.galleryImages.length >= 6) {
+                      toast.warning("You can add up to 6 gallery images.");
+                      return current;
+                    }
+                    return { ...current, galleryImages: [...current.galleryImages, getBotGalleryImageUrl(current.name || "Bot", current.galleryImages.length, current.bannerHue)] };
+                  })}
                 />
               </div>
+              {bot.galleryImages.length ? (
+                <div className="mt-3 flex justify-end">
+                  <Button size="sm" variant="ghost" onPress={() => setBot((current) => ({ ...current, galleryImages: current.galleryImages.slice(0, -1) }))}>
+                    <Trash2 className="size-3.5" />Remove last preview
+                  </Button>
+                </div>
+              ) : null}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="max-w-md">
               <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">Premium bot</p>
@@ -1069,25 +1062,12 @@ export default function NewListingPage() {
                   </Switch.Content>
                 </Switch>
               </div>
-              <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Verified badge</p>
-                  <p className="text-xs text-muted">Show verified trust signal</p>
-                </div>
-                <Switch
-                  aria-label="Verified bot"
-                  isSelected={bot.verified}
-                  onChange={(v) => setBot((s) => ({ ...s, verified: v }))}
-                >
-                  <Switch.Content>
-                    <Switch.Control>
-                      <Switch.Thumb />
-                    </Switch.Control>
-                  </Switch.Content>
-                </Switch>
-              </div>
             </div>
 
+            <Alert status="warning" className="rounded-2xl">
+              <Alert.Indicator><Clock3 className="size-4" /></Alert.Indicator>
+              <Alert.Content><Alert.Description>New bot listings go live with a Pending Review status. Nexus will review the bot for safety, clear functionality, and Discord Terms of Service compliance.</Alert.Description></Alert.Content>
+            </Alert>
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 variant="secondary"
@@ -1127,10 +1107,14 @@ export default function NewListingPage() {
 
       <ListingTypeModal
         isOpen={typeModalOpen}
-        onOpenChange={setTypeModalOpen}
+        onOpenChange={(open) => {
+          setTypeModalOpen(open);
+          if (!open && !flowReady) router.push("/dashboard");
+        }}
         value={pendingType}
         onChange={setPendingType}
         onContinue={handleTypeContinue}
+        onCancel={() => router.push("/dashboard")}
       />
 
       <ServerSetupModal
@@ -1151,6 +1135,27 @@ export default function NewListingPage() {
         onOpenChange={setReviewOpen}
         onAgree={finalizeBotPublish}
       />
+
+      <Modal.Backdrop isOpen={Boolean(publishSuccess)} onOpenChange={(open) => !open && setPublishSuccess(null)}>
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-lg">
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>Your {publishSuccess === "bot" ? "bot" : "server"} is live</Modal.Heading></Modal.Header>
+            <Modal.Body className="space-y-4">
+              <p className="text-sm text-muted">Your {publishSuccess === "bot" ? "bot" : "server"} is now publicly listed on Nexus and is waiting for review.</p>
+              <ListingStatusChip status="PENDING_REVIEW" livePrefix />
+              <TextField isReadOnly value={`http://localhost:3010/${publishSuccess === "bot" ? "bots" : "server"}/${slugify(publishSuccess === "bot" ? bot.name : server.name)}`}>
+                <Label>Public link</Label><Input />
+              </TextField>
+            </Modal.Body>
+            <Modal.Footer className="flex-wrap">
+              <Button variant="secondary" onPress={() => { const url = `http://localhost:3010/${publishSuccess === "bot" ? "bots" : "server"}/${slugify(publishSuccess === "bot" ? bot.name : server.name)}`; void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
+              <LinkButton href={`/${publishSuccess === "bot" ? "bots" : "server"}/${slugify(publishSuccess === "bot" ? bot.name : server.name)}`} variant="secondary">View page</LinkButton>
+              <LinkButton href="/dashboard">Back to dashboard</LinkButton>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
 
       <Modal.Backdrop isOpen={modalOpen} onOpenChange={setModalOpen}>
         <Modal.Container size="lg">

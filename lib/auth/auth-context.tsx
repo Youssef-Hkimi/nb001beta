@@ -23,6 +23,7 @@ type AuthContextValue = {
   requireAuth: (onSuccess?: () => void) => boolean;
   login: () => void;
   logout: () => void;
+  updateUser: (updates: Partial<AuthUser>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -69,6 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateUser = useCallback((updates: Partial<AuthUser>) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...updates };
+      try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore unavailable storage
+      }
+      return next;
+    });
+  }, []);
+
   const requireAuth = useCallback(
     (onSuccess?: () => void) => {
       if (user) {
@@ -92,8 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       requireAuth,
       login,
       logout,
+      updateUser,
     }),
-    [user, isReady, loginModalOpen, requireAuth, login, logout],
+    [user, isReady, loginModalOpen, requireAuth, login, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

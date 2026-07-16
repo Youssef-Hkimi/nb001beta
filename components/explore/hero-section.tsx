@@ -2,39 +2,24 @@
 
 import { Button, SearchField } from "@heroui/react";
 import { Search } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+
+import chillDark from "@/ChillDark.webp";
+import chillLight from "@/ChillLight.webp";
 
 export function HeroSection() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && resolvedTheme === "dark";
-
   return (
-    <section className="relative isolate overflow-hidden">
+    <section className="relative isolate">
       {/* Artwork background — top hero only, fades into page */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] md:h-[480px]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] overflow-hidden md:h-[680px]">
         <div
-          className="hero-artwork hero-fade-mask absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90 dark:opacity-100"
-          style={{
-            backgroundImage: isDark
-              ? "url(/artworkdark1.png)"
-              : "linear-gradient(180deg, rgba(98,155,248,0.22) 0%, rgba(130,176,249,0.12) 35%, rgba(245,249,255,0.0) 100%), radial-gradient(ellipse 80% 60% at 50% 0%, rgba(98,155,248,0.28), transparent 70%)",
-          }}
+          className="blended-artwork absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-100 dark:opacity-0"
+          style={{ backgroundImage: `url(${chillLight.src})` }}
         />
         <div
-          className="absolute inset-0"
-          style={{
-            background: isDark
-              ? "linear-gradient(to bottom, transparent 40%, #2D2E33 100%)"
-              : "linear-gradient(to bottom, transparent 35%, #FFFFFF 100%)",
-          }}
+          className="blended-artwork absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-0 dark:opacity-100"
+          style={{ backgroundImage: `url(${chillDark.src})` }}
         />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_38%,rgba(255,255,255,0.68)_0%,rgba(255,255,255,0.36)_38%,transparent_72%)] dark:hidden" />
       </div>
 
       <div className="relative mx-auto flex max-w-[920px] flex-col items-center px-4 pb-10 pt-16 text-center md:px-6 md:pt-20 lg:pt-24">
@@ -43,12 +28,12 @@ export function HeroSection() {
           Discover Discord communities & bots
         </p>
 
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
+        <h1 className="explore-hero-title text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
           Find your next{" "}
           <span className="nexus-gradient-text">favorite</span> community
         </h1>
 
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted md:text-lg">
+        <p className="explore-hero-copy mt-5 max-w-2xl text-base leading-relaxed md:text-lg">
           Explore thousands of Discord servers and bots to enhance your experience.
           Join communities, find tools, and level up your server.
         </p>

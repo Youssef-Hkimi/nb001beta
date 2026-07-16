@@ -1,6 +1,17 @@
 export type ActivityLevel = "high" | "medium" | "low";
 
-export type ServerListing = {
+export type ListingSafetyStatus = "PENDING_REVIEW" | "SAFE" | "PAUSED" | "SUSPENDED";
+
+export type ListingSafetyFields = {
+  safetyStatus: ListingSafetyStatus;
+  reviewedAt?: string;
+  pausedAt?: string;
+  suspendedAt?: string;
+  publicStatusReason?: string;
+  previousSafetyStatus?: ListingSafetyStatus;
+};
+
+export type ServerListing = ListingSafetyFields & {
   id: string;
   name: string;
   description: string;
@@ -12,20 +23,8 @@ export type ServerListing = {
   language: string;
   activity: ActivityLevel;
   bannerHue: string;
+  communityFeatures: string[];
   featured?: boolean;
-};
-
-export type ServerFeature = {
-  id: string;
-  title: string;
-  description: string;
-  icon: "study" | "music" | "voice" | "events" | "gift" | "staff" | "shield" | "roles";
-};
-
-export type ServerFaq = {
-  id: string;
-  question: string;
-  answer: string;
 };
 
 export type ServerOwner = {
@@ -53,10 +52,6 @@ export type ServerDetail = ServerListing & {
   isLiked: boolean;
   owner: ServerOwner;
   stats: ServerStats;
-  atmosphere: string[];
-  features: ServerFeature[];
-  highlights: string[];
-  faq: ServerFaq[];
   similarServerIds: string[];
   trust: {
     inviteChecked: boolean;
@@ -66,18 +61,50 @@ export type ServerDetail = ServerListing & {
   };
 };
 
-export type BotListing = {
+export type BotListing = ListingSafetyFields & {
   id: string;
+  slug: string;
   name: string;
-  description: string;
-  servers: number;
-  votes: number;
+  verified: boolean;
+  status: ListingStatus;
+  botBadge: "BOT";
+  clientId: string;
+  prefix: string;
+  shortDescription: string;
+  longDescription: string;
   category: string;
   tags: string[];
-  verified: boolean;
+  botFeatures: string[];
+  commands: BotCommand[];
+  servers: number;
+  votes: number;
+  monthlyGrowth: number;
+  createdAt: string;
+  developer: BotDeveloper;
+  avatar: string | null;
+  banner: string | null;
+  galleryImages: string[];
+  githubUrl: string;
+  websiteUrl: string;
+  supportServerUrl: string;
+  inviteUrl: string;
+  trustStatus: BotTrustStatus;
   rank?: number;
   bannerHue: string;
   premium?: boolean;
+};
+
+export type BotDeveloper = {
+  name: string;
+  handle: string;
+  verified: boolean;
+};
+
+export type BotTrustStatus = {
+  reviewed: boolean;
+  followsDiscordTos: boolean;
+  safeListing: boolean;
+  reportAvailable: boolean;
 };
 
 export type ListingType = "server" | "bot";
@@ -89,16 +116,25 @@ export type ListingStatus =
   | "Paused"
   | "Under Review"
   | "Live · Pending Review"
+  | "Suspended"
   | "Rejected";
 
 export type BotCommand = {
   id: string;
   name: string;
   description: string;
+  category?: string;
 };
 
 export type AuthUser = {
   username: string;
+  displayName?: string;
+  bio?: string;
+  socials?: {
+    x?: string;
+    github?: string;
+    roblox?: string;
+  };
   avatarUrl: string | null;
   discordId: string;
 };
@@ -123,7 +159,7 @@ export type DiscordServer = {
   createdAt: string;
 };
 
-export type DashboardListing = {
+export type DashboardListing = ListingSafetyFields & {
   id: string;
   name: string;
   type: ListingType;
@@ -134,6 +170,90 @@ export type DashboardListing = {
   category: string;
   description: string;
   bannerHue: string;
+};
+
+export type AnalyticsRange = "7d" | "30d" | "90d";
+
+export type ServerAnalytics = {
+  listingId: string;
+  listingViews: number;
+  joinClicks: number;
+  confirmedJoins: number;
+  likes: number;
+  linkCopies: number;
+  favorites: number;
+  conversionRate: number;
+  reviewScore: number;
+  percentageChanges: Record<
+    | "listingViews"
+    | "joinClicks"
+    | "confirmedJoins"
+    | "likes"
+    | "linkCopies"
+    | "favorites"
+    | "conversionRate"
+    | "reviewScore",
+    number
+  >;
+  history: Record<
+    AnalyticsRange,
+    Array<{ date: string; listingViews: number; joinClicks: number; confirmedJoins: number }>
+  >;
+};
+
+export type ServerDashboardListing = Omit<DashboardListing, "type" | "status"> & {
+  type: "server";
+  status: ListingStatus;
+  publicPath: string;
+  members: number;
+  online: number;
+  verified: boolean;
+  inviteActive: boolean;
+  inviteOutdated: boolean;
+  inviteLastChecked: string;
+  listingCompleteness: number;
+  mediaComplete: boolean;
+  analytics: ServerAnalytics;
+};
+
+export type BotAnalytics = {
+  listingId: string;
+  listingViews: number;
+  inviteClicks: number;
+  activeServers: number;
+  newServers: number;
+  removedServers: number;
+  votes: number;
+  conversionRate: number;
+  percentageChanges: Record<
+    | "listingViews"
+    | "inviteClicks"
+    | "activeServers"
+    | "newServers"
+    | "removedServers"
+    | "votes"
+    | "conversionRate",
+    number
+  >;
+  history: Record<
+    AnalyticsRange,
+    Array<{ date: string; newServers: number; removedServers: number }>
+  >;
+};
+
+export type BotDashboardListing = Omit<DashboardListing, "type"> & {
+  type: "bot";
+  publicPath: string;
+  prefix: string;
+  avatar: string | null;
+  analytics: BotAnalytics;
+  listingHealth: {
+    reviewStatus: string;
+    inviteConnected: boolean;
+    supportConnected: boolean;
+    websiteConnected: boolean;
+    githubConnected: boolean;
+  };
 };
 
 export type ActivityItem = {

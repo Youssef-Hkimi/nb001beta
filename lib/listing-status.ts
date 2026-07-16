@@ -1,4 +1,4 @@
-import type { DashboardListing, ListingStatus } from "@/lib/types";
+import type { DashboardListing, ListingSafetyStatus, ListingStatus } from "@/lib/types";
 
 const STORAGE_KEY = "nexus_listing_status_overrides";
 
@@ -11,6 +11,7 @@ export type ListingStatusOverride = {
   category?: string;
   description?: string;
   bannerHue?: string;
+  safetyStatus?: ListingSafetyStatus;
 };
 
 export function readStatusOverrides(): ListingStatusOverride[] {
@@ -46,6 +47,7 @@ export function mergeListingStatuses(rows: DashboardListing[]): DashboardListing
     return {
       ...row,
       status: o.status,
+      safetyStatus: o.safetyStatus ?? "PENDING_REVIEW",
       updated: o.updated ?? row.updated,
     };
   });
@@ -65,6 +67,7 @@ export function mergeListingStatuses(rows: DashboardListing[]): DashboardListing
       category: o.category ?? "General",
       description: o.description ?? "",
       bannerHue: o.bannerHue ?? "220",
+      safetyStatus: o.safetyStatus ?? "PENDING_REVIEW",
     });
   }
 

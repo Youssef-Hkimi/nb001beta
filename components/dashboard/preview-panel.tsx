@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, Chip } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { LayoutGrid, LayoutTemplate } from "lucide-react";
 
 import { BotPreviewCard } from "@/components/cards/bot-card";
+import { ListingStatusChip } from "@/components/listing/listing-safety";
 import {
   BotPagePreview,
   type BotPagePreviewModel,
@@ -39,6 +40,9 @@ type BotPreviewPanelProps = {
     servers: number;
     votes: number;
     verified: boolean;
+    botFeatures: string[];
+    avatarPreview: string | null;
+    bannerPreview: string | null;
     bannerHue?: string;
   };
   page: BotPagePreviewModel;
@@ -48,14 +52,14 @@ export type PreviewPanelProps = ServerPreviewPanelProps | BotPreviewPanelProps;
 
 export function PreviewPanel(props: PreviewPanelProps) {
   return (
-    <aside className="nexus-card sticky top-24 flex max-h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-2xl p-4 md:p-5">
-      <div className="mb-4 shrink-0 space-y-3">
+    <aside className="sticky top-24 flex max-h-[calc(100vh-7rem)] flex-col overflow-hidden">
+      <div className="mb-4 shrink-0 space-y-3 border-b border-border pb-4">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Preview</h2>
+          <h2 className="text-lg font-semibold text-foreground">Live preview</h2>
           <p className="text-xs text-muted">
             {props.kind === "server"
-              ? "Live preview of your marketplace card and public page"
-              : "Live preview of your bot listing card and public page"}
+              ? "See your server listing update as you edit."
+              : "See your bot listing update as you edit."}
           </p>
         </div>
 
@@ -81,7 +85,7 @@ export function PreviewPanel(props: PreviewPanelProps) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {props.kind === "server" ? (
           props.mode === "listing" ? (
             <ServerCardPreview model={props.listing} />
@@ -90,11 +94,7 @@ export function PreviewPanel(props: PreviewPanelProps) {
           )
         ) : props.mode === "listing" ? (
           <div className="space-y-3">
-            {props.page.statusLabel ? (
-              <Chip size="sm" variant="soft" color="warning">
-                <Chip.Label>{props.page.statusLabel}</Chip.Label>
-              </Chip>
-            ) : null}
+            <ListingStatusChip status="PENDING_REVIEW" livePrefix />
             <BotPreviewCard
               name={props.listing.name}
               description={props.listing.shortDescription}
@@ -103,6 +103,9 @@ export function PreviewPanel(props: PreviewPanelProps) {
               servers={props.listing.servers}
               votes={props.listing.votes}
               verified={props.listing.verified}
+              botFeatures={props.listing.botFeatures}
+              avatar={props.listing.avatarPreview}
+              banner={props.listing.bannerPreview}
               bannerHue={props.listing.bannerHue}
             />
           </div>

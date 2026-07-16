@@ -5,7 +5,7 @@ import { DASHBOARD_STATS } from "@/lib/data/dashboard";
 
 export function StatsGrid() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {DASHBOARD_STATS.map((stat) => (
         <Card key={stat.id} className="nexus-card hover-lift gap-2 p-4">
           <p className="text-xs font-medium text-muted">{stat.label}</p>

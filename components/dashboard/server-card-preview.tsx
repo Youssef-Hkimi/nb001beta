@@ -1,9 +1,11 @@
 "use client";
 
 import { Avatar, Button, Card, Chip } from "@heroui/react";
-import { BadgeCheck, Eye, Users } from "lucide-react";
+import { Eye, Users } from "lucide-react";
 
 import { formatCount, initials } from "@/lib/format";
+import { ListingStatusChip } from "@/components/listing/listing-safety";
+import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 
 export type ServerListingPreviewModel = {
   name: string;
@@ -30,7 +32,7 @@ export function ServerCardPreview({ model }: { model: ServerListingPreviewModel 
             <img
               src={model.bannerPreview}
               alt=""
-              className="h-32 w-full object-cover md:h-[8.5rem]"
+              className="block h-32 w-full object-cover md:h-[8.5rem]"
             />
           ) : (
             <div
@@ -45,27 +47,20 @@ export function ServerCardPreview({ model }: { model: ServerListingPreviewModel 
         <div className="absolute -bottom-7 left-4">
           <Avatar className="server-listing-icon size-14 border-2 border-background shadow-md">
             {model.iconPreview ? (
-              <Avatar.Image src={model.iconPreview} alt="" />
+              <Avatar.Image src={model.iconPreview} alt="" className="h-full w-full object-cover" />
             ) : null}
             <Avatar.Fallback className="server-listing-icon bg-accent/20 text-sm font-bold text-accent">
               {initials(model.name || "SV")}
             </Avatar.Fallback>
           </Avatar>
         </div>
-        {model.verified ? (
-          <div className="absolute top-3 right-3">
-            <Chip color="accent" size="sm" variant="soft" className="backdrop-blur-sm">
-              <BadgeCheck className="size-3.5" />
-              <Chip.Label>Verified</Chip.Label>
-            </Chip>
-          </div>
-        ) : null}
       </div>
 
       <Card.Header className="mt-8 gap-1 px-4 pt-0">
         <div className="flex items-center gap-2">
           <Card.Title className="text-base">{model.name || "Server name"}</Card.Title>
-          {model.verified ? <BadgeCheck className="size-4 text-accent" /> : null}
+          {model.verified ? <VerifiedBadgeIcon className="size-4 text-accent" /> : null}
+          <ListingStatusChip status="PENDING_REVIEW" livePrefix />
         </div>
         <Card.Description className="line-clamp-2 text-sm leading-relaxed">
           {model.shortDescription || "Your short description will appear here."}

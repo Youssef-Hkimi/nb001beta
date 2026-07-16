@@ -11,7 +11,9 @@ import { ExploreSidebar } from "@/components/explore/explore-sidebar";
 import { FAQSection } from "@/components/explore/faq-section";
 import { FeatureOverviewSection } from "@/components/explore/feature-overview-section";
 import { HeroSection } from "@/components/explore/hero-section";
+import { NexusFooter } from "@/components/layout/nexus-footer";
 import { SERVERS } from "@/lib/data/servers";
+import { isPubliclyDiscoverable } from "@/lib/listing-safety";
 
 const INITIAL_VISIBLE = 6;
 const LOAD_MORE_COUNT = 6;
@@ -23,9 +25,10 @@ export default function ExplorePage() {
   const router = useRouter();
 
   const filteredServers = useMemo(() => {
+    const publicServers = SERVERS.filter(isPubliclyDiscoverable);
     const list = !category
-      ? SERVERS
-      : SERVERS.filter(
+      ? publicServers
+      : publicServers.filter(
           (s) =>
             s.category === category ||
             s.tags.some((t) => t.toLowerCase() === category.toLowerCase()) ||
@@ -64,8 +67,8 @@ export default function ExplorePage() {
     <div className="theme-surface min-h-screen">
       <HeroSection />
 
-      <div className="server-listing-shell pb-16">
-        <div className="mb-8">
+      <div className="server-listing-shell relative z-10 pt-4 pb-16 md:pt-6">
+        <div className="mb-12 md:mb-14">
           <AnimatedTagMarquee activeTag={category} onTagClick={handleCategoryChange} />
         </div>
 
@@ -152,6 +155,7 @@ export default function ExplorePage() {
 
       <FeatureOverviewSection />
       <FAQSection />
+      <NexusFooter />
     </div>
   );
 }

@@ -20,7 +20,7 @@ const FAQ_ITEMS: FAQItemData[] = [
     id: "verified-badge",
     question: "How do I get a verified badge for my server?",
     answer:
-      "To receive a verified badge, your community must meet Nexus verification requirements. This usually means following Discord’s Terms of Service, having more than 10,000 members, being at least one year old, avoiding NSFW content, and showing healthy community engagement.",
+      "To receive a verified badge, a server must meet Nexus verification requirements. This includes following Discord’s Terms of Service, having at least 5,000 members, remaining active and SFW, and passing a Nexus review.",
   },
   {
     id: "private-data",

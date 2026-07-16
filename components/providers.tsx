@@ -15,9 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange={false}
     >
       <AuthProvider>
-        {children}
+        <div className="min-h-full">{children}</div>
         <LoginDiscordModal />
-        <Toast.Provider placement="bottom end" />
+        <Toast.Provider placement="top" maxVisibleToasts={3} />
       </AuthProvider>
     </ThemeProvider>
   );

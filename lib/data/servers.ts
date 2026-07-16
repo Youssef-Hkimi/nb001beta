@@ -1,6 +1,6 @@
-import type { ServerListing } from "@/lib/types";
+import type { ListingSafetyFields, ListingSafetyStatus, ServerListing } from "@/lib/types";
 
-export const SERVERS: ServerListing[] = [
+const SERVER_SEEDS: Omit<ServerListing, keyof ListingSafetyFields>[] = [
   {
     id: "nexus-hub",
     name: "Nexus Hub",
@@ -13,6 +13,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "220",
+    communityFeatures: ["creator-collabs", "support-channels", "events", "friendly-staff"],
     featured: true,
   },
   {
@@ -27,6 +28,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "280",
+    communityFeatures: ["study-rooms", "music-channels", "events", "friendly-staff"],
     featured: true,
   },
   {
@@ -41,6 +43,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "195",
+    communityFeatures: ["learning-resources", "creator-collabs", "support-channels", "friendly-staff"],
     featured: true,
   },
   {
@@ -55,6 +58,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "310",
+    communityFeatures: ["art-sharing", "creator-collabs", "learning-resources", "events"],
     featured: true,
   },
   {
@@ -69,6 +73,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "145",
+    communityFeatures: ["gaming-squads", "events", "voice-chats", "custom-roles"],
     featured: true,
   },
   {
@@ -83,6 +88,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "340",
+    communityFeatures: ["events", "voice-chats", "art-sharing", "friendly-staff"],
     featured: true,
   },
   {
@@ -97,6 +103,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "205",
+    communityFeatures: ["study-rooms", "music-channels", "friendly-staff", "safe-moderation"],
   },
   {
     id: "startup-lounge",
@@ -110,6 +117,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "medium",
     bannerHue: "255",
+    communityFeatures: ["creator-collabs", "marketplace", "events", "learning-resources"],
   },
   {
     id: "cozy-corner",
@@ -123,6 +131,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "medium",
     bannerHue: "25",
+    communityFeatures: ["music-channels", "voice-chats", "friendly-staff", "safe-moderation"],
   },
   {
     id: "valorant-hub",
@@ -136,6 +145,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "350",
+    communityFeatures: ["gaming-squads", "voice-chats", "events", "safe-moderation"],
   },
   {
     id: "crypto-hub",
@@ -149,6 +159,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "medium",
     bannerHue: "48",
+    communityFeatures: ["news-updates", "learning-resources", "safe-moderation", "events"],
   },
   {
     id: "art-garden",
@@ -162,6 +173,7 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "medium",
     bannerHue: "165",
+    communityFeatures: ["art-sharing", "creator-collabs", "learning-resources", "friendly-staff"],
   },
   {
     id: "meme-factory",
@@ -175,7 +187,27 @@ export const SERVERS: ServerListing[] = [
     language: "English",
     activity: "high",
     bannerHue: "15",
+    communityFeatures: ["memes", "giveaways", "events", "friendly-staff"],
   },
 ];
 
-export const FEATURED_SERVERS = SERVERS.filter((s) => s.featured).slice(0, 6);
+const SERVER_STATUS: Partial<Record<string, ListingSafetyStatus>> = {
+  reactflux: "PENDING_REVIEW",
+  minecraft: "PAUSED",
+  "crypto-hub": "SUSPENDED",
+};
+
+export const SERVERS: ServerListing[] = SERVER_SEEDS.map((server) => {
+  const safetyStatus = SERVER_STATUS[server.id] ?? "SAFE";
+  return {
+    ...server,
+    safetyStatus,
+    reviewedAt: safetyStatus === "SAFE" ? "2026-07-01" : undefined,
+    pausedAt: safetyStatus === "PAUSED" ? "2026-07-10" : undefined,
+    suspendedAt: safetyStatus === "SUSPENDED" ? "2026-07-11" : undefined,
+    previousSafetyStatus: safetyStatus === "PAUSED" ? "SAFE" : undefined,
+    publicStatusReason: safetyStatus === "SUSPENDED" ? "This listing is unavailable while Nexus reviews a policy concern." : undefined,
+  };
+});
+
+export const FEATURED_SERVERS = SERVERS.filter((s) => s.featured && s.safetyStatus !== "PAUSED" && s.safetyStatus !== "SUSPENDED").slice(0, 6);

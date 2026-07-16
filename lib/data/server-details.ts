@@ -2,60 +2,8 @@ import { SERVERS } from "@/lib/data/servers";
 import type {
   ActivityLevel,
   ServerDetail,
-  ServerFeature,
   ServerListing,
 } from "@/lib/types";
-
-const DEFAULT_FEATURES: ServerFeature[] = [
-  {
-    id: "study",
-    title: "Study rooms",
-    description: "Focus rooms with timers and quiet vibes.",
-    icon: "study",
-  },
-  {
-    id: "music",
-    title: "Music channels",
-    description: "Share playlists and stream chill tracks.",
-    icon: "music",
-  },
-  {
-    id: "voice",
-    title: "Chill voice chats",
-    description: "Casual hangouts with friendly people.",
-    icon: "voice",
-  },
-  {
-    id: "events",
-    title: "Events",
-    description: "Weekly community events and hangouts.",
-    icon: "events",
-  },
-  {
-    id: "gift",
-    title: "Giveaways",
-    description: "Regular prizes and community drops.",
-    icon: "gift",
-  },
-  {
-    id: "staff",
-    title: "Friendly staff",
-    description: "Active mods who keep things welcoming.",
-    icon: "staff",
-  },
-  {
-    id: "shield",
-    title: "Safe moderation",
-    description: "Clear rules and reliable enforcement.",
-    icon: "shield",
-  },
-  {
-    id: "roles",
-    title: "Custom roles",
-    description: "Pick roles for interests and access.",
-    icon: "roles",
-  },
-];
 
 const activityLabel = (activity: ActivityLevel) => {
   if (activity === "high") return "Very Active";
@@ -67,6 +15,7 @@ function similarFor(server: ServerListing): string[] {
   return SERVERS.filter(
     (s) =>
       s.id !== server.id &&
+      s.safetyStatus !== "PAUSED" && s.safetyStatus !== "SUSPENDED" &&
       (s.category === server.category || s.tags.some((t) => server.tags.includes(t))),
   )
     .slice(0, 3)
@@ -97,51 +46,6 @@ function buildDetail(server: ServerListing, overrides: Partial<ServerDetail> = {
       joinClicks: Math.round(server.members * 0.12),
       likes: baseLikes,
     },
-    atmosphere: [
-      "Friendly and welcoming culture",
-      "Active voice and text channels",
-      "Clear channel organization",
-      "Helpful staff presence",
-    ],
-    features: DEFAULT_FEATURES,
-    highlights: [
-      "Active daily community",
-      "Organized roles and channels",
-      "Regular events and hangouts",
-      "Safe, moderated spaces",
-    ],
-    faq: [
-      {
-        id: "f1",
-        question: "Is this server safe?",
-        answer:
-          "Yes. The community is actively moderated with clear rules, invite checks, and reporting tools.",
-      },
-      {
-        id: "f2",
-        question: "Do I need to be active every day?",
-        answer:
-          "Not at all. Drop in when you want — many members visit casually for chats, music, or events.",
-      },
-      {
-        id: "f3",
-        question: "Are voice channels active?",
-        answer:
-          "Yes. Peak hours usually have chill voice rooms open, especially evenings and weekends.",
-      },
-      {
-        id: "f4",
-        question: "Can I invite friends?",
-        answer:
-          "Absolutely. Share the public invite link and help friends find the right channels after joining.",
-      },
-      {
-        id: "f5",
-        question: "Does the server have events?",
-        answer:
-          "Yes. Expect recurring events, hangouts, and seasonal activities posted in the events board.",
-      },
-    ],
     similarServerIds: similarFor(server),
     trust: {
       inviteChecked: true,
@@ -157,10 +61,7 @@ function buildDetail(server: ServerListing, overrides: Partial<ServerDetail> = {
     owner: { ...base.owner, ...overrides.owner },
     stats: { ...base.stats, ...overrides.stats },
     trust: { ...base.trust, ...overrides.trust },
-    atmosphere: overrides.atmosphere ?? base.atmosphere,
-    features: overrides.features ?? base.features,
-    highlights: overrides.highlights ?? base.highlights,
-    faq: overrides.faq ?? base.faq,
+    communityFeatures: overrides.communityFeatures ?? base.communityFeatures,
     similarServerIds: overrides.similarServerIds ?? base.similarServerIds,
   };
 
@@ -195,18 +96,6 @@ const DETAIL_OVERRIDES: Record<string, Partial<ServerDetail>> = {
       joinClicks: 18400,
       likes: 12400,
     },
-    atmosphere: [
-      "Calm study-focused energy",
-      "Cozy late-night hangouts",
-      "Low-drama conversations",
-      "Warm welcome for newcomers",
-    ],
-    highlights: [
-      "Dedicated study voice rooms",
-      "Shared playlist channels",
-      "Weekly chill events",
-      "Helpful, active moderation",
-    ],
     similarServerIds: ["cozy-corner", "study-together", "anime-soul"],
   },
   "nexus-hub": {

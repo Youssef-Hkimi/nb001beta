@@ -2,7 +2,6 @@
 
 import { Avatar, Button, Card, Chip, Separator } from "@heroui/react";
 import {
-  BadgeCheck,
   Calendar,
   Copy,
   Globe2,
@@ -11,8 +10,11 @@ import {
   Users,
 } from "lucide-react";
 
-import { formatCount, initials } from "@/lib/format";
 import type { ServerListingPreviewModel } from "@/components/dashboard/server-card-preview";
+import { FormattedDescription } from "@/components/forms/rich-description-editor";
+import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
+import { getCommunityFeatureOptions } from "@/lib/data/community-features";
+import { formatCount, initials } from "@/lib/format";
 
 export type ServerPagePreviewModel = ServerListingPreviewModel & {
   fullDescription: string;
@@ -22,10 +24,12 @@ export type ServerPagePreviewModel = ServerListingPreviewModel & {
   monthlyGrowth: number;
   joinClicks: number;
   createdAt: string;
+  communityFeatures: string[];
 };
 
 export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) {
   const hue = model.bannerHue ?? "220";
+  const communityFeatures = getCommunityFeatureOptions(model.communityFeatures);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
@@ -68,7 +72,7 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
               <p className="truncate text-base font-bold text-foreground">
                 {model.name || "Server name"}
               </p>
-              {model.verified ? <BadgeCheck className="size-4 text-accent" /> : null}
+              {model.verified ? <VerifiedBadgeIcon className="size-4 text-accent" /> : null}
               <Chip size="sm" variant="soft" color="accent">
                 <Chip.Label>{model.category || "Category"}</Chip.Label>
               </Chip>
@@ -114,10 +118,37 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
         <div className="grid grid-cols-1 gap-3">
           <Card className="nexus-card gap-2 p-3">
             <p className="text-xs font-semibold text-foreground">About this server</p>
-            <p className="line-clamp-4 text-xs leading-relaxed text-muted">
-              {model.fullDescription ||
-                "Your full description will appear on the public server page."}
-            </p>
+            <FormattedDescription value={model.fullDescription || "Your full description will appear on the public server page."} />
+          </Card>
+
+          <Card className="nexus-card gap-3 p-3">
+            <div>
+              <p className="text-xs font-semibold text-foreground">What you can do here</p>
+              <p className="mt-0.5 text-[10px] text-muted">Community features and spaces</p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {communityFeatures.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <Card
+                    key={feature.id}
+                    className="flex-row items-start gap-2.5 rounded-xl border border-border bg-surface/50 p-2.5 transition-colors duration-200 hover:border-accent/35 hover:bg-accent/5"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-xs font-semibold text-foreground">
+                        {feature.label}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] leading-relaxed text-muted">
+                        {feature.description}
+                      </span>
+                    </span>
+                  </Card>
+                );
+              })}
+            </div>
           </Card>
 
           <Card className="nexus-card gap-3 p-3">
@@ -128,7 +159,6 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
                 { label: "Online Now", value: formatCount(model.online) },
                 { label: "Monthly Growth", value: `+${model.monthlyGrowth}%` },
                 { label: "Join Clicks", value: formatCount(model.joinClicks) },
-                { label: "Likes", value: formatCount(model.likes) },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-lg bg-default/50 p-2">
                   <p className="text-[10px] text-muted">{stat.label}</p>

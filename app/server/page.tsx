@@ -32,6 +32,7 @@ import {
   TRENDING_TAGS,
 } from "@/lib/data/categories";
 import { SERVERS } from "@/lib/data/servers";
+import { isPubliclyDiscoverable } from "@/lib/listing-safety";
 
 const defaultFilters: FilterState = {
   categories: [],
@@ -66,7 +67,7 @@ export default function ServerPage() {
   }, [search, category, sort, filters]);
 
   const filtered = useMemo(() => {
-    let list = [...SERVERS];
+    let list = SERVERS.filter(isPubliclyDiscoverable);
 
     if (search.trim()) {
       const q = search.toLowerCase();

@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_LISTINGS } from "@/lib/data/dashboard";
 import { formatCount } from "@/lib/format";
 import { mergeListingStatuses } from "@/lib/listing-status";
+import { ListingStatusChip } from "@/components/listing/listing-safety";
 import type { DashboardListing, ListingStatus } from "@/lib/types";
 
 const statusColor: Record<
@@ -31,6 +32,7 @@ const statusColor: Record<
   Paused: "default",
   "Under Review": "warning",
   "Live · Pending Review": "warning",
+  Suspended: "danger",
   Rejected: "danger",
 };
 
@@ -62,11 +64,11 @@ export function ListingsTable() {
           <Table.ScrollContainer>
             <Table.Content aria-label="My listings" className="min-w-[900px]">
               <Table.Header>
-                <Table.Column isRowHeader>Name</Table.Column>
+                <Table.Column isRowHeader>Listing</Table.Column>
                 <Table.Column>Type</Table.Column>
                 <Table.Column>Status</Table.Column>
                 <Table.Column>Views</Table.Column>
-                <Table.Column>Clicks</Table.Column>
+                <Table.Column>Interactions</Table.Column>
                 <Table.Column>Updated</Table.Column>
                 <Table.Column className="text-end">Actions</Table.Column>
               </Table.Header>
@@ -88,11 +90,7 @@ export function ListingsTable() {
                         <Chip.Label>{row.type === "bot" ? "Bot" : "Server"}</Chip.Label>
                       </Chip>
                     </Table.Cell>
-                    <Table.Cell>
-                      <Chip size="sm" variant="soft" color={statusColor[row.status]}>
-                        <Chip.Label>{row.status}</Chip.Label>
-                      </Chip>
-                    </Table.Cell>
+                    <Table.Cell><ListingStatusChip status={row.safetyStatus} livePrefix /></Table.Cell>
                     <Table.Cell>{formatCount(row.views)}</Table.Cell>
                     <Table.Cell>{formatCount(row.clicks)}</Table.Cell>
                     <Table.Cell className="text-muted">{row.updated}</Table.Cell>
@@ -128,12 +126,15 @@ export function ListingsTable() {
                               onAction={(key) => {
                                 if (key === "delete") setToDelete(row);
                                 if (key === "public") {
-                                  toast.info("Opening public page", {
-                                    description: `/${row.type === "bot" ? "bots" : "server"}`,
-                                  });
+                                  window.location.assign(`/${row.type === "bot" ? "bots" : "server"}/${row.id}`);
                                 }
                                 if (key === "edit") {
                                   toast.success("Edit mode ready");
+                                }
+                                if (key === "toggle") {
+                                  const status = row.status === "Paused" ? "Live" : "Paused";
+                                  setRows((current) => current.map((item) => item.id === row.id ? { ...item, status } : item));
+                                  toast.success(status === "Live" ? "Listing resumed" : "Listing paused");
                                 }
                               }}
                             >
@@ -144,6 +145,13 @@ export function ListingsTable() {
                               <Dropdown.Item id="public" textValue="Open public page">
                                 <ExternalLink className="size-4" />
                                 Open public page
+                              </Dropdown.Item>
+                              <Dropdown.Item
+                                id="toggle"
+                                textValue={row.status === "Paused" ? "Resume" : "Pause"}
+                              >
+                                <Eye className="size-4" />
+                                {row.status === "Paused" ? "Resume" : "Pause"}
                               </Dropdown.Item>
                               <Dropdown.Item id="delete" textValue="Delete" variant="danger">
                                 <Trash2 className="size-4" />
@@ -178,7 +186,7 @@ export function ListingsTable() {
                 </div>
                 <div className="rounded-xl bg-default p-3">
                   <p className="text-xs text-muted">Status</p>
-                  <p className="font-medium">{preview?.status}</p>
+                  {preview ? <ListingStatusChip status={preview.safetyStatus} livePrefix /> : null}
                 </div>
                 <div className="rounded-xl bg-default p-3">
                   <p className="text-xs text-muted">Views</p>
