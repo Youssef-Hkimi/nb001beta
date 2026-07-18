@@ -45,7 +45,7 @@ const RIGHT_FEATURES: FeatureBlockProps[] = [
   {
     title: "Growth Tools",
     description:
-      "Votes, analytics, featured spots, and dashboard tools help creators get discovered and grow faster.",
+      "Likes, analytics, featured spots, and dashboard tools help creators get discovered and grow faster.",
     icon: TrendingUp,
     accent: "growth",
   },

@@ -17,7 +17,8 @@ export default function LoginPage() {
     setConnecting(true);
     window.setTimeout(() => {
       login();
-      router.push("/dashboard");
+      const requestedPath = new URLSearchParams(window.location.search).get("next");
+      router.push(requestedPath?.startsWith("/") ? requestedPath : "/dashboard");
     }, 650);
   }
 

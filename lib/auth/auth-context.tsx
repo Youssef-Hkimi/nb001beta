@@ -17,9 +17,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isReady: boolean;
-  loginModalOpen: boolean;
-  setLoginModalOpen: (open: boolean) => void;
-  /** Opens login modal; runs onSuccess after a successful mock login. */
+  /** Runs the action when signed in; otherwise redirects to the login page. */
   requireAuth: (onSuccess?: () => void) => boolean;
   login: () => void;
   logout: () => void;
@@ -31,8 +29,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [pendingSuccess, setPendingSuccess] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     try {
@@ -56,10 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-    setLoginModalOpen(false);
-    pendingSuccess?.();
-    setPendingSuccess(null);
-  }, [pendingSuccess]);
+  }, []);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -89,8 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onSuccess?.();
         return true;
       }
-      if (onSuccess) setPendingSuccess(() => onSuccess);
-      setLoginModalOpen(true);
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      window.location.assign(`/login?next=${encodeURIComponent(returnPath)}`);
       return false;
     },
     [user],
@@ -101,14 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: Boolean(user),
       isReady,
-      loginModalOpen,
-      setLoginModalOpen,
       requireAuth,
       login,
       logout,
       updateUser,
     }),
-    [user, isReady, loginModalOpen, requireAuth, login, logout, updateUser],
+    [user, isReady, requireAuth, login, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

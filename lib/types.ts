@@ -130,6 +130,7 @@ export type AuthUser = {
   username: string;
   displayName?: string;
   bio?: string;
+  inboxNotifications?: boolean;
   socials?: {
     x?: string;
     github?: string;

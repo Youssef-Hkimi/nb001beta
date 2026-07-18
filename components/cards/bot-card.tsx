@@ -29,7 +29,7 @@ type BotCardModel = Pick<
   | "rank"
   | "premium"
   | "safetyStatus"
->;
+> & { bannerColor?: string };
 
 export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPreview?: boolean }) {
   const features = getBotFeatureOptions(bot.botFeatures);
@@ -38,12 +38,25 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
     <Card className="server-listing-card nexus-card hover-lift group overflow-hidden p-0">
       <div className="relative">
         <div className="server-listing-banner">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={bot.banner || getBotBannerUrl(bot.slug, bot.bannerHue)}
-            alt=""
-            className="block h-28 w-full object-cover"
-          />
+          {bot.banner ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={bot.banner} alt="" className="block h-28 w-full object-cover" />
+          ) : bot.bannerColor ? (
+            <div
+              aria-hidden
+              className="h-28 w-full"
+              style={{
+                background: `linear-gradient(135deg, ${bot.bannerColor}, color-mix(in srgb, ${bot.bannerColor} 72%, #111827))`,
+              }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={getBotBannerUrl(bot.slug, bot.bannerHue)}
+              alt=""
+              className="block h-28 w-full object-cover"
+            />
+          )}
         </div>
         <div className="absolute -bottom-7 left-4">
           <Avatar className="server-listing-icon size-14 border-2 border-background shadow-md">
@@ -91,7 +104,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
           </span>
           <span className="inline-flex items-center gap-1">
             <ThumbsUp className="size-3.5" />
-            {formatCount(bot.votes)} votes
+            {formatCount(bot.votes)} likes
           </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -117,9 +130,15 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
             <Eye className="size-4" />View
           </LinkButton>
         )}
-        <ListingActionGuard status={bot.safetyStatus} variant="tertiary" onPress={() => toast.success(`Voted for ${bot.name}`)}>
-          <ThumbsUp className="size-4" />Vote
-        </ListingActionGuard>
+        {isPreview ? (
+          <Button variant="tertiary" onPress={() => toast.info("Likes are available on the public bot page")}>
+            <ThumbsUp className="size-4" />Like
+          </Button>
+        ) : (
+          <LinkButton variant="tertiary" href={`/bots/${bot.slug}`}>
+            <ThumbsUp className="size-4" />Like
+          </LinkButton>
+        )}
       </Card.Footer>
     </Card>
   );
@@ -137,6 +156,7 @@ export function BotPreviewCard({
   avatar,
   banner,
   bannerHue = "215",
+  bannerColor,
 }: {
   name: string;
   description: string;
@@ -149,6 +169,7 @@ export function BotPreviewCard({
   avatar?: string | null;
   banner?: string | null;
   bannerHue?: string;
+  bannerColor?: string;
 }) {
   const preview: BotCardModel = {
     id: "preview",
@@ -164,6 +185,7 @@ export function BotPreviewCard({
     bannerHue,
     avatar: avatar ?? null,
     banner: banner ?? null,
+    bannerColor,
     safetyStatus: "PENDING_REVIEW",
   };
 

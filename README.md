@@ -17,8 +17,12 @@ Discord **server & bot discovery** demo — Next.js 16, TypeScript, Tailwind CSS
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev -- -p 3010
 ```
+
+Set `MONGODB_URI` in `.env.local` to enable shared Discord widget caching. Successful
+widget checks are cached briefly; publishing and retrying always perform a fresh Discord check.
 
 Open http://localhost:3010
 

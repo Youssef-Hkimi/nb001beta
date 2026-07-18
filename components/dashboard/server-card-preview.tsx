@@ -18,10 +18,12 @@ export type ServerListingPreviewModel = {
   bannerPreview?: string | null;
   iconPreview?: string | null;
   bannerHue?: string;
+  bannerColor?: string;
 };
 
 export function ServerCardPreview({ model }: { model: ServerListingPreviewModel }) {
   const hue = model.bannerHue ?? "220";
+  const bannerColor = model.bannerColor;
 
   return (
     <Card className="server-listing-card nexus-card hover-lift group w-full min-w-0 overflow-hidden p-0">
@@ -39,7 +41,9 @@ export function ServerCardPreview({ model }: { model: ServerListingPreviewModel 
               aria-hidden
               className="h-32 w-full md:h-[8.5rem]"
               style={{
-                background: `linear-gradient(135deg, hsl(${hue} 72% 58%) 0%, hsl(${hue} 65% 42%) 48%, hsl(${Number(hue) + 28} 70% 48%) 100%)`,
+                background: bannerColor
+                  ? `linear-gradient(135deg, ${bannerColor}, color-mix(in srgb, ${bannerColor} 72%, #111827))`
+                  : `linear-gradient(135deg, hsl(${hue} 72% 58%) 0%, hsl(${hue} 65% 42%) 48%, hsl(${Number(hue) + 28} 70% 48%) 100%)`,
               }}
             />
           )}

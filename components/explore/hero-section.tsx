@@ -2,23 +2,55 @@
 
 import { Button, SearchField } from "@heroui/react";
 import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import chillDark from "@/ChillDark.webp";
 import chillLight from "@/ChillLight.webp";
+import disDark from "@/disdark.webp";
+import disLight from "@/dislight.webp";
+
+const ARTWORK_ROTATION_MS = 15 * 60 * 1000;
+const ARTWORKS = [
+  { dark: chillDark, light: chillLight },
+  { dark: disDark, light: disLight },
+] as const;
 
 export function HeroSection() {
+  const [activeArtwork, setActiveArtwork] = useState(0);
+
+  useEffect(() => {
+    const syncArtwork = () => {
+      setActiveArtwork(
+        Math.floor(Date.now() / ARTWORK_ROTATION_MS) % ARTWORKS.length,
+      );
+    };
+
+    syncArtwork();
+    const interval = window.setInterval(syncArtwork, ARTWORK_ROTATION_MS);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   return (
     <section className="relative isolate">
       {/* Artwork background — top hero only, fades into page */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] overflow-hidden md:h-[680px]">
-        <div
-          className="blended-artwork absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-100 dark:opacity-0"
-          style={{ backgroundImage: `url(${chillLight.src})` }}
-        />
-        <div
-          className="blended-artwork absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-0 dark:opacity-100"
-          style={{ backgroundImage: `url(${chillDark.src})` }}
-        />
+        {ARTWORKS.map((artwork, index) => (
+          <div key={`${artwork.light.src}-${index}`}>
+            <div
+              className={`hero-artwork blended-artwork absolute inset-0 bg-cover bg-bottom bg-no-repeat dark:opacity-0 ${
+                activeArtwork === index ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ backgroundImage: `url(${artwork.light.src})` }}
+            />
+            <div
+              className={`hero-artwork blended-artwork absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-0 ${
+                activeArtwork === index ? "dark:opacity-100" : "dark:opacity-0"
+              }`}
+              style={{ backgroundImage: `url(${artwork.dark.src})` }}
+            />
+          </div>
+        ))}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_38%,rgba(255,255,255,0.68)_0%,rgba(255,255,255,0.36)_38%,transparent_72%)] dark:hidden" />
       </div>
 

@@ -99,5 +99,5 @@ export const SORT_OPTIONS = [
   { id: "trending", label: "Trending" },
   { id: "members", label: "Most members" },
   { id: "newest", label: "Newest" },
-  { id: "votes", label: "Most votes" },
+  { id: "votes", label: "Most liked" },
 ] as const;

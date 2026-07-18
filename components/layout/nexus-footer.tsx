@@ -7,8 +7,8 @@ import {
   Mail,
   MessageCircle,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 import { FormEvent, useRef, useState } from "react";
 
 import { siteConfig } from "@/lib/site-config";
@@ -220,9 +220,7 @@ export function NexusFooter() {
             aria-label="Nexus home"
             className="mx-auto inline-flex items-center gap-2.5 text-foreground md:mx-0 md:justify-self-start"
           >
-            <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#629BF8] to-[#82B0F9] text-white shadow-sm">
-              <Sparkles className="size-4" aria-hidden />
-            </span>
+            <Image src="/nexus-logo.jpg" alt="" width={36} height={36} className="size-9 rounded-xl object-cover" />
             <span className="text-lg font-bold tracking-tight">{siteConfig.logo.label}</span>
           </Link>
 

@@ -5,6 +5,7 @@ export const MOCK_AUTH_USER: AuthUser = {
   username: "Alex",
   displayName: "Alex",
   bio: "Building welcoming Discord communities and useful bots.",
+  inboxNotifications: true,
   socials: {
     x: "alexnexus",
     github: "alexnexus",

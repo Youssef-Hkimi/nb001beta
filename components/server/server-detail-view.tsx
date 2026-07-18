@@ -27,6 +27,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
+import { ListingLikeDialog, useListingLike } from "@/components/listing/listing-like";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
@@ -43,10 +44,10 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
     () => getCommunityFeatureOptions(server.communityFeatures),
     [server.communityFeatures],
   );
-  const [liked, setLiked] = useState(Boolean(server.isLiked));
-  const [likeCount, setLikeCount] = useState(
-    typeof server.likes === "number" ? server.likes : server.stats?.likes ?? 0,
-  );
+  const like = useListingLike({
+    listingKey: `server:${server.slug}`,
+    initialLikes: typeof server.likes === "number" ? server.likes : server.stats?.likes ?? 0,
+  });
   const [reportOpen, setReportOpen] = useState(false);
 
   const copyInvite = () => {
@@ -57,15 +58,6 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
   const joinServer = () => {
     toast.success(`Joining ${server.name}`, {
       description: "Invite flow is mocked in this demo.",
-    });
-  };
-
-  const toggleLike = () => {
-    setLiked((prev) => {
-      const next = !prev;
-      setLikeCount((count) => Math.max(0, count + (next ? 1 : -1)));
-      toast.success(next ? "Server liked" : "Like removed");
-      return next;
     });
   };
 
@@ -156,17 +148,17 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
             <div className="flex flex-wrap items-center gap-2 md:justify-end md:pb-1">
               <ListingActionGuard
                 status={server.safetyStatus}
-                variant={liked ? "primary" : "secondary"}
+                variant={like.isCoolingDown ? "primary" : "secondary"}
                 className={
-                  liked
+                  like.isCoolingDown
                     ? "bg-[#629BF8] text-white transition-colors duration-200 hover:bg-[#629BF8]/90"
                     : "transition-colors duration-200"
                 }
-                onPress={toggleLike}
+                onPress={like.addLike}
               >
-                <ThumbsUp className={`size-4 ${liked ? "fill-current" : ""}`} />
+                <ThumbsUp className={`size-4 ${like.isCoolingDown ? "fill-current" : ""}`} />
                 Like
-                <span className="text-xs opacity-90">{formatCount(likeCount)}</span>
+                <span className="text-xs opacity-90">{formatCount(like.likeCount)}</span>
               </ListingActionGuard>
               <ListingActionGuard status={server.safetyStatus} variant="secondary" onPress={copyInvite}>
                 <Copy className="size-4" />
@@ -391,6 +383,14 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
           </Card>
         </aside>
       </div>
+
+      <ListingLikeDialog
+        listingName={server.name}
+        mode={like.dialogMode}
+        open={like.dialogOpen}
+        remaining={like.remaining}
+        onOpenChange={like.setDialogOpen}
+      />
 
       {/* Report modal */}
       <Modal.Backdrop isOpen={reportOpen} onOpenChange={setReportOpen}>

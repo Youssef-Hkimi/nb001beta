@@ -39,7 +39,7 @@ import {
   TrendingUp,
   UserCheck,
 } from "lucide-react";
-import { useMemo, useState, type ElementType, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 
 import { AnalyticsLineChart } from "@/components/dashboard/analytics-line-chart";
 import { CommunityFeatureSelect } from "@/components/forms/community-feature-select";
@@ -136,6 +136,7 @@ function listingStatusColor(status: ListingStatus) {
 
 export function ServerOwnerDashboard() {
   const [servers, setServers] = useState<EditableServerListing[]>(SERVER_DASHBOARD_LISTINGS);
+  const [activeTab, setActiveTab] = useState("overview");
   const [analyticsServerId, setAnalyticsServerId] = useState<string | null>(null);
   const [inviteServer, setInviteServer] = useState<ServerDashboardListing | null>(null);
   const [inviteUrl, setInviteUrl] = useState("");
@@ -151,6 +152,13 @@ export function ServerOwnerDashboard() {
     () => servers.find((server) => server.id === analyticsServerId) ?? null,
     [servers, analyticsServerId],
   );
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("serverTab");
+    if (requestedTab === "overview" || requestedTab === "analytics" || requestedTab === "status") {
+      setActiveTab(requestedTab);
+    }
+  }, []);
 
   function copyLink(server: ServerDashboardListing) {
     void navigator.clipboard?.writeText(`${window.location.origin}${server.publicPath}`);
@@ -287,7 +295,7 @@ export function ServerOwnerDashboard() {
         <LinkButton href="/dashboard/new?type=server"><Plus className="size-4" />Add Server</LinkButton>
       </header>
 
-      <Tabs defaultSelectedKey="overview" className="server-dashboard-tabs w-full" variant="primary">
+      <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(String(key))} className="server-dashboard-tabs w-full" variant="primary">
         <Tabs.ListContainer className="w-full max-w-2xl">
           <Tabs.List aria-label="Server dashboard sections">
             <Tabs.Tab id="overview">Overview</Tabs.Tab>

@@ -6,11 +6,12 @@ import {
   Form,
   Input,
   Label,
+  Switch,
   TextArea,
   TextField,
   toast,
 } from "@heroui/react";
-import { AtSign, Code2, Gamepad2, Save, UserRound } from "lucide-react";
+import { AtSign, Bell, Code2, Gamepad2, Save, UserRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { useAuth } from "@/lib/auth/auth-context";
@@ -21,6 +22,7 @@ type ProfileForm = {
   x: string;
   github: string;
   roblox: string;
+  inboxNotifications: boolean;
 };
 
 export function UserSettings() {
@@ -31,6 +33,7 @@ export function UserSettings() {
     x: user?.socials?.x ?? "",
     github: user?.socials?.github ?? "",
     roblox: user?.socials?.roblox ?? "",
+    inboxNotifications: user?.inboxNotifications !== false,
   }));
 
   function update<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
@@ -48,6 +51,7 @@ export function UserSettings() {
     updateUser({
       displayName,
       bio: profile.bio.trim(),
+      inboxNotifications: profile.inboxNotifications,
       socials: {
         x: profile.x.trim(),
         github: profile.github.trim(),
@@ -132,6 +136,33 @@ export function UserSettings() {
             Save changes
           </Button>
         </Card.Footer>
+      </Card>
+
+      <Card className="nexus-card gap-5 xl:col-span-2">
+        <Card.Header>
+          <span className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+            <Bell className="size-5" />
+          </span>
+          <div>
+            <Card.Title>Inbox notifications</Card.Title>
+            <Card.Description>Receive listing updates, milestones, and Nexus announcements in your header inbox.</Card.Description>
+          </div>
+        </Card.Header>
+        <Card.Content>
+          <Switch
+            aria-label="Enable inbox notifications"
+            isSelected={profile.inboxNotifications}
+            onChange={(value) => update("inboxNotifications", value)}
+          >
+            <Switch.Content>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">Enable inbox notifications</p>
+                <p className="text-xs text-muted">Keep important Nexus activity available from the site header.</p>
+              </div>
+              <Switch.Control><Switch.Thumb /></Switch.Control>
+            </Switch.Content>
+          </Switch>
+        </Card.Content>
       </Card>
     </Form>
   );

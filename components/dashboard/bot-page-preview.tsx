@@ -44,6 +44,7 @@ export type BotPagePreviewModel = {
   bannerPreview: string | null;
   galleryImages: string[];
   bannerHue?: string;
+  bannerColor?: string;
   statusLabel?: string;
 };
 
@@ -51,13 +52,26 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
   const name = model.name || "Bot name";
   const commands = model.commands.filter((command) => command.name.trim() || command.description.trim());
   const features = getBotFeatureOptions(model.botFeatures);
-  const banner = model.bannerPreview || getBotBannerUrl("preview", model.bannerHue ?? "215");
+  const fallbackBanner = getBotBannerUrl("preview", model.bannerHue ?? "215");
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-[var(--page-bg)]">
       <div className="relative h-32 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={banner} alt="" className="h-full w-full object-cover" />
+        {model.bannerPreview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={model.bannerPreview} alt="" className="h-full w-full object-cover" />
+        ) : model.bannerColor ? (
+          <div
+            aria-hidden
+            className="h-full w-full"
+            style={{
+              background: `linear-gradient(135deg, ${model.bannerColor}, color-mix(in srgb, ${model.bannerColor} 68%, #111827))`,
+            }}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={fallbackBanner} alt="" className="h-full w-full object-cover" />
+        )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-[var(--page-bg)]" />
         <div className="absolute -bottom-7 left-4">
           <Avatar className="size-16 rounded-2xl border-2 border-background shadow-md">
@@ -82,12 +96,12 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
           <span className="inline-flex items-center gap-1"><Hash className="size-3.5" />ID: {model.clientId || "—"}</span>
           <span className="inline-flex items-center gap-1"><TerminalSquare className="size-3.5" />Prefix {model.prefix || "/"}</span>
           <span className="inline-flex items-center gap-1"><Server className="size-3.5" />{formatCount(model.servers)} servers</span>
-          <span className="inline-flex items-center gap-1"><ThumbsUp className="size-3.5" />{formatCount(model.votes)} votes</span>
+          <span className="inline-flex items-center gap-1"><ThumbsUp className="size-3.5" />{formatCount(model.votes)} likes</span>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button size="sm">Invite Bot</Button>
-          <Button size="sm" variant="secondary"><ThumbsUp className="size-3.5" />Vote</Button>
+          <Button size="sm" variant="secondary"><ThumbsUp className="size-3.5" />Like</Button>
           {model.supportUrl ? <Button size="sm" variant="secondary"><MessageCircle className="size-3.5" />Support</Button> : null}
         </div>
 
@@ -126,7 +140,7 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
           <div className="grid grid-cols-2 gap-2">
             {[
               { label: "Servers", value: formatCount(model.servers), icon: Server },
-              { label: "Votes", value: formatCount(model.votes), icon: ThumbsUp },
+              { label: "Likes", value: formatCount(model.votes), icon: ThumbsUp },
               { label: "Growth", value: `+${model.monthlyGrowth}%`, icon: TrendingUp },
               { label: "Commands", value: String(commands.length), icon: TerminalSquare },
             ].map((stat) => {

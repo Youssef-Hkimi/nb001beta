@@ -16,35 +16,33 @@ import {
   toast,
 } from "@heroui/react";
 import {
-  Bot,
   CheckSquare2,
   ChevronDown,
   Copy,
   Edit3,
   Eye,
-  Heart,
-  Megaphone,
   MousePointerClick,
   PanelRightClose,
   PanelRightOpen,
   Plus,
-  Rocket,
   Server,
-  Share2,
+  ThumbsUp,
   TrendingUp,
+  X,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { ListingStatusChip } from "@/components/listing/listing-safety";
 import { IconifyIcon } from "@/components/ui/iconify-icon";
 import { LinkButton } from "@/components/ui/link-button";
+import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { DASHBOARD_LISTINGS } from "@/lib/data/dashboard";
 import { formatCount, initials } from "@/lib/format";
 
 const STATS = [
   { label: "Total Views", value: "124.8K", delta: "12.4%", detail: "vs last 7 days", icon: Eye, tone: "bg-blue-500/10 text-blue-500" },
   { label: "Invite Clicks", value: "18.2K", delta: "9.1%", detail: "vs last 7 days", icon: MousePointerClick, tone: "bg-violet-500/10 text-violet-500" },
-  { label: "Likes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: Heart, tone: "bg-rose-500/10 text-rose-500" },
+  { label: "Likes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: ThumbsUp, tone: "bg-accent/10 text-accent" },
   { label: "Total Listings", value: "8", delta: "", detail: "6 Live · 2 Drafts", icon: CheckSquare2, tone: "bg-slate-500/10 text-slate-500" },
   { label: "Conversion Rate", value: "14.6%", delta: "2.3%", detail: "vs last 7 days", icon: TrendingUp, tone: "bg-blue-500/10 text-blue-500" },
 ] as const;
@@ -65,6 +63,7 @@ export function OverviewDashboard({ username }: { username: string }) {
   const [page, setPage] = useState(1);
   const [chartRange, setChartRange] = useState("30d");
   const [tipsOpen, setTipsOpen] = useState(true);
+  const [verificationListingVisible, setVerificationListingVisible] = useState(true);
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -144,11 +143,13 @@ export function OverviewDashboard({ username }: { username: string }) {
             </Card.Content>
           </Card>
 
-          <section className="space-y-3"><h2 className="text-base font-bold text-foreground">Quick Actions</h2><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="space-y-3"><h2 className="text-base font-bold text-foreground">Quick Actions</h2><div className="grid items-stretch gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
             <QuickAction title="Create a Server Listing" description="Add your community and grow your members." label="Create Server" icon={Server} tone="bg-violet-500/8" href="/dashboard/new?type=server" />
-            <QuickAction title="Publish a Discord Bot" description="List your bot and reach more users." label="Publish Bot" icon={Bot} tone="bg-blue-500/8" href="/dashboard/new?type=bot" />
-            <QuickAction title="Improve an Existing Listing" description="Edit details, update media, and boost performance." label="Improve Listing" icon={Rocket} tone="bg-emerald-500/8" href="/dashboard#servers" />
-            <QuickAction title="Share & Promote" description="Share your listings and attract more visitors." label="Get Share Link" icon={Megaphone} tone="bg-orange-500/8" onPress={() => toast.success("Share link ready")} />
+            <VerificationQuickAction
+              listingVisible={verificationListingVisible}
+              onCloseListing={() => setVerificationListingVisible(false)}
+              onShowListing={() => setVerificationListingVisible(true)}
+            />
           </div></section>
         </main>
 
@@ -227,6 +228,43 @@ function ActionButton({ label, icon: Icon, onPress }: { label: string; icon: typ
   return <Tooltip><Tooltip.Trigger aria-label={label} className="button button--ghost button--sm button--icon-only" onClick={onPress}><Icon className="size-3.5" /></Tooltip.Trigger><Tooltip.Content>{label}</Tooltip.Content></Tooltip>;
 }
 
-function QuickAction({ title, description, label, icon: Icon, tone, href, onPress }: { title: string; description: string; label: string; icon: typeof Server; tone: string; href?: string; onPress?: () => void }) {
-  return <Card variant="default" className={`gap-3 p-5 ${tone}`}><span className="flex size-10 items-center justify-center rounded-xl bg-white/70 text-accent dark:bg-white/8"><Icon className="size-5" /></span><div className="flex-1"><p className="text-sm font-semibold text-foreground">{title}</p><p className="mt-1 text-xs leading-relaxed text-muted">{description}</p></div>{href ? <LinkButton href={href} size="sm">{label}<Plus className="size-3.5" /></LinkButton> : <Button size="sm" onPress={onPress}>{label}<Share2 className="size-3.5" /></Button>}</Card>;
+function QuickAction({ title, description, label, icon: Icon, tone, href }: { title: string; description: string; label: string; icon: typeof Server; tone: string; href: string }) {
+  return <Card variant="default" className={`h-full gap-3 p-5 ${tone}`}><span className="flex size-10 items-center justify-center rounded-xl bg-white/70 text-accent dark:bg-white/8"><Icon className="size-5" /></span><div className="flex-1"><p className="text-sm font-semibold text-foreground">{title}</p><p className="mt-1 text-xs leading-relaxed text-muted">{description}</p></div><LinkButton href={href} size="sm">{label}<Plus className="size-3.5" /></LinkButton></Card>;
+}
+
+function VerificationQuickAction({ listingVisible, onCloseListing, onShowListing }: { listingVisible: boolean; onCloseListing: () => void; onShowListing: () => void }) {
+  const listing = DASHBOARD_LISTINGS.find((item) => item.id === "nexus-hub") ?? DASHBOARD_LISTINGS[0];
+
+  return (
+    <div className="nexus-card relative min-h-64 overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_82%_8%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_38%)] p-5 sm:p-7">
+      <div className="pointer-events-none absolute -bottom-20 -left-16 size-52 rounded-full bg-accent/8 blur-3xl" />
+      <div className="relative z-10 max-w-xl md:max-w-[calc(100%-320px)]">
+        <div className="flex items-center gap-2 text-sm font-semibold text-accent"><VerifiedBadgeIcon className="size-5 text-accent" />Nexus Verification</div>
+        <h3 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Get your verification badge</h3>
+        <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted">Build trust around your server or bot. Review the requirements, then check a listing&apos;s eligibility from its status dashboard.</p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <LinkButton href="/verification" target="_blank">Learn more</LinkButton>
+          <LinkButton href="/dashboard?serverTab=status#servers" variant="secondary">Check eligibility</LinkButton>
+        </div>
+      </div>
+
+      {listingVisible ? (
+        <div className="verification-server-float relative z-20 mt-6 md:absolute md:top-3 md:right-5 md:mt-0 md:w-[300px]">
+          <Card className="verification-server-card nexus-card group gap-0 p-4 shadow-lg shadow-black/10 backdrop-blur">
+            <Button isIconOnly size="sm" variant="ghost" aria-label="Close current listing preview" className="absolute top-2 right-2 z-10" onPress={onCloseListing}><X className="size-4" /></Button>
+            <div className="flex items-center gap-3 pr-7">
+              <Avatar className="size-12 rounded-2xl"><Avatar.Fallback className="rounded-2xl text-sm font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${listing.bannerHue} 72% 56%),hsl(${Number(listing.bannerHue) + 30} 70% 42%))` }}>{initials(listing.name)}</Avatar.Fallback></Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-foreground">{listing.name}<VerifiedBadgeIcon className="size-4 shrink-0 text-accent transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" /></p>
+                <p className="mt-0.5 truncate text-xs text-muted">{listing.category} · {listing.type === "server" ? "Server listing" : "Bot listing"}</p>
+                <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted"><span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />Active now</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <Button size="sm" variant="ghost" className="absolute top-4 right-4" onPress={onShowListing}>Show current listing</Button>
+      )}
+    </div>
+  );
 }

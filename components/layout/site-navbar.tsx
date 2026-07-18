@@ -1,15 +1,19 @@
 "use client";
 
-import { Avatar, Button, Drawer, Dropdown, SearchField, toast } from "@heroui/react";
+import { Avatar, Button, Drawer, Dropdown, toast } from "@heroui/react";
 import {
+  Bell,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Menu,
   PlusCircle,
   Search,
-  Sparkles,
+  ShieldCheck,
+  ThumbsUp,
   UserRound,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -34,24 +38,25 @@ export function SiteNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAuthenticated, requireAuth, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const accountName = user?.displayName ?? user?.username;
+  const inboxEnabled = user?.inboxNotifications !== false;
 
   function goDashboard() {
-    requireAuth(() => router.push("/dashboard"));
+    if (isAuthenticated) router.push("/dashboard");
+    else router.push("/login?next=/dashboard");
   }
 
   function goCreateListing() {
-    requireAuth(() => router.push("/dashboard/new"));
+    if (isAuthenticated) router.push("/dashboard/new");
+    else router.push("/login?next=/dashboard/new");
   }
 
   return (
     <header className="navbar-shell sticky top-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 md:px-6 lg:px-8">
         <Link href="/explore" className="flex shrink-0 items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#629BF8] to-[#82B0F9] text-white shadow-sm">
-            <Sparkles className="size-4" />
-          </span>
+          <Image src="/nexus-logo.jpg" alt="" width={36} height={36} priority className="size-9 rounded-xl object-cover" />
           <span className="text-lg font-bold tracking-tight text-foreground">Nexus</span>
         </Link>
 
@@ -83,20 +88,43 @@ export function SiteNavbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden w-48 md:block lg:w-56">
-            <SearchField aria-label="Search Nexus" className="w-full">
-              <SearchField.Group>
-                <SearchField.SearchIcon />
-                <SearchField.Input placeholder="Search..." />
-                <SearchField.ClearButton />
-              </SearchField.Group>
-            </SearchField>
-          </div>
-
           <ThemeToggle />
 
           {isAuthenticated && user ? (
-            <Dropdown>
+            <>
+              <Dropdown>
+                <Dropdown.Trigger
+                  aria-label="Open inbox"
+                  className="relative inline-flex size-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-default hover:text-foreground"
+                >
+                  <Bell className="size-5" />
+                  {inboxEnabled ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent ring-2 ring-background" /> : null}
+                </Dropdown.Trigger>
+                <Dropdown.Popover placement="bottom end" className="w-[min(92vw,23rem)]">
+                  <Dropdown.Menu
+                    aria-label="Inbox notifications"
+                    onAction={(key) => {
+                      if (key === "listing") router.push("/dashboard");
+                      if (key === "likes") router.push("/dashboard?tab=servers");
+                      if (key === "announcement") router.push("/verification");
+                    }}
+                  >
+                    <Dropdown.Item id="listing" textValue="Listing approved">
+                      <ShieldCheck className="size-4 text-emerald-500" />
+                      <div><p className="text-sm font-medium">Nexus Hub is live</p><p className="text-xs text-muted">Your listing passed the latest status check.</p></div>
+                    </Dropdown.Item>
+                    <Dropdown.Item id="likes" textValue="Like milestone">
+                      <ThumbsUp className="size-4 text-accent" />
+                      <div><p className="text-sm font-medium">New like milestone</p><p className="text-xs text-muted">Lofi Girl reached 10K likes.</p></div>
+                    </Dropdown.Item>
+                    <Dropdown.Item id="announcement" textValue="Nexus announcement">
+                      <Megaphone className="size-4 text-violet-400" />
+                      <div><p className="text-sm font-medium">Nexus announcement</p><p className="text-xs text-muted">Verification eligibility has been updated.</p></div>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
+              <Dropdown>
               <Dropdown.Trigger
                 aria-label="Account menu"
                 className="hidden items-center gap-2 rounded-full border border-border bg-default/50 py-1 pr-2.5 pl-1 sm:inline-flex"
@@ -136,7 +164,8 @@ export function SiteNavbar() {
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown.Popover>
-            </Dropdown>
+              </Dropdown>
+            </>
           ) : (
             <Button className="hidden sm:inline-flex" onPress={() => router.push("/login")}>
               <IconifyIcon icon="ic:baseline-discord" className="size-4" />
@@ -165,13 +194,6 @@ export function SiteNavbar() {
                 <Drawer.Heading>Menu</Drawer.Heading>
               </Drawer.Header>
               <Drawer.Body className="flex flex-col gap-1">
-                <SearchField aria-label="Search Nexus" className="mb-3 w-full">
-                  <SearchField.Group>
-                    <SearchField.SearchIcon />
-                    <SearchField.Input placeholder="Search servers & bots..." />
-                    <SearchField.ClearButton />
-                  </SearchField.Group>
-                </SearchField>
                 {NAV_ITEMS.map((item) => {
                   const active = item.match(pathname);
                   return (

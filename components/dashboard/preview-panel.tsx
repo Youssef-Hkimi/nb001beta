@@ -44,6 +44,7 @@ type BotPreviewPanelProps = {
     avatarPreview: string | null;
     bannerPreview: string | null;
     bannerHue?: string;
+    bannerColor?: string;
   };
   page: BotPagePreviewModel;
 };
@@ -107,6 +108,7 @@ export function PreviewPanel(props: PreviewPanelProps) {
               avatar={props.listing.avatarPreview}
               banner={props.listing.bannerPreview}
               bannerHue={props.listing.bannerHue}
+              bannerColor={props.listing.bannerColor}
             />
           </div>
         ) : (

@@ -12,11 +12,12 @@ import {
   Select,
   Switch,
   TextField,
+  Tooltip,
   toast,
 } from "@heroui/react";
-import { Bot, Clock3, Copy, Eye, Plus, Save, Send, Server, Shield, Trash2 } from "lucide-react";
+import { Bot, CircleHelp, Clock3, Copy, Eye, Plus, Save, Send, Server, Shield, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { DashboardNav } from "@/components/dashboard/dashboard-sidebar";
 import { PreviewPanel, type PreviewMode } from "@/components/dashboard/preview-panel";
@@ -31,11 +32,16 @@ import { ListingStatusChip } from "@/components/listing/listing-safety";
 import { LinkButton } from "@/components/ui/link-button";
 import { CommunityFeatureSelect } from "@/components/forms/community-feature-select";
 import { BotFeatureSelect } from "@/components/forms/bot-feature-select";
+import { BannerColorPicker } from "@/components/forms/banner-color-picker";
 import { RichDescriptionEditor } from "@/components/forms/rich-description-editor";
 import {
   ServerSetupModal,
   type ServerSetupMode,
 } from "@/components/listing/server-setup-modal";
+import {
+  ServerWidgetVerificationModal,
+  type ServerWidgetVerificationState,
+} from "@/components/listing/server-widget-verification-modal";
 import {
   BOT_CATEGORIES,
   BOT_LISTING_TAGS,
@@ -46,6 +52,7 @@ import {
 import { DEFAULT_COMMUNITY_FEATURE_IDS } from "@/lib/data/community-features";
 import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { getBotAvatarUrl, getBotBannerUrl, getBotGalleryImageUrl } from "@/lib/bot-visuals";
+import { bannerColorFromHue, extractMatchingBannerColor } from "@/lib/image-color";
 import { writeStatusOverride } from "@/lib/listing-status";
 import type { BotCommand, DiscordServer, ListingType } from "@/lib/types";
 
@@ -54,6 +61,7 @@ const ACTIVITY_LEVELS = ["Very Active", "Active", "Calm"] as const;
 const VISIBILITY = ["Public", "Unlisted", "Private"] as const;
 
 type ServerForm = {
+  guildId: string;
   name: string;
   shortDescription: string;
   fullDescription: string;
@@ -75,6 +83,7 @@ type ServerForm = {
   iconPreview: string | null;
   bannerPreview: string | null;
   bannerHue: string;
+  bannerColor: string;
   communityFeatures: string[];
 };
 
@@ -104,9 +113,11 @@ type BotForm = {
   galleryImages: string[];
   statusLabel: string;
   bannerHue: string;
+  bannerColor: string;
 };
 
 const emptyServer = (): ServerForm => ({
+  guildId: "",
   name: "",
   shortDescription: "",
   fullDescription: "",
@@ -128,10 +139,12 @@ const emptyServer = (): ServerForm => ({
   iconPreview: null,
   bannerPreview: null,
   bannerHue: "220",
+  bannerColor: "#325578",
   communityFeatures: [],
 });
 
 const sampleServer = (): ServerForm => ({
+  guildId: "",
   name: "Nexus Hub",
   shortDescription: "Official community for creators and server owners.",
   fullDescription:
@@ -154,6 +167,7 @@ const sampleServer = (): ServerForm => ({
   iconPreview: null,
   bannerPreview: null,
   bannerHue: "220",
+  bannerColor: "#325578",
   communityFeatures: [...DEFAULT_COMMUNITY_FEATURE_IDS],
 });
 
@@ -187,6 +201,7 @@ const sampleBot = (): BotForm => ({
   galleryImages: Array.from({ length: 4 }, (_, index) => getBotGalleryImageUrl("Helper AI", index, "185")),
   statusLabel: "",
   bannerHue: "185",
+  bannerColor: "#256b73",
 });
 
 function num(value: string, fallback = 0) {
@@ -205,6 +220,7 @@ function slugify(name: string) {
 
 function fromDiscordServer(ds: DiscordServer): ServerForm {
   return {
+    ...emptyServer(),
     name: ds.name,
     shortDescription: ds.shortDescription,
     fullDescription: ds.fullDescription,
@@ -215,17 +231,10 @@ function fromDiscordServer(ds: DiscordServer): ServerForm {
     inviteUrl: ds.inviteUrl,
     members: String(ds.members),
     online: String(ds.online),
-    likes: "0",
-    monthlyGrowth: "10",
-    joinClicks: "0",
     createdAt: ds.createdAt,
     activity: "Very Active",
-    visibility: "Public",
-    featured: false,
-    verified: false,
-    iconPreview: null,
-    bannerPreview: null,
     bannerHue: ds.bannerHue,
+    bannerColor: bannerColorFromHue(ds.bannerHue),
     communityFeatures: [...DEFAULT_COMMUNITY_FEATURE_IDS],
   };
 }
@@ -237,7 +246,7 @@ export default function NewListingPage() {
   const [bot, setBot] = useState(sampleBot);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("listing");
   const [modalOpen, setModalOpen] = useState(false);
-  const [publishSuccess, setPublishSuccess] = useState<ListingType | null>(null);
+  const [publishSuccess, setPublishSuccess] = useState<"bot" | null>(null);
 
   const [typeModalOpen, setTypeModalOpen] = useState(true);
   const [pendingType, setPendingType] = useState<ListingType | null>(null);
@@ -245,9 +254,14 @@ export default function NewListingPage() {
   const [setupMode, setSetupMode] = useState<ServerSetupMode | null>(null);
   const [selectedDiscordId, setSelectedDiscordId] = useState<string | null>(null);
   const [flowReady, setFlowReady] = useState(false);
+  const [serverVerificationState, setServerVerificationState] = useState<ServerWidgetVerificationState>(null);
+  const [serverVerificationError, setServerVerificationError] = useState("");
+  const serverVerificationInFlight = useRef(false);
 
   const [reviewOpen, setReviewOpen] = useState(false);
   const [commandError, setCommandError] = useState<string | null>(null);
+  const [serverColorMatched, setServerColorMatched] = useState(false);
+  const [botColorMatched, setBotColorMatched] = useState(false);
 
   const listingPreview = useMemo(
     () => ({
@@ -261,6 +275,7 @@ export default function NewListingPage() {
       bannerPreview: server.bannerPreview,
       iconPreview: server.iconPreview,
       bannerHue: server.bannerHue,
+      bannerColor: server.bannerColor,
     }),
     [server],
   );
@@ -293,6 +308,7 @@ export default function NewListingPage() {
       avatarPreview: bot.avatarPreview,
       bannerPreview: bot.bannerPreview,
       bannerHue: bot.bannerHue,
+      bannerColor: bot.bannerColor,
     }),
     [bot],
   );
@@ -322,6 +338,7 @@ export default function NewListingPage() {
       bannerPreview: bot.bannerPreview,
       galleryImages: bot.galleryImages,
       bannerHue: bot.bannerHue,
+      bannerColor: bot.bannerColor,
       statusLabel: bot.statusLabel || undefined,
     }),
     [bot],
@@ -350,7 +367,6 @@ export default function NewListingPage() {
       return;
     }
     if (setupMode === "import" && selectedDiscordId) {
-      // selection already applied via onSelectServer
       setSetupModalOpen(false);
       setFlowReady(true);
       toast.success("Server details imported from Discord");
@@ -378,11 +394,10 @@ export default function NewListingPage() {
       !bot.fullDescription.trim() ||
       !bot.tags.length ||
       !bot.inviteUrl.trim() ||
-      !bot.avatarPreview ||
-      !bot.bannerPreview
+      !bot.avatarPreview
     ) {
       toast.danger("Missing required fields", {
-        description: "Complete the required details, tags, invite URL, avatar, and banner.",
+        description: "Complete the required details, tags, invite URL, and avatar.",
       });
       return;
     }
@@ -408,27 +423,93 @@ export default function NewListingPage() {
     toast.success("Bot listing published");
   }
 
-  function publishServer() {
-    if (!server.name.trim() || !server.inviteUrl.trim()) {
+  async function publishServer() {
+    if (serverVerificationInFlight.current) return;
+
+    if (!server.name.trim() || !server.inviteUrl.trim() || !server.guildId.trim()) {
       toast.danger("Missing required fields", {
-        description: "Server name and invite URL are required.",
+        description: "Server name, Server ID, and invite URL are required.",
       });
       return;
     }
-    const id = slugify(server.name);
-    writeStatusOverride({
-      id,
-      name: server.name,
-      type: "server",
-      status: "Live · Pending Review",
-      safetyStatus: "PENDING_REVIEW",
-      updated: "Just now",
-      category: server.category,
-      description: server.shortDescription,
-      bannerHue: server.bannerHue,
-    });
-    setPublishSuccess("server");
-    toast.success("Server listing published");
+
+    if (!/^\d{17,20}$/.test(server.guildId.trim())) {
+      toast.danger("Invalid Server ID", {
+        description: "Discord Server IDs contain 17–20 digits.",
+      });
+      return;
+    }
+
+    setServerVerificationState("verifying");
+    setServerVerificationError("");
+    serverVerificationInFlight.current = true;
+
+    try {
+      const response = await fetch("/api/discord/server-widget", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guildId: server.guildId.trim(),
+          forceRefresh: true,
+        }),
+      });
+      const result: unknown = await response.json();
+      const error =
+        typeof result === "object" && result !== null && "error" in result
+          ? String(result.error)
+          : "";
+
+      if (error === "widget_disabled") {
+        setServerVerificationState("widget_disabled");
+        return;
+      }
+
+      if (!response.ok) {
+        setServerVerificationError(
+          error === "guild_not_found"
+            ? "Discord could not find that server. Check the Server ID and try again."
+            : error === "widget_no_channel"
+              ? "Your widget is enabled, but no invite channel is selected. Open Server Settings → Widget, choose a public channel, save, then try again."
+            : "Discord could not verify this server right now. Please try again.",
+        );
+        setServerVerificationState("error");
+        return;
+      }
+
+      const guild =
+        typeof result === "object" && result !== null && "guild" in result
+          ? result.guild as { name?: unknown; presenceCount?: unknown }
+          : null;
+      if (typeof guild?.name !== "string" || typeof guild.presenceCount !== "number") {
+        throw new Error("Invalid verification response");
+      }
+
+      const verifiedName = guild.name;
+      const id = slugify(verifiedName);
+      setServer((current) => ({
+        ...current,
+        name: verifiedName,
+        online: String(guild.presenceCount),
+      }));
+      writeStatusOverride({
+        id,
+        name: verifiedName,
+        type: "server",
+        status: "Live · Pending Review",
+        safetyStatus: "PENDING_REVIEW",
+        updated: "Just now",
+        category: server.category,
+        description: server.shortDescription,
+        bannerHue: server.bannerHue,
+      });
+      setServerVerificationState("success");
+      toast.success("Server verified and published");
+    } catch {
+      setServerVerificationError("Nexus could not reach Discord. Please try again.");
+      setServerVerificationState("error");
+    } finally {
+      serverVerificationInFlight.current = false;
+    }
   }
 
   function updateCommand(id: string, patch: Partial<BotCommand>) {
@@ -436,6 +517,28 @@ export default function NewListingPage() {
       ...b,
       commands: b.commands.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     }));
+  }
+
+  async function handleServerIcon(file: File, iconPreview: string) {
+    setServer((current) => ({ ...current, iconPreview }));
+    try {
+      const bannerColor = await extractMatchingBannerColor(file);
+      setServer((current) => ({ ...current, bannerColor }));
+      setServerColorMatched(true);
+    } catch {
+      setServerColorMatched(false);
+    }
+  }
+
+  async function handleBotAvatar(file: File, avatarPreview: string) {
+    setBot((current) => ({ ...current, avatarPreview }));
+    try {
+      const bannerColor = await extractMatchingBannerColor(file);
+      setBot((current) => ({ ...current, bannerColor }));
+      setBotColorMatched(true);
+    } catch {
+      setBotColorMatched(false);
+    }
   }
 
   return (
@@ -565,14 +668,46 @@ export default function NewListingPage() {
                 </Select>
               </div>
 
-              <TextField
-                isRequired
-                value={server.inviteUrl}
-                onChange={(v) => setServer((s) => ({ ...s, inviteUrl: v }))}
-              >
-                <Label>Discord invite URL</Label>
-                <Input placeholder="https://discord.gg/..." />
-              </TextField>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <TextField
+                  isRequired
+                  value={server.guildId}
+                  onChange={(value) =>
+                    setServer((current) => ({
+                      ...current,
+                      guildId: value.replace(/\D/g, ""),
+                    }))
+                  }
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Label>
+                      Discord Server ID <span className="text-danger" aria-hidden="true">*</span>
+                    </Label>
+                    <Tooltip>
+                      <Tooltip.Trigger
+                        aria-label="Why Nexus requires a Discord Server ID"
+                        className="rounded-full text-muted outline-none transition-colors hover:text-accent focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        <CircleHelp className="size-4" />
+                      </Tooltip.Trigger>
+                      <Tooltip.Content className="max-w-xs">
+                        Nexus uses the Server ID to verify the public Discord widget and sync the official server name and live online count when you publish.
+                      </Tooltip.Content>
+                    </Tooltip>
+                  </div>
+                  <Input inputMode="numeric" pattern="[0-9]*" placeholder="123456789012345678" />
+                  <Description>Required for Discord widget verification.</Description>
+                </TextField>
+
+                <TextField
+                  isRequired
+                  value={server.inviteUrl}
+                  onChange={(v) => setServer((s) => ({ ...s, inviteUrl: v }))}
+                >
+                  <Label>Discord invite URL</Label>
+                  <Input placeholder="https://discord.gg/..." />
+                </TextField>
+              </div>
 
               <TextField
                 value={server.shortDescription}
@@ -712,20 +847,41 @@ export default function NewListingPage() {
                   Servers support icon and banner only — no gallery images.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[160px_minmax(0,1fr)]">
                 <UploadBox
                   title="Server icon"
                   hint="Drag & drop or click"
                   sizeHint="Recommended 512×512"
                   variant="icon"
+                  previewUrl={server.iconPreview}
+                  onFile={handleServerIcon}
+                  onClear={() => {
+                    setServer((current) => ({ ...current, iconPreview: null }));
+                    setServerColorMatched(false);
+                  }}
                 />
                 <UploadBox
-                  title="Server banner"
+                  title="Server banner (optional)"
                   hint="Drag & drop or click"
                   sizeHint="Recommended 960×320"
                   variant="banner"
+                  previewUrl={server.bannerPreview}
+                  onFile={(_, bannerPreview) =>
+                    setServer((current) => ({ ...current, bannerPreview }))
+                  }
+                  onClear={() =>
+                    setServer((current) => ({ ...current, bannerPreview: null }))
+                  }
                 />
               </div>
+              <BannerColorPicker
+                value={server.bannerColor}
+                matchedFromIcon={serverColorMatched}
+                onChange={(bannerColor) => {
+                  setServer((current) => ({ ...current, bannerColor }));
+                  setServerColorMatched(false);
+                }}
+              />
             </section>
 
             <div className="max-w-md">
@@ -1001,26 +1157,47 @@ export default function NewListingPage() {
               </div>
             </section>
 
-            <div>
+            <section className="space-y-3">
               <p className="mb-2 text-sm font-semibold text-foreground">Bot media</p>
               <p className="mb-3 text-xs text-muted">
-                Avatar, banner, and gallery previews (up to 6 images). Gallery is bot-only.
+                Avatar, optional banner, and gallery previews (up to 6 images). Gallery is bot-only.
               </p>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <UploadDropzone
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[160px_minmax(0,1fr)]">
+                <UploadBox
                   title="Bot avatar *"
                   hint="Drag & drop or click"
                   sizeHint="Recommended 512×512"
-                  selectedLabel={bot.avatarPreview ? "Mock avatar ready · click to remove" : undefined}
-                  onPress={() => setBot((current) => ({ ...current, avatarPreview: current.avatarPreview ? null : getBotAvatarUrl(current.name || "Bot", current.bannerHue) }))}
+                  variant="icon"
+                  previewUrl={bot.avatarPreview}
+                  onFile={handleBotAvatar}
+                  onClear={() => {
+                    setBot((current) => ({ ...current, avatarPreview: null }));
+                    setBotColorMatched(false);
+                  }}
                 />
-                <UploadDropzone
-                  title="Bot banner *"
+                <UploadBox
+                  title="Bot banner (optional)"
                   hint="Drag & drop or click"
                   sizeHint="Recommended 960×320"
-                  selectedLabel={bot.bannerPreview ? "Mock banner ready · click to remove" : undefined}
-                  onPress={() => setBot((current) => ({ ...current, bannerPreview: current.bannerPreview ? null : getBotBannerUrl(slugify(current.name || "bot"), current.bannerHue) }))}
+                  variant="banner"
+                  previewUrl={bot.bannerPreview}
+                  onFile={(_, bannerPreview) =>
+                    setBot((current) => ({ ...current, bannerPreview }))
+                  }
+                  onClear={() =>
+                    setBot((current) => ({ ...current, bannerPreview: null }))
+                  }
                 />
+              </div>
+              <BannerColorPicker
+                value={bot.bannerColor}
+                matchedFromIcon={botColorMatched}
+                onChange={(bannerColor) => {
+                  setBot((current) => ({ ...current, bannerColor }));
+                  setBotColorMatched(false);
+                }}
+              />
+              <div>
                 <UploadDropzone
                   title="Preview gallery"
                   hint="Add up to 6 images"
@@ -1042,7 +1219,7 @@ export default function NewListingPage() {
                   </Button>
                 </div>
               ) : null}
-            </div>
+            </section>
 
             <div className="max-w-md">
               <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
@@ -1123,11 +1300,19 @@ export default function NewListingPage() {
         mode={setupMode}
         onModeChange={setSetupMode}
         selectedServerId={selectedDiscordId}
-        onSelectServer={(ds) => {
-          setSelectedDiscordId(ds.id);
-          setServer(fromDiscordServer(ds));
+        onSelectServer={(discordServer) => {
+          setSelectedDiscordId(discordServer.id);
+          setServer(fromDiscordServer(discordServer));
         }}
         onContinue={handleSetupContinue}
+      />
+
+      <ServerWidgetVerificationModal
+        state={serverVerificationState}
+        errorMessage={serverVerificationError}
+        publicPath={`/server/${slugify(server.name || "server")}`}
+        onRetry={() => void publishServer()}
+        onClose={() => setServerVerificationState(null)}
       />
 
       <BotReviewModal
@@ -1136,21 +1321,21 @@ export default function NewListingPage() {
         onAgree={finalizeBotPublish}
       />
 
-      <Modal.Backdrop isOpen={Boolean(publishSuccess)} onOpenChange={(open) => !open && setPublishSuccess(null)}>
+      <Modal.Backdrop isOpen={publishSuccess === "bot"} onOpenChange={(open) => !open && setPublishSuccess(null)}>
         <Modal.Container>
           <Modal.Dialog className="sm:max-w-lg">
             <Modal.CloseTrigger />
-            <Modal.Header><Modal.Heading>Your {publishSuccess === "bot" ? "bot" : "server"} is live</Modal.Heading></Modal.Header>
+            <Modal.Header><Modal.Heading>Your bot is live</Modal.Heading></Modal.Header>
             <Modal.Body className="space-y-4">
-              <p className="text-sm text-muted">Your {publishSuccess === "bot" ? "bot" : "server"} is now publicly listed on Nexus and is waiting for review.</p>
+              <p className="text-sm text-muted">Your bot is now publicly listed on Nexus and is waiting for review.</p>
               <ListingStatusChip status="PENDING_REVIEW" livePrefix />
-              <TextField isReadOnly value={`http://localhost:3010/${publishSuccess === "bot" ? "bots" : "server"}/${slugify(publishSuccess === "bot" ? bot.name : server.name)}`}>
+              <TextField isReadOnly value={`http://localhost:3010/bots/${slugify(bot.name)}`}>
                 <Label>Public link</Label><Input />
               </TextField>
             </Modal.Body>
             <Modal.Footer className="flex-wrap">
-              <Button variant="secondary" onPress={() => { const url = `http://localhost:3010/${publishSuccess === "bot" ? "bots" : "server"}/${slugify(publishSuccess === "bot" ? bot.name : server.name)}`; void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
-              <LinkButton href={`/${publishSuccess === "bot" ? "bots" : "server"}/${slugify(publishSuccess === "bot" ? bot.name : server.name)}`} variant="secondary">View page</LinkButton>
+              <Button variant="secondary" onPress={() => { const url = `http://localhost:3010/bots/${slugify(bot.name)}`; void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
+              <LinkButton href={`/bots/${slugify(bot.name)}`} variant="secondary">View page</LinkButton>
               <LinkButton href="/dashboard">Back to dashboard</LinkButton>
             </Modal.Footer>
           </Modal.Dialog>

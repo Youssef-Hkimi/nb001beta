@@ -29,6 +29,7 @@ export type ServerPagePreviewModel = ServerListingPreviewModel & {
 
 export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) {
   const hue = model.bannerHue ?? "220";
+  const bannerColor = model.bannerColor;
   const communityFeatures = getCommunityFeatureOptions(model.communityFeatures);
 
   return (
@@ -46,7 +47,9 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
           <div
             className="h-full w-full"
             style={{
-              background: `linear-gradient(135deg, hsl(${hue} 55% 28%) 0%, hsl(${hue} 45% 18%) 40%, hsl(${Number(hue) + 40} 50% 30%) 100%)`,
+              background: bannerColor
+                ? `linear-gradient(135deg, ${bannerColor}, color-mix(in srgb, ${bannerColor} 68%, #111827))`
+                : `linear-gradient(135deg, hsl(${hue} 55% 28%) 0%, hsl(${hue} 45% 18%) 40%, hsl(${Number(hue) + 40} 50% 30%) 100%)`,
             }}
           />
         )}

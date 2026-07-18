@@ -33,8 +33,8 @@ export function ServerCard({
       </div>
 
       <Card.Header className="mt-8 gap-1 px-4 pt-0">
-        <div className="flex items-center gap-2">
-          <Card.Title className="text-base">{server.name}</Card.Title>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Card.Title className="min-w-0 max-w-full truncate text-base">{server.name}</Card.Title>
           {server.verified ? <VerifiedBadgeIcon className="size-4 text-accent" /> : null}
           <ListingStatusChip status={server.safetyStatus} />
         </div>
@@ -55,13 +55,13 @@ export function ServerCard({
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <Chip size="sm" variant="soft" color="accent">
-            <Chip.Label>{server.category}</Chip.Label>
+        <div className="flex min-w-0 flex-wrap gap-1.5 overflow-hidden">
+          <Chip size="sm" variant="soft" color="accent" className="max-w-full">
+            <Chip.Label className="max-w-[8rem] truncate">{server.category}</Chip.Label>
           </Chip>
           {server.tags.slice(0, compact ? 1 : 2).map((tag) => (
-            <Chip key={tag} size="sm" variant="soft">
-              <Chip.Label>{tag}</Chip.Label>
+            <Chip key={tag} size="sm" variant="soft" className="max-w-full">
+              <Chip.Label className="max-w-[8rem] truncate">{tag}</Chip.Label>
             </Chip>
           ))}
         </div>

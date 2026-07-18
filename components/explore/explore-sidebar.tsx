@@ -6,6 +6,8 @@ import { ArrowUpRight, Bot, Plus } from "lucide-react";
 import { LinkButton } from "@/components/ui/link-button";
 import { TOP_BOTS } from "@/lib/data/bots";
 import { formatCount, initials } from "@/lib/format";
+import darkBanner from "@/darkbanner.webp";
+import lightBanner from "@/lightbanner.webp";
 
 export function ExploreSidebar() {
   return (
@@ -43,8 +45,17 @@ export function ExploreSidebar() {
         </Card.Footer>
       </Card>
 
-      <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#629BF8] to-[#82B0F9] p-0 text-white shadow-lg">
-        <div className="space-y-3 p-5">
+      <Card className="relative overflow-hidden border-0 bg-[#2D2E33] p-0 text-white shadow-lg">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100 dark:opacity-0"
+          style={{ backgroundImage: `url(${lightBanner.src})` }}
+        />
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-0 dark:opacity-100"
+          style={{ backgroundImage: `url(${darkBanner.src})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#102033]/85 via-[#102033]/68 to-[#2D2E33]/78" />
+        <div className="relative z-10 space-y-3 p-5">
           <p className="text-xs font-semibold tracking-wide text-white/80 uppercase">
             Grow on Nexus
           </p>

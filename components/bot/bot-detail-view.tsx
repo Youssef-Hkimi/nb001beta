@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
+import { ListingLikeDialog, useListingLike } from "@/components/listing/listing-like";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
@@ -21,8 +22,7 @@ import { getListingActionBlockReason } from "@/lib/listing-safety";
 import type { BotListing } from "@/lib/types";
 
 export function BotDetailView({ bot }: { bot: BotListing }) {
-  const [votes, setVotes] = useState(bot.votes);
-  const [voted, setVoted] = useState(false);
+  const like = useListingLike({ listingKey: `bot:${bot.slug}`, initialLikes: bot.votes });
   const [galleryImage, setGalleryImage] = useState<string | null>(null);
   const features = useMemo(() => getBotFeatureOptions(bot.botFeatures), [bot.botFeatures]);
   const similar = useMemo(() => getSimilarBots(bot), [bot]);
@@ -33,15 +33,6 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
     bot.websiteUrl ? { label: "Website", url: bot.websiteUrl, icon: Globe2 } : null,
     bot.supportServerUrl ? { label: "Support Server", url: bot.supportServerUrl, icon: MessageSquare } : null,
   ].filter((link): link is { label: string; url: string; icon: typeof GitBranch } => Boolean(link));
-
-  const toggleVote = () => {
-    setVoted((current) => {
-      const next = !current;
-      setVotes((count) => Math.max(0, count + (next ? 1 : -1)));
-      toast.success(next ? "Vote added" : "Vote removed");
-      return next;
-    });
-  };
 
   return (
     <div className="theme-surface min-h-screen pb-16">
@@ -64,7 +55,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
                 <p className="max-w-2xl text-sm leading-relaxed text-muted md:text-base">{bot.shortDescription}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
                   <span className="inline-flex items-center gap-1.5"><Server className="size-4 text-accent" />{formatCount(bot.servers)} servers</span>
-                  <span className="inline-flex items-center gap-1.5"><ThumbsUp className="size-4" />{formatCount(votes)} votes</span>
+                  <span className="inline-flex items-center gap-1.5"><ThumbsUp className="size-4" />{formatCount(like.likeCount)} likes</span>
                   <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" />{bot.createdAt}</span>
                   <span className="inline-flex items-center gap-1.5 font-mono"><TerminalSquare className="size-4" />Prefix {bot.prefix}</span>
                 </div>
@@ -72,7 +63,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
             </div>
             <div className="flex flex-wrap items-center gap-2 md:justify-end md:pb-1">
               <ListingActionGuard status={bot.safetyStatus} onPress={() => openExternal(bot.inviteUrl)}><Link2 className="size-4" />Invite Bot</ListingActionGuard>
-              <ListingActionGuard status={bot.safetyStatus} variant={voted ? "primary" : "secondary"} onPress={toggleVote}><ThumbsUp className={`size-4 ${voted ? "fill-current" : ""}`} />Vote</ListingActionGuard>
+              <ListingActionGuard status={bot.safetyStatus} variant={like.isCoolingDown ? "primary" : "secondary"} onPress={like.addLike}><ThumbsUp className={`size-4 ${like.isCoolingDown ? "fill-current" : ""}`} />Like</ListingActionGuard>
               {bot.supportServerUrl ? <ListingActionGuard status={bot.safetyStatus} variant="secondary" onPress={() => openExternal(bot.supportServerUrl)}><MessageSquare className="size-4" />Support Server</ListingActionGuard> : null}
               <Dropdown>
                 <Dropdown.Trigger aria-label="More actions" className="button button--ghost button--icon-only"><MoreHorizontal className="size-4" /></Dropdown.Trigger>
@@ -119,7 +110,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card className="nexus-card-elevated gap-4"><Card.Header><Card.Title className="text-base">Bot Stats</Card.Title></Card.Header><Card.Content className="space-y-3">{[
-            { label: "Servers", value: formatCount(bot.servers), icon: Server }, { label: "Votes", value: formatCount(votes), icon: ThumbsUp }, { label: "Monthly Growth", value: `+${bot.monthlyGrowth}%`, icon: TrendingUp }, { label: "Commands", value: String(bot.commands.length), icon: TerminalSquare }, { label: "Created", value: bot.createdAt, icon: CalendarDays },
+            { label: "Servers", value: formatCount(bot.servers), icon: Server }, { label: "Likes", value: formatCount(like.likeCount), icon: ThumbsUp }, { label: "Monthly Growth", value: `+${bot.monthlyGrowth}%`, icon: TrendingUp }, { label: "Commands", value: String(bot.commands.length), icon: TerminalSquare }, { label: "Created", value: bot.createdAt, icon: CalendarDays },
           ].map((stat) => { const Icon = stat.icon; return <div key={stat.label} className="flex items-center gap-3 rounded-xl bg-default/40 p-3"><Icon className="size-4 shrink-0 text-accent" /><span className="min-w-0 flex-1 text-xs text-muted">{stat.label}</span><span className="text-right text-sm font-semibold text-foreground">{stat.value}</span></div>; })}</Card.Content></Card>
 
           <Card className="nexus-card gap-4"><Card.Header><Card.Title className="text-base">Developer</Card.Title></Card.Header><Card.Content className="flex items-center gap-3"><Avatar className="size-11 rounded-xl"><Avatar.Fallback className="rounded-xl bg-accent/15 text-sm font-semibold text-accent">{initials(bot.developer.name)}</Avatar.Fallback></Avatar><span><span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">{bot.developer.name}{bot.developer.verified ? <VerifiedBadgeIcon className="size-3.5 text-accent" /> : null}</span><span className="block text-xs text-muted">{bot.developer.handle}</span></span></Card.Content></Card>
@@ -135,6 +126,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
       <Modal.Backdrop isOpen={Boolean(galleryImage)} onOpenChange={(open) => !open && setGalleryImage(null)}>
         <Modal.Container><Modal.Dialog className="sm:max-w-4xl"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>{bot.name} preview</Modal.Heading></Modal.Header><Modal.Body>{galleryImage ? <img src={galleryImage} alt={`${bot.name} expanded preview`} className="w-full rounded-2xl border border-border" /> : null}</Modal.Body></Modal.Dialog></Modal.Container>
       </Modal.Backdrop>
+      <ListingLikeDialog listingName={bot.name} mode={like.dialogMode} open={like.dialogOpen} remaining={like.remaining} onOpenChange={like.setDialogOpen} />
     </div>
   );
 }
