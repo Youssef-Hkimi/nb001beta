@@ -96,7 +96,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="space-y-3 px-4">
+      <Card.Content className="space-y-3 px-4 pb-3">
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1">
             <Server className="size-3.5" />
@@ -107,7 +107,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
             {formatCount(bot.votes)} likes
           </span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex min-h-6 flex-wrap items-center gap-1.5 overflow-hidden">
           <Chip size="sm" variant="soft" color="accent"><Chip.Label>{bot.category}</Chip.Label></Chip>
           {features.slice(0, 2).map((feature) => (
             <Chip key={feature.id} size="sm" variant="soft"><Chip.Label>{feature.label}</Chip.Label></Chip>
@@ -115,7 +115,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
         </div>
       </Card.Content>
 
-      <Card.Footer className="flex-wrap gap-2 px-4 pb-4">
+      <Card.Footer className="mt-auto flex-wrap items-center gap-2 px-4 pt-1 pb-4">
         <ListingActionGuard
           status={bot.safetyStatus}
           className="min-w-[7rem] flex-1"

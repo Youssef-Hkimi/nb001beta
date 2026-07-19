@@ -2,8 +2,9 @@
 
 import { Alert, Button, Card, Separator } from "@heroui/react";
 import { ArrowRight, Check, LockKeyhole, ShieldCheck, X } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { IconifyIcon } from "@/components/ui/iconify-icon";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -12,14 +13,16 @@ export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, login, user } = useAuth();
   const [connecting, setConnecting] = useState(false);
+  const [authError, setAuthError] = useState(false);
+
+  useEffect(() => {
+    setAuthError(new URLSearchParams(window.location.search).has("error"));
+  }, []);
 
   function continueWithDiscord() {
     setConnecting(true);
-    window.setTimeout(() => {
-      login();
-      const requestedPath = new URLSearchParams(window.location.search).get("next");
-      router.push(requestedPath?.startsWith("/") ? requestedPath : "/dashboard");
-    }, 650);
+    const requestedPath = new URLSearchParams(window.location.search).get("next");
+    login(requestedPath?.startsWith("/") ? requestedPath : "/dashboard");
   }
 
   return (
@@ -29,9 +32,14 @@ export default function LoginPage() {
         <Button isIconOnly variant="ghost" aria-label="Close login" className="absolute top-5 right-5" onPress={() => router.back()}><X className="size-5" /></Button>
 
         <div className="flex flex-col items-center text-center">
-          <span className="flex size-16 items-center justify-center rounded-2xl border border-border bg-default/60 text-foreground">
-            <IconifyIcon icon="ic:baseline-discord" className="size-8" label="Discord" />
-          </span>
+          <Image
+            src="/nexus-logo.jpg"
+            alt="Nexus"
+            width={64}
+            height={64}
+            priority
+            className="size-16 rounded-2xl object-cover shadow-sm"
+          />
           <h1 className="mt-6 text-2xl font-bold tracking-tight sm:text-3xl">{isAuthenticated ? "You’re signed in" : "Log in to Nexus"}</h1>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted sm:text-base">
             {isAuthenticated ? `Connected as ${user?.username ?? "your Discord account"}.` : "Use your Discord account to create listings, manage projects, and access your Nexus dashboard."}
@@ -45,6 +53,15 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
+            {authError ? (
+              <Alert className="mt-7" status="danger">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>Discord login could not be completed</Alert.Title>
+                  <Alert.Description>Please try again and approve both requested permissions.</Alert.Description>
+                </Alert.Content>
+              </Alert>
+            ) : null}
             <Button className="mt-8 w-full" size="lg" isPending={connecting} onPress={continueWithDiscord}>
               <IconifyIcon icon="ic:baseline-discord" className="size-5" />
               {connecting ? "Connecting…" : "Continue with Discord"}

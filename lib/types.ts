@@ -131,6 +131,11 @@ export type AuthUser = {
   displayName?: string;
   bio?: string;
   inboxNotifications?: boolean;
+  notificationPreferences?: {
+    listingUpdates?: boolean;
+    likeMilestones?: boolean;
+    announcements?: boolean;
+  };
   socials?: {
     x?: string;
     github?: string;
@@ -158,6 +163,7 @@ export type DiscordServer = {
   bannerHue: string;
   verified: boolean;
   createdAt: string;
+  iconUrl?: string | null;
 };
 
 export type DashboardListing = ListingSafetyFields & {

@@ -1,20 +1,36 @@
 "use client";
 
 import {
+  Avatar,
   Button,
   Card,
+  Chip,
   Form,
   Input,
   Label,
+  Separator,
   Switch,
   TextArea,
   TextField,
   toast,
 } from "@heroui/react";
-import { AtSign, Bell, Code2, Gamepad2, Save, UserRound } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import {Bell, Save, Share2, UserRound} from "lucide-react";
+import {useState, type ReactNode} from "react";
 
-import { useAuth } from "@/lib/auth/auth-context";
+import {IconifyIcon} from "@/components/ui/iconify-icon";
+import {useAuth} from "@/lib/auth/auth-context";
+
+type NotificationKey = "listingUpdates" | "likeMilestones" | "announcements";
+
+function getInitials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
 
 type ProfileForm = {
   displayName: string;
@@ -23,168 +39,169 @@ type ProfileForm = {
   github: string;
   roblox: string;
   inboxNotifications: boolean;
+  notifications: Record<NotificationKey, boolean>;
 };
 
+function SettingsSwitch({title, description, isSelected, isDisabled, onChange}: {
+  title: string;
+  description: string;
+  isSelected: boolean;
+  isDisabled?: boolean;
+  onChange: (selected: boolean) => void;
+}) {
+  return (
+    <Switch
+      className="w-full rounded-2xl border border-border/70 bg-surface-2/45 p-4 transition-colors hover:bg-surface-2/70"
+      isDisabled={isDisabled}
+      isSelected={isSelected}
+      onChange={onChange}
+    >
+      <Switch.Content>
+        <div className="min-w-0 flex-1 pr-4">
+          <p className="font-medium text-foreground">{title}</p>
+          <p className="mt-0.5 text-sm leading-5 text-muted">{description}</p>
+        </div>
+        <Switch.Control><Switch.Thumb /></Switch.Control>
+      </Switch.Content>
+    </Switch>
+  );
+}
+
+function SectionHeader({icon, title, description}: {icon: ReactNode; title: string; description: string}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">{icon}</div>
+      <div>
+        <Card.Title>{title}</Card.Title>
+        <Card.Description className="mt-1">{description}</Card.Description>
+      </div>
+    </div>
+  );
+}
+
 export function UserSettings() {
-  const { user, updateUser } = useAuth();
-  const [profile, setProfile] = useState<ProfileForm>(() => ({
+  const {user, updateUser} = useAuth();
+  const [profile, setProfile] = useState<ProfileForm>({
     displayName: user?.displayName ?? user?.username ?? "",
     bio: user?.bio ?? "",
     x: user?.socials?.x ?? "",
     github: user?.socials?.github ?? "",
     roblox: user?.socials?.roblox ?? "",
-    inboxNotifications: user?.inboxNotifications !== false,
-  }));
+    inboxNotifications: user?.inboxNotifications ?? true,
+    notifications: {
+      listingUpdates: user?.notificationPreferences?.listingUpdates ?? true,
+      likeMilestones: user?.notificationPreferences?.likeMilestones ?? true,
+      announcements: user?.notificationPreferences?.announcements ?? true,
+    },
+  });
 
-  function update<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
-    setProfile((current) => ({ ...current, [key]: value }));
-  }
+  const updateField = <K extends keyof Omit<ProfileForm, "notifications">>(key: K, value: ProfileForm[K]) => {
+    setProfile((current) => ({...current, [key]: value}));
+  };
 
-  function saveProfile(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const displayName = profile.displayName.trim();
-    if (!displayName) {
-      toast.warning("Display name is required");
-      return;
-    }
+  const updateNotification = (key: NotificationKey, value: boolean) => {
+    setProfile((current) => ({...current, notifications: {...current.notifications, [key]: value}}));
+  };
 
+  const saveProfile = () => {
     updateUser({
-      displayName,
+      displayName: profile.displayName.trim(),
       bio: profile.bio.trim(),
       inboxNotifications: profile.inboxNotifications,
-      socials: {
-        x: profile.x.trim(),
-        github: profile.github.trim(),
-        roblox: profile.roblox.trim(),
-      },
+      notificationPreferences: profile.notifications,
+      socials: {x: profile.x.trim(), github: profile.github.trim(), roblox: profile.roblox.trim()},
     });
-    toast.success("Profile updated", {
-      description: "Your Nexus profile changes were saved successfully.",
-    });
-  }
+    toast.success("Settings updated", {description: "Your profile preferences have been saved."});
+  };
 
   return (
-    <Form onSubmit={saveProfile} className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-      <Card className="nexus-card gap-5">
-        <Card.Header>
-          <span className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-            <UserRound className="size-5" />
-          </span>
-          <div>
-            <Card.Title>Public profile</Card.Title>
-            <Card.Description>Update the name and bio people see across Nexus.</Card.Description>
-          </div>
-        </Card.Header>
-        <Card.Content className="space-y-5">
-          <TextField
-            isRequired
-            value={profile.displayName}
-            onChange={(value) => update("displayName", value)}
-          >
-            <Label>Display name</Label>
-            <Input placeholder="Your Nexus display name" maxLength={40} />
-          </TextField>
-
-          <TextField value={profile.bio} onChange={(value) => update("bio", value)}>
-            <div className="flex items-center justify-between gap-3">
-              <Label>Bio</Label>
-              <span className="text-xs text-muted">{profile.bio.length}/240</span>
+    <Form
+      className="flex flex-col gap-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        saveProfile();
+      }}
+    >
+      <Card className="nexus-card overflow-hidden">
+        <Card.Content className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+          <Avatar className="size-16 rounded-2xl ring-1 ring-border">
+            {user?.avatarUrl ? <Avatar.Image alt={user.username} src={user.avatarUrl} /> : null}
+            <Avatar.Fallback>{getInitials(profile.displayName || user?.username || "Nexus")}</Avatar.Fallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-lg font-semibold">{profile.displayName || user?.username || "Nexus user"}</h2>
+              <Chip color="success" size="sm" variant="soft">
+                <IconifyIcon className="size-3.5" icon="ic:baseline-discord" />
+                Discord connected
+              </Chip>
             </div>
-            <TextArea
-              rows={6}
-              maxLength={240}
-              placeholder="Tell people about yourself and what you build."
-              className="resize-y"
-            />
-          </TextField>
-        </Card.Content>
-      </Card>
-
-      <Card className="nexus-card gap-5">
-        <Card.Header>
-          <div>
-            <Card.Title>Social links</Card.Title>
-            <Card.Description>Connect the profiles you want visitors to find.</Card.Description>
+            <p className="mt-1 text-sm text-muted">@{user?.username ?? "nexus-user"}</p>
           </div>
-        </Card.Header>
-        <Card.Content className="space-y-4">
-          <SocialField
-            label="X"
-            value={profile.x}
-            placeholder="username"
-            icon={<AtSign className="size-4" />}
-            onChange={(value) => update("x", value)}
-          />
-          <SocialField
-            label="GitHub"
-            value={profile.github}
-            placeholder="username"
-            icon={<Code2 className="size-4" />}
-            onChange={(value) => update("github", value)}
-          />
-          <SocialField
-            label="Roblox"
-            value={profile.roblox}
-            placeholder="username"
-            icon={<Gamepad2 className="size-4" />}
-            onChange={(value) => update("roblox", value)}
-          />
-        </Card.Content>
-        <Card.Footer className="justify-end border-t border-border pt-4">
-          <Button type="submit">
+          <p className="max-w-sm text-sm leading-5 text-muted sm:text-right">
+            Your avatar and Discord identity are synced from your connected account.
+          </p>
+          <Button className="shrink-0" type="submit" variant="primary">
             <Save className="size-4" />
-            Save changes
+            Save settings
           </Button>
-        </Card.Footer>
-      </Card>
-
-      <Card className="nexus-card gap-5 xl:col-span-2">
-        <Card.Header>
-          <span className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-            <Bell className="size-5" />
-          </span>
-          <div>
-            <Card.Title>Inbox notifications</Card.Title>
-            <Card.Description>Receive listing updates, milestones, and Nexus announcements in your header inbox.</Card.Description>
-          </div>
-        </Card.Header>
-        <Card.Content>
-          <Switch
-            aria-label="Enable inbox notifications"
-            isSelected={profile.inboxNotifications}
-            onChange={(value) => update("inboxNotifications", value)}
-          >
-            <Switch.Content>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">Enable inbox notifications</p>
-                <p className="text-xs text-muted">Keep important Nexus activity available from the site header.</p>
-              </div>
-              <Switch.Control><Switch.Thumb /></Switch.Control>
-            </Switch.Content>
-          </Switch>
         </Card.Content>
       </Card>
-    </Form>
-  );
-}
 
-function SocialField({
-  label,
-  value,
-  placeholder,
-  icon,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  placeholder: string;
-  icon: React.ReactNode;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <TextField value={value} onChange={onChange}>
-      <Label className="flex items-center gap-2">{icon}{label}</Label>
-      <Input placeholder={placeholder} autoCapitalize="none" />
-    </TextField>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="nexus-card">
+          <Card.Header className="p-5 pb-0">
+            <SectionHeader description="Control the information visitors see across Nexus." icon={<UserRound className="size-5" />} title="Public profile" />
+          </Card.Header>
+          <Card.Content className="grid gap-4 p-5">
+            <TextField isRequired name="displayName">
+              <Label>Display name</Label>
+              <Input maxLength={32} placeholder="Your display name" value={profile.displayName} onChange={(event) => updateField("displayName", event.target.value)} />
+            </TextField>
+            <TextField name="bio">
+              <div className="flex items-center justify-between gap-3"><Label>Bio</Label><span className="text-xs text-muted">{profile.bio.length}/240</span></div>
+              <TextArea className="min-h-32" maxLength={240} placeholder="Tell people about yourself and what you build." value={profile.bio} onChange={(event) => updateField("bio", event.target.value)} />
+            </TextField>
+          </Card.Content>
+        </Card>
+
+        <Card className="nexus-card">
+          <Card.Header className="p-5 pb-0">
+            <SectionHeader description="Connect the profiles you want visitors to find." icon={<Share2 className="size-5" />} title="Social links" />
+          </Card.Header>
+          <Card.Content className="grid gap-4 p-5">
+            <TextField name="x">
+              <Label className="flex items-center gap-2"><IconifyIcon className="size-4" icon="simple-icons:x" />X</Label>
+              <Input placeholder="Username" value={profile.x} onChange={(event) => updateField("x", event.target.value)} />
+            </TextField>
+            <TextField name="github">
+              <Label className="flex items-center gap-2"><IconifyIcon className="size-4" icon="simple-icons:github" />GitHub</Label>
+              <Input placeholder="Username" value={profile.github} onChange={(event) => updateField("github", event.target.value)} />
+            </TextField>
+            <TextField name="roblox">
+              <Label className="flex items-center gap-2"><IconifyIcon className="size-4" icon="simple-icons:roblox" />Roblox</Label>
+              <Input placeholder="Username" value={profile.roblox} onChange={(event) => updateField("roblox", event.target.value)} />
+            </TextField>
+            <p className="text-xs leading-5 text-muted">Enter usernames only. Nexus will build the public profile links for you.</p>
+          </Card.Content>
+        </Card>
+      </div>
+
+      <div>
+        <Card className="nexus-card">
+          <Card.Header className="p-5 pb-0">
+            <SectionHeader description="Choose which listing activity appears in your header inbox." icon={<Bell className="size-5" />} title="Inbox notifications" />
+          </Card.Header>
+          <Card.Content className="grid gap-3 p-5">
+            <SettingsSwitch description="Keep important Nexus activity available from the site header." isSelected={profile.inboxNotifications} title="Enable inbox notifications" onChange={(selected) => updateField("inboxNotifications", selected)} />
+            <Separator className="my-1" />
+            <SettingsSwitch description="Review decisions, suspensions, and listing status changes." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.listingUpdates} title="Listing updates" onChange={(selected) => updateNotification("listingUpdates", selected)} />
+            <SettingsSwitch description="Celebrate when a listing reaches a new like milestone." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.likeMilestones} title="Like milestones" onChange={(selected) => updateNotification("likeMilestones", selected)} />
+            <SettingsSwitch description="Product updates, verification news, and platform notices." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.announcements} title="Nexus announcements" onChange={(selected) => updateNotification("announcements", selected)} />
+          </Card.Content>
+        </Card>
+
+      </div>
+    </Form>
   );
 }

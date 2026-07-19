@@ -43,7 +43,7 @@ export function ServerCard({
         </Card.Description>
       </Card.Header>
 
-      <Card.Content className="space-y-3 px-4">
+      <Card.Content className="space-y-3 px-4 pb-3">
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1">
             <Users className="size-3.5" />
@@ -55,7 +55,7 @@ export function ServerCard({
           </span>
         </div>
 
-        <div className="flex min-w-0 flex-wrap gap-1.5 overflow-hidden">
+        <div className="flex min-h-6 min-w-0 flex-wrap items-center gap-1.5 overflow-hidden">
           <Chip size="sm" variant="soft" color="accent" className="max-w-full">
             <Chip.Label className="max-w-[8rem] truncate">{server.category}</Chip.Label>
           </Chip>
@@ -67,7 +67,7 @@ export function ServerCard({
         </div>
       </Card.Content>
 
-      <Card.Footer className="gap-2 px-4 pb-4">
+      <Card.Footer className="mt-auto flex-wrap items-center gap-2 px-4 pt-1 pb-4">
         <ListingActionGuard
           status={server.safetyStatus}
           className="min-w-[7.5rem] px-4"

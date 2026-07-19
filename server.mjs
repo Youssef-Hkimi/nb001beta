@@ -18,7 +18,7 @@ function readPort() {
 const port = readPort();
 const hostname = process.env.HOSTNAME || "0.0.0.0";
 const dev = process.env.NODE_ENV !== "production";
-const nextApp = next({ dev, hostname, port });
+const nextApp = next({ dev, hostname, port, webpack: true });
 const nextHandler = nextApp.getRequestHandler();
 
 await nextApp.prepare();

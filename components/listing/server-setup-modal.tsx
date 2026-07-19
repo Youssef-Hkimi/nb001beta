@@ -3,7 +3,6 @@
 import { Avatar, Button, Chip, Modal } from "@heroui/react";
 import { Download, PenLine } from "lucide-react";
 
-import { MOCK_DISCORD_SERVERS } from "@/lib/data/mock-discord-servers";
 import { formatCount, initials } from "@/lib/format";
 import type { DiscordServer } from "@/lib/types";
 
@@ -15,6 +14,7 @@ type Props = {
   mode: ServerSetupMode | null;
   onModeChange: (mode: ServerSetupMode) => void;
   selectedServerId: string | null;
+  servers: DiscordServer[];
   onSelectServer: (server: DiscordServer) => void;
   onContinue: () => void;
   onCancel?: () => void;
@@ -26,6 +26,7 @@ export function ServerSetupModal({
   mode,
   onModeChange,
   selectedServerId,
+  servers,
   onSelectServer,
   onContinue,
   onCancel,
@@ -85,7 +86,7 @@ export function ServerSetupModal({
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">Your Discord servers</p>
                 <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                  {MOCK_DISCORD_SERVERS.map((server) => {
+                  {servers.length ? servers.map((server) => {
                     const selected = selectedServerId === server.id;
                     return (
                       <button
@@ -99,6 +100,7 @@ export function ServerSetupModal({
                         }`}
                       >
                         <Avatar className="size-10 shrink-0">
+                          {server.iconUrl ? <Avatar.Image alt="" src={server.iconUrl} /> : null}
                           <Avatar.Fallback className="bg-accent/20 text-xs font-bold text-accent">
                             {initials(server.name)}
                           </Avatar.Fallback>
@@ -116,7 +118,12 @@ export function ServerSetupModal({
                         </Chip>
                       </button>
                     );
-                  })}
+                  }) : (
+                    <div className="rounded-xl border border-border bg-default/30 p-4 text-center">
+                      <p className="text-sm font-medium text-foreground">No manageable servers found</p>
+                      <p className="mt-1 text-xs leading-5 text-muted">Discord only returns servers where you are the owner or have Manage Server permission.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : null}

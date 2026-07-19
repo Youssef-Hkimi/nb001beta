@@ -130,6 +130,7 @@ export function SiteNavbar() {
                 className="hidden items-center gap-2 rounded-full border border-border bg-default/50 py-1 pr-2.5 pl-1 sm:inline-flex"
               >
                 <Avatar className="size-8">
+                  {user.avatarUrl ? <Avatar.Image alt="" src={user.avatarUrl} /> : null}
                   <Avatar.Fallback className="bg-accent/20 text-xs font-bold text-accent">
                     {initials(accountName ?? user.username)}
                   </Avatar.Fallback>

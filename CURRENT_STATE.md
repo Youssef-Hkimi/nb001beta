@@ -11,6 +11,7 @@
 - Global layout: `app/layout.tsx` + `globals.css` + Geist fonts  
 - Providers: `components/providers.tsx` (next-themes + `Toast.Provider`)  
 - Sticky navbar: Explore, Servers, Bots, Dashboard + search + theme toggle + Login toast  
+- Test-only Discord OAuth (`identify` + `guilds`) now powers login and server import; sessions use local test storage and listing data remains mocked
 - **No** Categories / Leaderboard nav items  
 - Theme: light/dark, soft charcoal dark  
 - Root `/` → `/explore`  
@@ -128,7 +129,7 @@ components/
 ## What is NOT built yet
 
 - Bot detail page `/bots/[slug]`  
-- Real Discord OAuth / invites / uploads  
+- Production Discord auth/session persistence, real invites, and uploads
 - Real search/backend  
 - Categories or Leaderboard product pages  
 - Full visual QA automation  

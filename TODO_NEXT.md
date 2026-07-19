@@ -58,7 +58,7 @@ If the user asks to “fix banner fog” or “make cards wider” again, first 
 
 ### Later / backend (out of current mock scope)
 
-8. Real Discord OAuth  
+8. Production-grade Discord OAuth persistence (the local test flow is implemented)
 9. Real invite validation  
 10. Real image uploads / CDN  
 11. Persistence for likes, listings, reviews (if product wants reviews later — **not** on servers for now)

@@ -54,6 +54,7 @@ import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { getBotAvatarUrl, getBotBannerUrl, getBotGalleryImageUrl } from "@/lib/bot-visuals";
 import { bannerColorFromHue, extractMatchingBannerColor } from "@/lib/image-color";
 import { writeStatusOverride } from "@/lib/listing-status";
+import { useAuth } from "@/lib/auth/auth-context";
 import type { BotCommand, DiscordServer, ListingType } from "@/lib/types";
 
 const REGIONS = ["Global", "North America", "Europe", "Asia", "South America", "Oceania"] as const;
@@ -221,6 +222,7 @@ function slugify(name: string) {
 function fromDiscordServer(ds: DiscordServer): ServerForm {
   return {
     ...emptyServer(),
+    guildId: ds.id,
     name: ds.name,
     shortDescription: ds.shortDescription,
     fullDescription: ds.fullDescription,
@@ -233,6 +235,7 @@ function fromDiscordServer(ds: DiscordServer): ServerForm {
     online: String(ds.online),
     createdAt: ds.createdAt,
     activity: "Very Active",
+    iconPreview: ds.iconUrl ?? null,
     bannerHue: ds.bannerHue,
     bannerColor: bannerColorFromHue(ds.bannerHue),
     communityFeatures: [...DEFAULT_COMMUNITY_FEATURE_IDS],
@@ -241,6 +244,7 @@ function fromDiscordServer(ds: DiscordServer): ServerForm {
 
 export default function NewListingPage() {
   const router = useRouter();
+  const { discordServers } = useAuth();
   const [tab, setTab] = useState<"server" | "bot">("server");
   const [server, setServer] = useState(sampleServer);
   const [bot, setBot] = useState(sampleBot);
@@ -1300,6 +1304,7 @@ export default function NewListingPage() {
         mode={setupMode}
         onModeChange={setSetupMode}
         selectedServerId={selectedDiscordId}
+        servers={discordServers}
         onSelectServer={(discordServer) => {
           setSelectedDiscordId(discordServer.id);
           setServer(fromDiscordServer(discordServer));
