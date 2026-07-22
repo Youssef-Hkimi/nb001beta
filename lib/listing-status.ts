@@ -12,6 +12,10 @@ export type ListingStatusOverride = {
   description?: string;
   bannerHue?: string;
   safetyStatus?: ListingSafetyStatus;
+  guildId?: string;
+  members?: number;
+  online?: number;
+  widgetSetupPending?: boolean;
 };
 
 export function readStatusOverrides(): ListingStatusOverride[] {

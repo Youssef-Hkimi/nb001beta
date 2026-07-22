@@ -56,7 +56,7 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-[var(--page-bg)]">
-      <div className="relative h-32 overflow-hidden">
+      <div className="hero-image-wrapper h-32 overflow-hidden">
         {model.bannerPreview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={model.bannerPreview} alt="" className="h-full w-full object-cover" />
@@ -72,8 +72,7 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={fallbackBanner} alt="" className="h-full w-full object-cover" />
         )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-[var(--page-bg)]" />
-        <div className="absolute -bottom-7 left-4">
+        <div className="absolute -bottom-7 left-4 z-10">
           <Avatar className="size-16 rounded-2xl border-2 border-background shadow-md">
             {model.avatarPreview ? <Avatar.Image src={model.avatarPreview} alt="" /> : null}
             <Avatar.Fallback className="rounded-2xl bg-accent/20 text-sm font-bold text-accent">{initials(name)}</Avatar.Fallback>
@@ -96,12 +95,12 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
           <span className="inline-flex items-center gap-1"><Hash className="size-3.5" />ID: {model.clientId || "—"}</span>
           <span className="inline-flex items-center gap-1"><TerminalSquare className="size-3.5" />Prefix {model.prefix || "/"}</span>
           <span className="inline-flex items-center gap-1"><Server className="size-3.5" />{formatCount(model.servers)} servers</span>
-          <span className="inline-flex items-center gap-1"><ThumbsUp className="size-3.5" />{formatCount(model.votes)} likes</span>
+          <span className="inline-flex items-center gap-1"><ThumbsUp className="size-3.5" />{formatCount(model.votes)} votes</span>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button size="sm">Invite Bot</Button>
-          <Button size="sm" variant="secondary"><ThumbsUp className="size-3.5" />Like</Button>
+          <Button size="sm" variant="secondary"><ThumbsUp className="size-3.5" />Vote</Button>
           {model.supportUrl ? <Button size="sm" variant="secondary"><MessageCircle className="size-3.5" />Support</Button> : null}
         </div>
 
@@ -140,7 +139,7 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
           <div className="grid grid-cols-2 gap-2">
             {[
               { label: "Servers", value: formatCount(model.servers), icon: Server },
-              { label: "Likes", value: formatCount(model.votes), icon: ThumbsUp },
+              { label: "Votes", value: formatCount(model.votes), icon: ThumbsUp },
               { label: "Growth", value: `+${model.monthlyGrowth}%`, icon: TrendingUp },
               { label: "Commands", value: String(commands.length), icon: TerminalSquare },
             ].map((stat) => {

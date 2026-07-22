@@ -196,7 +196,7 @@ export function UserSettings() {
             <SettingsSwitch description="Keep important Nexus activity available from the site header." isSelected={profile.inboxNotifications} title="Enable inbox notifications" onChange={(selected) => updateField("inboxNotifications", selected)} />
             <Separator className="my-1" />
             <SettingsSwitch description="Review decisions, suspensions, and listing status changes." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.listingUpdates} title="Listing updates" onChange={(selected) => updateNotification("listingUpdates", selected)} />
-            <SettingsSwitch description="Celebrate when a listing reaches a new like milestone." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.likeMilestones} title="Like milestones" onChange={(selected) => updateNotification("likeMilestones", selected)} />
+            <SettingsSwitch description="Celebrate when a listing reaches a new vote milestone." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.likeMilestones} title="Vote milestones" onChange={(selected) => updateNotification("likeMilestones", selected)} />
             <SettingsSwitch description="Product updates, verification news, and platform notices." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.announcements} title="Nexus announcements" onChange={(selected) => updateNotification("announcements", selected)} />
           </Card.Content>
         </Card>

@@ -104,7 +104,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
           </span>
           <span className="inline-flex items-center gap-1">
             <ThumbsUp className="size-3.5" />
-            {formatCount(bot.votes)} likes
+            {formatCount(bot.votes)} votes
           </span>
         </div>
         <div className="flex min-h-6 flex-wrap items-center gap-1.5 overflow-hidden">
@@ -131,12 +131,12 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
           </LinkButton>
         )}
         {isPreview ? (
-          <Button variant="tertiary" onPress={() => toast.info("Likes are available on the public bot page")}>
-            <ThumbsUp className="size-4" />Like
+          <Button variant="tertiary" onPress={() => toast.info("Voting is available on the public bot page")}>
+            <ThumbsUp className="size-4" />Vote
           </Button>
         ) : (
           <LinkButton variant="tertiary" href={`/bots/${bot.slug}`}>
-            <ThumbsUp className="size-4" />Like
+            <ThumbsUp className="size-4" />Vote
           </LinkButton>
         )}
       </Card.Footer>

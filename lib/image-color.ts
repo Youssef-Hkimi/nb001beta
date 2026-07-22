@@ -23,8 +23,39 @@ export function bannerColorFromHue(hue: string | number) {
   return hslToHex(Number.isFinite(numericHue) ? numericHue : 220, 52, 38);
 }
 
+async function decodeImage(file: File): Promise<{
+  source: CanvasImageSource;
+  cleanup: () => void;
+}> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return { source: bitmap, cleanup: () => bitmap.close() };
+    } catch {
+      // Some browser/image format combinations cannot be decoded as an ImageBitmap.
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  image.decoding = "async";
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Image could not be decoded"));
+      image.src = url;
+    });
+  } catch (error) {
+    URL.revokeObjectURL(url);
+    throw error;
+  }
+
+  return { source: image, cleanup: () => URL.revokeObjectURL(url) };
+}
+
 export async function extractMatchingBannerColor(file: File) {
-  const bitmap = await createImageBitmap(file);
+  const { source, cleanup } = await decodeImage(file);
   const canvas = document.createElement("canvas");
   const size = 48;
   canvas.width = size;
@@ -32,12 +63,12 @@ export async function extractMatchingBannerColor(file: File) {
   const context = canvas.getContext("2d", { willReadFrequently: true });
 
   if (!context) {
-    bitmap.close();
+    cleanup();
     throw new Error("Canvas is unavailable");
   }
 
-  context.drawImage(bitmap, 0, 0, size, size);
-  bitmap.close();
+  context.drawImage(source, 0, 0, size, size);
+  cleanup();
   const pixels = context.getImageData(0, 0, size, size).data;
   let red = 0;
   let green = 0;

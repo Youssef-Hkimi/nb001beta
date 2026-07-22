@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ButtonGroup, Card } from "@heroui/react";
+import { Button, ButtonGroup, Card, Chip } from "@heroui/react";
 import { useState } from "react";
 
 import type { AnalyticsRange } from "@/lib/types";
@@ -23,7 +23,7 @@ export function AnalyticsLineChart<T extends { date: string }>({
   title: string;
   description: string;
   history: Record<AnalyticsRange, T[]>;
-  series: Array<{ key: keyof T & string; label: string; color: string }>;
+  series: Array<{ key: keyof T & string; label: string; color: string; comingSoon?: boolean }>;
   range?: AnalyticsRange;
   onRangeChange?: (range: AnalyticsRange) => void;
   showRangeControls?: boolean;
@@ -35,12 +35,13 @@ export function AnalyticsLineChart<T extends { date: string }>({
     onRangeChange?.(next);
   };
   const points = history[range];
+  const availableSeries = series.filter((line) => !line.comingSoon);
   const width = 720;
   const height = 240;
   const pad = 28;
   const maxValue = Math.max(
     1,
-    ...points.flatMap((point) => series.map((line) => Number(point[line.key]) || 0)),
+    ...points.flatMap((point) => availableSeries.map((line) => Number(point[line.key]) || 0)),
   );
   const x = (index: number) => pad + (index * (width - pad * 2)) / Math.max(1, points.length - 1);
   const y = (value: number) => height - pad - (value / maxValue) * (height - pad * 2);
@@ -71,6 +72,7 @@ export function AnalyticsLineChart<T extends { date: string }>({
             <span key={line.key} className="inline-flex items-center gap-2">
               <span className="size-2.5 rounded-full" style={{ backgroundColor: line.color }} />
               {line.label}
+              {line.comingSoon ? <Chip size="sm" variant="soft"><Chip.Label>Coming Soon</Chip.Label></Chip> : null}
             </span>
           ))}
         </div>
@@ -79,7 +81,9 @@ export function AnalyticsLineChart<T extends { date: string }>({
             <div key={line.key} className="rounded-xl bg-default/40 px-3 py-2">
               <p className="text-[11px] font-medium text-muted">Total {line.label}</p>
               <p className="mt-0.5 text-sm font-bold text-foreground">
-                {new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(points.reduce((total, point) => total + (Number(point[line.key]) || 0), 0))}
+                {line.comingSoon
+                  ? "—"
+                  : new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(points.reduce((total, point) => total + (Number(point[line.key]) || 0), 0))}
               </p>
             </div>
           ))}
@@ -105,7 +109,7 @@ export function AnalyticsLineChart<T extends { date: string }>({
                 />
               );
             })}
-            {series.map((line) => {
+            {availableSeries.map((line) => {
               const path = points
                 .map((point, index) => `${index === 0 ? "M" : "L"} ${x(index)} ${y(Number(point[line.key]) || 0)}`)
                 .join(" ");

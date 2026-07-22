@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { SiteNavbar } from "@/components/layout/site-navbar";
 import { Providers } from "@/components/providers";
+import { WidgetSetupReminderAlert } from "@/components/dashboard/widget-setup-reminder";
 
 import "./globals.css";
 
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body className="min-h-full bg-background text-foreground antialiased">
         <Providers>
           <SiteNavbar />
+          <WidgetSetupReminderAlert />
           <main className="flex-1">{children}</main>
         </Providers>
       </body>

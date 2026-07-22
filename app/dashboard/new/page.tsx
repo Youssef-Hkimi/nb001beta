@@ -54,6 +54,10 @@ import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { getBotAvatarUrl, getBotBannerUrl, getBotGalleryImageUrl } from "@/lib/bot-visuals";
 import { bannerColorFromHue, extractMatchingBannerColor } from "@/lib/image-color";
 import { writeStatusOverride } from "@/lib/listing-status";
+import {
+  addWidgetSetupReminder,
+  removeWidgetSetupReminder,
+} from "@/lib/widget-setup-reminders";
 import { useAuth } from "@/lib/auth/auth-context";
 import type { BotCommand, DiscordServer, ListingType } from "@/lib/types";
 
@@ -116,6 +120,18 @@ type BotForm = {
   bannerHue: string;
   bannerColor: string;
 };
+
+type ServerField = "name" | "guildId" | "inviteUrl";
+type BotField =
+  | "name"
+  | "clientId"
+  | "prefix"
+  | "shortDescription"
+  | "fullDescription"
+  | "tags"
+  | "inviteUrl"
+  | "commands"
+  | "avatar";
 
 const emptyServer = (): ServerForm => ({
   guildId: "",
@@ -266,6 +282,8 @@ export default function NewListingPage() {
   const [commandError, setCommandError] = useState<string | null>(null);
   const [serverColorMatched, setServerColorMatched] = useState(false);
   const [botColorMatched, setBotColorMatched] = useState(false);
+  const [serverFieldErrors, setServerFieldErrors] = useState<Partial<Record<ServerField, string>>>({});
+  const [botFieldErrors, setBotFieldErrors] = useState<Partial<Record<BotField, string>>>({});
 
   const listingPreview = useMemo(
     () => ({
@@ -353,10 +371,13 @@ export default function NewListingPage() {
     setTab(pendingType);
     setTypeModalOpen(false);
     if (pendingType === "server") {
+      setServerFieldErrors({});
       setSetupMode(null);
       setSelectedDiscordId(null);
       setSetupModalOpen(true);
     } else {
+      setBotFieldErrors({});
+      setCommandError(null);
       setBot(sampleBot());
       setFlowReady(true);
     }
@@ -364,6 +385,7 @@ export default function NewListingPage() {
 
   function handleSetupContinue() {
     if (setupMode === "manual") {
+      setServerFieldErrors({});
       setServer(emptyServer());
       setSetupModalOpen(false);
       setFlowReady(true);
@@ -381,30 +403,62 @@ export default function NewListingPage() {
     return commands.filter((c) => c.name.trim() && c.description.trim());
   }
 
+  function focusListingField(field: ServerField | BotField, kind: "server" | "bot") {
+    requestAnimationFrame(() => {
+      const fieldElement = document.querySelector<HTMLElement>(
+        `[data-listing-field="${kind}-${field}"]`,
+      );
+      fieldElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(() => {
+        fieldElement
+          ?.querySelector<HTMLElement>("input, textarea, button, [tabindex]:not([tabindex='-1'])")
+          ?.focus({ preventScroll: true });
+      }, 350);
+    });
+  }
+
+  function clearServerFieldError(field: ServerField) {
+    setServerFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function clearBotFieldError(field: BotField) {
+    setBotFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
   function tryPublishBot() {
     const good = validCommands(bot.commands);
-    if (good.length < 2) {
-      setCommandError("Add at least 2 commands with a name and description before publishing.");
-      toast.danger("Missing commands", {
-        description: "Bot listings require at least 2 commands.",
-      });
-      return;
-    }
-    if (
-      !bot.name.trim() ||
-      !bot.clientId.trim() ||
-      !bot.prefix.trim() ||
-      !bot.shortDescription.trim() ||
-      !bot.fullDescription.trim() ||
-      !bot.tags.length ||
-      !bot.inviteUrl.trim() ||
-      !bot.avatarPreview
-    ) {
+    const errors: Partial<Record<BotField, string>> = {};
+    if (!bot.name.trim()) errors.name = "Bot name is required.";
+    if (!bot.clientId.trim()) errors.clientId = "Bot client ID is required.";
+    if (!bot.prefix.trim()) errors.prefix = "Bot prefix is required.";
+    if (!bot.shortDescription.trim()) errors.shortDescription = "Short description is required.";
+    if (!bot.fullDescription.trim()) errors.fullDescription = "Long description is required.";
+    if (!bot.tags.length) errors.tags = "Choose at least one tag.";
+    if (!bot.inviteUrl.trim()) errors.inviteUrl = "Bot invite URL is required.";
+    if (good.length < 2) errors.commands = "Add at least 2 complete commands.";
+    if (!bot.avatarPreview) errors.avatar = "Bot avatar is required.";
+
+    const firstInvalid = (Object.keys(errors) as BotField[])[0];
+    if (firstInvalid) {
+      setBotFieldErrors(errors);
+      setCommandError(errors.commands || null);
+      focusListingField(firstInvalid, "bot");
       toast.danger("Missing required fields", {
-        description: "Complete the required details, tags, invite URL, and avatar.",
+        description: "The first missing field has been highlighted.",
       });
       return;
     }
+    setBotFieldErrors({});
     setCommandError(null);
     setReviewOpen(true);
   }
@@ -430,19 +484,25 @@ export default function NewListingPage() {
   async function publishServer() {
     if (serverVerificationInFlight.current) return;
 
-    if (!server.name.trim() || !server.inviteUrl.trim() || !server.guildId.trim()) {
-      toast.danger("Missing required fields", {
-        description: "Server name, Server ID, and invite URL are required.",
-      });
-      return;
+    const errors: Partial<Record<ServerField, string>> = {};
+    if (!server.name.trim()) errors.name = "Server name is required.";
+    if (!server.guildId.trim()) {
+      errors.guildId = "Discord Server ID is required.";
+    } else if (!/^\d{17,20}$/.test(server.guildId.trim())) {
+      errors.guildId = "Discord Server IDs contain 17–20 digits.";
     }
+    if (!server.inviteUrl.trim()) errors.inviteUrl = "Discord invite URL is required.";
 
-    if (!/^\d{17,20}$/.test(server.guildId.trim())) {
-      toast.danger("Invalid Server ID", {
-        description: "Discord Server IDs contain 17–20 digits.",
+    const firstInvalid = (Object.keys(errors) as ServerField[])[0];
+    if (firstInvalid) {
+      setServerFieldErrors(errors);
+      focusListingField(firstInvalid, "server");
+      toast.danger("Missing required fields", {
+        description: "The first missing or invalid field has been highlighted.",
       });
       return;
     }
+    setServerFieldErrors({});
 
     setServerVerificationState("verifying");
     setServerVerificationError("");
@@ -505,7 +565,12 @@ export default function NewListingPage() {
         category: server.category,
         description: server.shortDescription,
         bannerHue: server.bannerHue,
+        guildId: server.guildId.trim(),
+        members: num(server.members),
+        online: guild.presenceCount,
+        widgetSetupPending: false,
       });
+      removeWidgetSetupReminder(server.guildId.trim());
       setServerVerificationState("success");
       toast.success("Server verified and published");
     } catch {
@@ -516,11 +581,51 @@ export default function NewListingPage() {
     }
   }
 
+  function publishServerWithoutWidget() {
+    const guildId = server.guildId.trim();
+    const importedServer = discordServers.find((item) => item.id === guildId);
+    const memberCount = num(server.members, importedServer?.members ?? 0);
+    const serverName = server.name.trim() || importedServer?.name || "Untitled Server";
+    const id = slugify(serverName);
+
+    setServer((current) => ({
+      ...current,
+      name: serverName,
+      members: String(memberCount),
+      online: String(memberCount),
+    }));
+    writeStatusOverride({
+      id,
+      name: serverName,
+      type: "server",
+      status: "Live · Pending Review",
+      safetyStatus: "PENDING_REVIEW",
+      updated: "Just now",
+      category: server.category,
+      description: server.shortDescription,
+      bannerHue: server.bannerHue,
+      guildId,
+      members: memberCount,
+      online: memberCount,
+      widgetSetupPending: true,
+    });
+    addWidgetSetupReminder({
+      guildId,
+      serverName,
+      memberCount,
+      createdAt: Date.now(),
+    });
+    setServerVerificationState("success_unverified");
+    toast.success("Server published with widget setup pending");
+  }
+
   function updateCommand(id: string, patch: Partial<BotCommand>) {
     setBot((b) => ({
       ...b,
       commands: b.commands.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     }));
+    clearBotFieldError("commands");
+    setCommandError(null);
   }
 
   async function handleServerIcon(file: File, iconPreview: string) {
@@ -640,12 +745,18 @@ export default function NewListingPage() {
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <TextField
+                  data-listing-field="server-name"
                   isRequired
+                  isInvalid={Boolean(serverFieldErrors.name)}
                   value={server.name}
-                  onChange={(v) => setServer((s) => ({ ...s, name: v }))}
+                  onChange={(v) => {
+                    setServer((s) => ({ ...s, name: v }));
+                    clearServerFieldError("name");
+                  }}
                 >
                   <Label>Server name</Label>
                   <Input placeholder="My awesome server" />
+                  {serverFieldErrors.name ? <FieldError>{serverFieldErrors.name}</FieldError> : null}
                 </TextField>
 
                 <Select
@@ -674,14 +785,17 @@ export default function NewListingPage() {
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <TextField
+                  data-listing-field="server-guildId"
                   isRequired
+                  isInvalid={Boolean(serverFieldErrors.guildId)}
                   value={server.guildId}
-                  onChange={(value) =>
+                  onChange={(value) => {
                     setServer((current) => ({
                       ...current,
                       guildId: value.replace(/\D/g, ""),
-                    }))
-                  }
+                    }));
+                    clearServerFieldError("guildId");
+                  }}
                 >
                   <div className="flex items-center gap-1.5">
                     <Label>
@@ -701,15 +815,22 @@ export default function NewListingPage() {
                   </div>
                   <Input inputMode="numeric" pattern="[0-9]*" placeholder="123456789012345678" />
                   <Description>Required for Discord widget verification.</Description>
+                  {serverFieldErrors.guildId ? <FieldError>{serverFieldErrors.guildId}</FieldError> : null}
                 </TextField>
 
                 <TextField
+                  data-listing-field="server-inviteUrl"
                   isRequired
+                  isInvalid={Boolean(serverFieldErrors.inviteUrl)}
                   value={server.inviteUrl}
-                  onChange={(v) => setServer((s) => ({ ...s, inviteUrl: v }))}
+                  onChange={(v) => {
+                    setServer((s) => ({ ...s, inviteUrl: v }));
+                    clearServerFieldError("inviteUrl");
+                  }}
                 >
                   <Label>Discord invite URL</Label>
                   <Input placeholder="https://discord.gg/..." />
+                  {serverFieldErrors.inviteUrl ? <FieldError>{serverFieldErrors.inviteUrl}</FieldError> : null}
                 </TextField>
               </div>
 
@@ -972,29 +1093,51 @@ export default function NewListingPage() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <TextField
+                data-listing-field="bot-name"
                 isRequired
+                isInvalid={Boolean(botFieldErrors.name)}
                 value={bot.name}
-                onChange={(v) => setBot((s) => ({ ...s, name: v }))}
+                onChange={(v) => {
+                  setBot((s) => ({ ...s, name: v }));
+                  clearBotFieldError("name");
+                }}
               >
                 <Label>Bot name</Label>
                 <Input placeholder="My utility bot" />
+                {botFieldErrors.name ? <FieldError>{botFieldErrors.name}</FieldError> : null}
               </TextField>
 
               <TextField
+                data-listing-field="bot-clientId"
                 isRequired
+                isInvalid={Boolean(botFieldErrors.clientId)}
                 value={bot.clientId}
-                onChange={(v) => setBot((s) => ({ ...s, clientId: v }))}
+                onChange={(v) => {
+                  setBot((s) => ({ ...s, clientId: v }));
+                  clearBotFieldError("clientId");
+                }}
               >
                 <Label>Bot client ID</Label>
                 <Input placeholder="From Discord Developer Portal" />
                 <Description>Found in the Discord Developer Portal application page.</Description>
+                {botFieldErrors.clientId ? <FieldError>{botFieldErrors.clientId}</FieldError> : null}
               </TextField>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TextField isRequired value={bot.prefix} onChange={(v) => setBot((s) => ({ ...s, prefix: v }))}>
+              <TextField
+                data-listing-field="bot-prefix"
+                isRequired
+                isInvalid={Boolean(botFieldErrors.prefix)}
+                value={bot.prefix}
+                onChange={(v) => {
+                  setBot((s) => ({ ...s, prefix: v }));
+                  clearBotFieldError("prefix");
+                }}
+              >
                 <Label>Bot prefix</Label>
                 <Input placeholder="/" />
+                {botFieldErrors.prefix ? <FieldError>{botFieldErrors.prefix}</FieldError> : null}
               </TextField>
 
               <Select
@@ -1020,29 +1163,51 @@ export default function NewListingPage() {
             </div>
 
             <TextField
+              data-listing-field="bot-shortDescription"
               isRequired
+              isInvalid={Boolean(botFieldErrors.shortDescription)}
               value={bot.shortDescription}
-              onChange={(v) => setBot((s) => ({ ...s, shortDescription: v }))}
+              onChange={(v) => {
+                setBot((s) => ({ ...s, shortDescription: v }));
+                clearBotFieldError("shortDescription");
+              }}
             >
               <Label>Short description</Label>
               <Input placeholder="One-line pitch" />
+              {botFieldErrors.shortDescription ? <FieldError>{botFieldErrors.shortDescription}</FieldError> : null}
             </TextField>
 
-            <div className="space-y-2">
+            <div
+              data-listing-field="bot-fullDescription"
+              className={botFieldErrors.fullDescription ? "space-y-2 rounded-xl ring-2 ring-danger/70 ring-offset-2 ring-offset-background" : "space-y-2"}
+            >
               <div><p className="text-sm font-medium text-foreground">Long description</p><p className="text-xs text-muted">Format features, setup instructions, and command examples with a live preview.</p></div>
               <RichDescriptionEditor
                 value={bot.fullDescription}
-                onChange={(fullDescription) => setBot((current) => ({ ...current, fullDescription }))}
+                onChange={(fullDescription) => {
+                  setBot((current) => ({ ...current, fullDescription }));
+                  clearBotFieldError("fullDescription");
+                }}
                 placeholder="Describe features, setup instructions, and command examples."
               />
+              {botFieldErrors.fullDescription ? <p className="text-sm text-danger">{botFieldErrors.fullDescription}</p> : null}
             </div>
 
-            <TagMultiSelect
-              value={bot.tags}
-              options={BOT_LISTING_TAGS}
-              onChange={(tags) => setBot((s) => ({ ...s, tags }))}
-              placeholder="Select up to 3 tags"
-            />
+            <div
+              data-listing-field="bot-tags"
+              className={botFieldErrors.tags ? "rounded-xl ring-2 ring-danger/70 ring-offset-2 ring-offset-background" : undefined}
+            >
+              <TagMultiSelect
+                value={bot.tags}
+                options={BOT_LISTING_TAGS}
+                onChange={(tags) => {
+                  setBot((s) => ({ ...s, tags }));
+                  clearBotFieldError("tags");
+                }}
+                placeholder="Select up to 3 tags"
+              />
+              {botFieldErrors.tags ? <p className="mt-1 text-sm text-danger">{botFieldErrors.tags}</p> : null}
+            </div>
 
             <BotFeatureSelect
               value={bot.botFeatures}
@@ -1051,12 +1216,18 @@ export default function NewListingPage() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <TextField
+                data-listing-field="bot-inviteUrl"
                 isRequired
+                isInvalid={Boolean(botFieldErrors.inviteUrl)}
                 value={bot.inviteUrl}
-                onChange={(v) => setBot((s) => ({ ...s, inviteUrl: v }))}
+                onChange={(v) => {
+                  setBot((s) => ({ ...s, inviteUrl: v }));
+                  clearBotFieldError("inviteUrl");
+                }}
               >
                 <Label>Bot invite URL</Label>
                 <Input placeholder="https://discord.com/oauth2/..." />
+                {botFieldErrors.inviteUrl ? <FieldError>{botFieldErrors.inviteUrl}</FieldError> : null}
               </TextField>
               <TextField
                 value={bot.supportUrl}
@@ -1084,7 +1255,10 @@ export default function NewListingPage() {
               </TextField>
             </div>
 
-            <section className="space-y-3">
+            <section
+              data-listing-field="bot-commands"
+              className={botFieldErrors.commands ? "space-y-3 rounded-xl ring-2 ring-danger/70 ring-offset-2 ring-offset-background" : "space-y-3"}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">Bot commands</h2>
@@ -1167,18 +1341,27 @@ export default function NewListingPage() {
                 Avatar, optional banner, and gallery previews (up to 6 images). Gallery is bot-only.
               </p>
               <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[160px_minmax(0,1fr)]">
-                <UploadBox
-                  title="Bot avatar *"
-                  hint="Drag & drop or click"
-                  sizeHint="Recommended 512×512"
-                  variant="icon"
-                  previewUrl={bot.avatarPreview}
-                  onFile={handleBotAvatar}
-                  onClear={() => {
-                    setBot((current) => ({ ...current, avatarPreview: null }));
-                    setBotColorMatched(false);
-                  }}
-                />
+                <div
+                  data-listing-field="bot-avatar"
+                  className={botFieldErrors.avatar ? "rounded-2xl ring-2 ring-danger/70 ring-offset-2 ring-offset-background" : undefined}
+                >
+                  <UploadBox
+                    title="Bot avatar *"
+                    hint="Drag & drop or click"
+                    sizeHint="Recommended 512×512"
+                    variant="icon"
+                    previewUrl={bot.avatarPreview}
+                    onFile={(file, avatarPreview) => {
+                      clearBotFieldError("avatar");
+                      void handleBotAvatar(file, avatarPreview);
+                    }}
+                    onClear={() => {
+                      setBot((current) => ({ ...current, avatarPreview: null }));
+                      setBotColorMatched(false);
+                    }}
+                  />
+                  {botFieldErrors.avatar ? <p className="mt-1 text-sm text-danger">{botFieldErrors.avatar}</p> : null}
+                </div>
                 <UploadBox
                   title="Bot banner (optional)"
                   hint="Drag & drop or click"
@@ -1306,6 +1489,7 @@ export default function NewListingPage() {
         selectedServerId={selectedDiscordId}
         servers={discordServers}
         onSelectServer={(discordServer) => {
+          setServerFieldErrors({});
           setSelectedDiscordId(discordServer.id);
           setServer(fromDiscordServer(discordServer));
         }}
@@ -1317,6 +1501,7 @@ export default function NewListingPage() {
         errorMessage={serverVerificationError}
         publicPath={`/server/${slugify(server.name || "server")}`}
         onRetry={() => void publishServer()}
+        onSkip={publishServerWithoutWidget}
         onClose={() => setServerVerificationState(null)}
       />
 

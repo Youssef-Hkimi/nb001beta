@@ -27,7 +27,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
-import { ListingLikeDialog, useListingLike } from "@/components/listing/listing-like";
+import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-like";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
@@ -44,9 +44,9 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
     () => getCommunityFeatureOptions(server.communityFeatures),
     [server.communityFeatures],
   );
-  const like = useListingLike({
+  const vote = useListingVote({
     listingKey: `server:${server.slug}`,
-    initialLikes: typeof server.likes === "number" ? server.likes : server.stats?.likes ?? 0,
+    initialVotes: typeof server.likes === "number" ? server.likes : server.stats?.likes ?? 0,
   });
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -71,7 +71,7 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
       {/* Hero — cinematic banner + profile header */}
       <section className="relative">
         <div
-          className="server-hero-banner"
+          className="server-hero-banner hero-image-wrapper"
           role="img"
           aria-label={`${server.name} banner`}
           style={{ backgroundImage: `url("${bannerUrl}")` }}
@@ -148,17 +148,17 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
             <div className="flex flex-wrap items-center gap-2 md:justify-end md:pb-1">
               <ListingActionGuard
                 status={server.safetyStatus}
-                variant={like.isCoolingDown ? "primary" : "secondary"}
+                variant={vote.isCoolingDown ? "primary" : "secondary"}
                 className={
-                  like.isCoolingDown
+                  vote.isCoolingDown
                     ? "bg-[#629BF8] text-white transition-colors duration-200 hover:bg-[#629BF8]/90"
                     : "transition-colors duration-200"
                 }
-                onPress={like.addLike}
+                onPress={vote.addVote}
               >
-                <ThumbsUp className={`size-4 ${like.isCoolingDown ? "fill-current" : ""}`} />
-                Like
-                <span className="text-xs opacity-90">{formatCount(like.likeCount)}</span>
+                <ThumbsUp className={`size-4 ${vote.isCoolingDown ? "fill-current" : ""}`} />
+                Vote
+                <span className="text-xs opacity-90">{formatCount(vote.voteCount)}</span>
               </ListingActionGuard>
               <ListingActionGuard status={server.safetyStatus} variant="secondary" onPress={copyInvite}>
                 <Copy className="size-4" />
@@ -384,12 +384,12 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
         </aside>
       </div>
 
-      <ListingLikeDialog
+      <ListingVoteDialog
         listingName={server.name}
-        mode={like.dialogMode}
-        open={like.dialogOpen}
-        remaining={like.remaining}
-        onOpenChange={like.setDialogOpen}
+        mode={vote.dialogMode}
+        open={vote.dialogOpen}
+        remaining={vote.remaining}
+        onOpenChange={vote.setDialogOpen}
       />
 
       {/* Report modal */}

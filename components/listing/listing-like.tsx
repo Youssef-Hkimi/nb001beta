@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/auth/auth-context";
 
-const LIKE_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+const VOTE_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 function formatRemaining(milliseconds: number) {
   const totalMinutes = Math.max(1, Math.ceil(milliseconds / 60_000));
@@ -16,44 +16,48 @@ function formatRemaining(milliseconds: number) {
   return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
-export function useListingLike({
+export function useListingVote({
   listingKey,
-  initialLikes,
+  initialVotes,
 }: {
   listingKey: string;
-  initialLikes: number;
+  initialVotes: number;
 }) {
   const { requireAuth } = useAuth();
-  const [likeCount, setLikeCount] = useState(initialLikes);
-  const [nextLikeAt, setNextLikeAt] = useState(0);
+  const [voteCount, setVoteCount] = useState(initialVotes);
+  const [nextVoteAt, setNextVoteAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"success" | "cooldown">("success");
-  const storageKey = `nexus-like-cooldown:${listingKey}`;
+  const storageKey = `nexus-vote-cooldown:${listingKey}`;
+  const legacyStorageKey = `nexus-like-cooldown:${listingKey}`;
 
   useEffect(() => {
-    const stored = Number(window.localStorage.getItem(storageKey) ?? 0);
-    if (stored > Date.now()) setNextLikeAt(stored);
-  }, [storageKey]);
+    const stored = Math.max(
+      Number(window.localStorage.getItem(storageKey) ?? 0),
+      Number(window.localStorage.getItem(legacyStorageKey) ?? 0),
+    );
+    if (stored > Date.now()) setNextVoteAt(stored);
+  }, [legacyStorageKey, storageKey]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const addLike = () => {
+  const addVote = () => {
     requireAuth(() => {
       const pressedAt = Date.now();
       setNow(pressedAt);
-      if (nextLikeAt > pressedAt) {
+      if (nextVoteAt > pressedAt) {
         setDialogMode("cooldown");
         setDialogOpen(true);
         return;
       }
 
-      const nextAvailable = pressedAt + LIKE_COOLDOWN_MS;
-      setLikeCount((count) => count + 1);
-      setNextLikeAt(nextAvailable);
+      const nextAvailable = pressedAt + VOTE_COOLDOWN_MS;
+      setVoteCount((count) => count + 1);
+      setNextVoteAt(nextAvailable);
       window.localStorage.setItem(storageKey, String(nextAvailable));
       setDialogMode("success");
       setDialogOpen(true);
@@ -61,17 +65,17 @@ export function useListingLike({
   };
 
   return {
-    addLike,
+    addVote,
     dialogMode,
     dialogOpen,
-    isCoolingDown: nextLikeAt > now,
-    likeCount,
-    remaining: formatRemaining(nextLikeAt - now),
+    isCoolingDown: nextVoteAt > now,
+    voteCount,
+    remaining: formatRemaining(nextVoteAt - now),
     setDialogOpen,
   };
 }
 
-export function ListingLikeDialog({
+export function ListingVoteDialog({
   listingName,
   mode,
   open,
@@ -94,18 +98,22 @@ export function ListingLikeDialog({
             <span className="flex size-11 items-center justify-center rounded-2xl bg-accent/12 text-accent">
               {success ? <ThumbsUp className="size-5 fill-current" /> : <Clock3 className="size-5" />}
             </span>
-            <Modal.Heading>{success ? "Like added" : "Like cooldown active"}</Modal.Heading>
+            <Modal.Heading>{success ? "Vote recorded" : "Vote cooldown active"}</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
             <p className="text-sm leading-relaxed text-muted">
               {success
-                ? `${listingName} received your like. You can support this listing again in ${remaining}.`
-                : `You already liked ${listingName}. You can like this listing again in ${remaining}.`}
+                ? `Your vote for ${listingName} has been counted. You can vote for this listing again when the cooldown ends.`
+                : `You already voted for ${listingName}. Your next vote becomes available when the cooldown ends.`}
             </p>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-default/40 px-3 py-2.5 text-sm text-foreground">
-              <Clock3 className="size-4 text-accent" />
-              Six-hour like cooldown
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-accent/20 bg-accent/8 px-4 py-3">
+              <span className="flex items-center gap-3">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-accent/12 text-accent"><Clock3 className="size-4" /></span>
+                <span><span className="block text-xs font-medium text-muted">Next vote available in</span><span className="block text-base font-semibold text-foreground">{remaining}</span></span>
+              </span>
+              <span className="rounded-full bg-default/70 px-2.5 py-1 text-[11px] font-medium text-muted">6-hour cooldown</span>
             </div>
+            <p className="text-xs leading-relaxed text-muted">Votes help active, useful listings reach more people across Nexus.</p>
           </Modal.Body>
           <Modal.Footer>
             <Button slot="close">Got it</Button>

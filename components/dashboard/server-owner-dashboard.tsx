@@ -27,7 +27,6 @@ import {
   Copy,
   ExternalLink,
   Eye,
-  Heart,
   Link2,
   MoreHorizontal,
   MousePointerClick,
@@ -37,7 +36,8 @@ import {
   ShieldCheck,
   Trash2,
   TrendingUp,
-  UserCheck,
+  ThumbsUp,
+  UserMinus,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 
@@ -100,8 +100,8 @@ type ServerEditForm = {
 const ANALYTICS_METRICS = [
   { key: "listingViews", label: "Listing Views", icon: Eye },
   { key: "joinClicks", label: "Join Clicks", icon: MousePointerClick },
-  { key: "confirmedJoins", label: "Confirmed Joins", icon: UserCheck },
-  { key: "likes", label: "Likes", icon: Heart },
+  { key: "confirmedJoins", label: "Members left", icon: UserMinus, comingSoon: true },
+  { key: "likes", label: "Votes", icon: ThumbsUp },
   { key: "conversionRate", label: "Conversion Rate", icon: TrendingUp },
 ] as const;
 
@@ -646,7 +646,7 @@ function AnalyticsTab({ servers, selectedId, selectedServer, onSelect }: {
         <Card variant="secondary" className="items-center p-10 text-center">
           <span className="flex size-12 items-center justify-center rounded-2xl bg-accent/10 text-accent"><Server className="size-6" /></span>
           <h3 className="mt-2 font-semibold text-foreground">Select a server</h3>
-          <p className="max-w-md text-sm text-muted">Choose a server above to view listing views, joins, likes, and conversion data.</p>
+          <p className="max-w-md text-sm text-muted">Choose a server above to view listing views, joins, votes, and conversion data.</p>
         </Card>
       ) : (
         <div className="space-y-5">
@@ -654,18 +654,19 @@ function AnalyticsTab({ servers, selectedId, selectedServer, onSelect }: {
             {ANALYTICS_METRICS.map((metric) => {
               const Icon = metric.icon;
               const value = selectedServer.analytics[metric.key];
-              const display = metric.key === "conversionRate" ? `${value.toFixed(1)}%` : formatCount(value);
-              return <Card key={metric.key} variant="default" className="gap-3 p-5"><span className="flex size-9 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon className="size-4" /></span><div><p className="text-xs font-medium text-muted">{metric.label}</p><p className="mt-1 text-2xl font-bold text-foreground">{display}</p></div></Card>;
+              const comingSoon = "comingSoon" in metric && metric.comingSoon;
+              const display = comingSoon ? "—" : metric.key === "conversionRate" ? `${value.toFixed(1)}%` : formatCount(value);
+              return <Card key={metric.key} variant="default" className="gap-3 p-5"><span className="flex size-9 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon className="size-4" /></span><div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-medium text-muted">{metric.label}</p>{comingSoon ? <Chip size="sm" variant="soft"><Chip.Label>Coming Soon</Chip.Label></Chip> : null}</div><p className="mt-1 text-2xl font-bold text-foreground">{display}</p></div></Card>;
             })}
           </div>
           <AnalyticsLineChart
             title={`${selectedServer.name} performance`}
-            description="Listing views, join clicks, and confirmed joins over time."
+            description="Listing views and join clicks over time. Members-left tracking is coming soon."
             history={selectedServer.analytics.history}
             series={[
               { key: "listingViews", label: "Listing Views", color: "#629BF8" },
               { key: "joinClicks", label: "Join Clicks", color: "#9B8AFB" },
-              { key: "confirmedJoins", label: "Confirmed Joins", color: "#34D399" },
+              { key: "confirmedJoins", label: "Members Left", color: "#34D399", comingSoon: true },
             ]}
           />
         </div>

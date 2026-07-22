@@ -113,9 +113,9 @@ export function SiteNavbar() {
                       <ShieldCheck className="size-4 text-emerald-500" />
                       <div><p className="text-sm font-medium">Nexus Hub is live</p><p className="text-xs text-muted">Your listing passed the latest status check.</p></div>
                     </Dropdown.Item>
-                    <Dropdown.Item id="likes" textValue="Like milestone">
+                    <Dropdown.Item id="likes" textValue="Vote milestone">
                       <ThumbsUp className="size-4 text-accent" />
-                      <div><p className="text-sm font-medium">New like milestone</p><p className="text-xs text-muted">Lofi Girl reached 10K likes.</p></div>
+                      <div><p className="text-sm font-medium">New vote milestone</p><p className="text-xs text-muted">Lofi Girl reached 10K votes.</p></div>
                     </Dropdown.Item>
                     <Dropdown.Item id="announcement" textValue="Nexus announcement">
                       <Megaphone className="size-4 text-violet-400" />

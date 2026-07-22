@@ -127,7 +127,7 @@ async function requestDiscordWidget(guildId, { cacheBust = false } = {}) {
     let response;
     try {
       const widgetUrl = new URL(
-        `https://discord.com/api/v10/guilds/${guildId}/widget.json`,
+        `https://discord.com/api/guilds/${guildId}/widget.json`,
       );
       if (cacheBust) widgetUrl.searchParams.set("t", String(Date.now()));
 
@@ -142,7 +142,7 @@ async function requestDiscordWidget(guildId, { cacheBust = false } = {}) {
               : {}),
             "User-Agent": "Nexus/0.1 (https://github.com/Youssef-Hkimi/NexusBeta)",
           },
-          redirect: "error",
+          redirect: "follow",
           signal: AbortSignal.timeout(8_000),
         },
       );
@@ -178,11 +178,13 @@ async function requestDiscordWidget(guildId, { cacheBust = false } = {}) {
       };
     }
 
-    if (payload?.code === 10004) {
+    const discordErrorCode = Number(payload?.code);
+
+    if (discordErrorCode === 10004) {
       return { error: "guild_not_found", status: 404 };
     }
 
-    if (payload?.code === 50004) {
+    if (discordErrorCode === 50004) {
       lastFailure = { error: "widget_disabled", status: 403 };
       continue;
     }

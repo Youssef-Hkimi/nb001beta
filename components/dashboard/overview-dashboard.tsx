@@ -42,7 +42,7 @@ import { formatCount, initials } from "@/lib/format";
 const STATS = [
   { label: "Total Views", value: "124.8K", delta: "12.4%", detail: "vs last 7 days", icon: Eye, tone: "bg-blue-500/10 text-blue-500" },
   { label: "Invite Clicks", value: "18.2K", delta: "9.1%", detail: "vs last 7 days", icon: MousePointerClick, tone: "bg-violet-500/10 text-violet-500" },
-  { label: "Likes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: ThumbsUp, tone: "bg-accent/10 text-accent" },
+  { label: "Votes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: ThumbsUp, tone: "bg-accent/10 text-accent" },
   { label: "Total Listings", value: "8", delta: "", detail: "6 Live · 2 Drafts", icon: CheckSquare2, tone: "bg-slate-500/10 text-slate-500" },
   { label: "Conversion Rate", value: "14.6%", delta: "2.3%", detail: "vs last 7 days", icon: TrendingUp, tone: "bg-blue-500/10 text-blue-500" },
 ] as const;
@@ -54,7 +54,7 @@ const GETTING_STARTED_ITEMS = [
   { id: "notifications", title: "Set up notifications", subtitle: "Receive important listing and account updates", content: "Choose the updates you want Nexus to send about reviews, listing status, milestones, and account activity.", action: "Enable notifications", icon: "solar:bell-linear" },
   { id: "listing", title: "Add a listing", subtitle: "Publish your first Discord server or bot", content: "Create a complete Nexus listing so people can discover your community or add your bot to their servers.", action: "Complete listing step", icon: "solar:add-circle-linear" },
   { id: "media", title: "Upload a banner and icon", subtitle: "Give your listing a recognizable identity", content: "Add a sharp banner and a clear icon to help your listing stand out across Nexus discovery pages.", action: "Complete media step", icon: "solar:gallery-add-linear" },
-  { id: "likes", title: "Get 10 likes on a listing", subtitle: "Reach your first community milestone", content: "Share your public listing and encourage genuine community members to support it with a like.", action: "Check progress", icon: "solar:heart-angle-linear" },
+  { id: "votes", title: "Get 10 votes on a listing", subtitle: "Reach your first community milestone", content: "Share your public listing and encourage genuine community members to support it with a vote.", action: "Check progress", icon: "solar:like-linear" },
 ] as const;
 
 export function OverviewDashboard({ username }: { username: string }) {

@@ -35,7 +35,7 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
       {/* Mini hero banner */}
-      <div className="relative h-36 w-full overflow-hidden md:h-40">
+      <div className="hero-image-wrapper h-36 w-full overflow-hidden md:h-40">
         {model.bannerPreview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -53,13 +53,6 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
             }}
           />
         )}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-12"
-          style={{
-            background:
-              "linear-gradient(to bottom, transparent 0%, var(--page-bg, var(--background)) 100%)",
-          }}
-        />
       </div>
 
       <div className="space-y-4 px-3 pb-4 pt-0">
@@ -105,7 +98,7 @@ export function ServerPagePreview({ model }: { model: ServerPagePreviewModel }) 
         <div className="flex flex-wrap gap-1.5">
           <Button size="sm" variant="secondary">
             <ThumbsUp className="size-3.5" />
-            Like
+            Vote
             <span className="text-[11px] opacity-90">{formatCount(model.likes)}</span>
           </Button>
           <Button size="sm" variant="secondary">

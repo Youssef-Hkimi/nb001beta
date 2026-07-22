@@ -134,7 +134,7 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
   {
     id: "3",
     icon: "votes",
-    text: "Shield Mod gained 530 likes",
+    text: "Shield Mod gained 530 votes",
     time: "3 hours ago",
   },
   {
