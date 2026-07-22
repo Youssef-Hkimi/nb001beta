@@ -202,3 +202,22 @@ Only listing cards/grid — not navbar, not filters redesign, not bots cards unl
 6. Server pages: no gallery/reviews/rules; bots may have gallery later.  
 7. Banner: sharp + tiny fade only.  
 8. After changes: typecheck/build and smoke the touched routes.  
+
+---
+
+## 2026-07-22 — Rewards referral demo + verified badge hydration fix
+
+### Rewards dashboard
+
+- Added a mock-only **Rewards** dashboard section with a referral-program setup agreement.
+- Product wording is **Growth Points**, not Growth Credits.
+- Agreement confirms a maximum of 10 Growth Points can be applied each day and warns against referral abuse.
+- After setup, the page provides Referral and Tracking tabs, a copyable referral link, selectable mock server rewards, daily point limits, and mock referral activity.
+- The falling gift effect uses the supplied Cloudinary WebP, grows during setup transition, fades away afterward, and can be toggled from the page header.
+- Particle density and transformation size remain intact; rendering snapshots the WebP into a lightweight canvas sprite for smoother motion.
+
+### Verified badge hydration error
+
+- HeroUI `Tooltip.Trigger` renders a `div` by default, but `VerifiedBadgeIcon` is frequently used inside paragraph text.
+- This created invalid `p > div` HTML and a React hydration error.
+- Permanent fix: render the shared tooltip trigger as an inline `span` in `components/ui/verified-badge-icon.tsx`.

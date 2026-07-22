@@ -20,9 +20,10 @@ export function VerifiedBadgeIcon({ className = "size-5 text-[#00c4ff]", label =
 
   return (
     <Tooltip delay={0}>
-      <Tooltip.Trigger
+      <Tooltip.Trigger<"span">
         aria-label={label}
         className="inline-flex shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        render={(props) => <span {...props} />}
       >
         <span aria-hidden className={`inline-block shrink-0 ${className}`} style={style} />
       </Tooltip.Trigger>

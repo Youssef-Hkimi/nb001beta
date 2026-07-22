@@ -6,12 +6,13 @@ import { useEffect, useState } from "react";
 import { BotOwnerDashboard } from "@/components/dashboard/bot-owner-dashboard";
 import { DashboardNav } from "@/components/dashboard/dashboard-sidebar";
 import { OverviewDashboard } from "@/components/dashboard/overview-dashboard";
+import { RewardsLanding } from "@/components/dashboard/rewards-landing";
 import { ServerOwnerDashboard } from "@/components/dashboard/server-owner-dashboard";
 import { UserSettings } from "@/components/dashboard/user-settings";
 import { LinkButton } from "@/components/ui/link-button";
 import { useAuth } from "@/lib/auth/auth-context";
 
-type DashboardSection = "overview" | "servers" | "bots" | "settings";
+type DashboardSection = "overview" | "servers" | "bots" | "rewards" | "settings";
 
 export default function DashboardPage() {
   const [section, setSection] = useState<DashboardSection>("overview");
@@ -20,7 +21,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const sync = () => {
       const hash = window.location.hash.slice(1);
-      setSection(hash === "servers" || hash === "bots" || hash === "settings" ? hash : "overview");
+      setSection(hash === "servers" || hash === "bots" || hash === "rewards" || hash === "settings" ? hash : "overview");
     };
     sync();
     window.addEventListener("hashchange", sync);
@@ -41,6 +42,10 @@ export default function DashboardPage() {
 
       {section === "bots" ? (
         <BotOwnerDashboard />
+      ) : null}
+
+      {section === "rewards" ? (
+        <RewardsLanding />
       ) : null}
 
       {section === "settings" ? (

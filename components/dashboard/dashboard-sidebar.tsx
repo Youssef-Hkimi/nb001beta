@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Gem, LayoutDashboard, PlusCircle, Server, Settings } from "lucide-react";
+import { Bot, Gem, Gift, LayoutDashboard, PlusCircle, Server, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,6 +11,7 @@ const SECTIONS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "servers", label: "My Servers", icon: Server },
   { id: "bots", label: "My Bots", icon: Bot },
+  { id: "rewards", label: "Rewards", icon: Gift },
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -48,7 +49,7 @@ export function DashboardNav() {
         <p className="mt-1 text-sm font-semibold text-foreground">{studioName}</p>
       </div>
 
-      {SECTIONS.slice(0, 3).map((item) => {
+      {SECTIONS.slice(0, 4).map((item) => {
         const Icon = item.icon;
         const active = pathname === "/dashboard" && activeSection === item.id;
         return (
@@ -79,7 +80,7 @@ export function DashboardNav() {
         Create Listing
       </Link>
 
-      {SECTIONS.slice(3).map((item) => {
+      {SECTIONS.slice(4).map((item) => {
         const Icon = item.icon;
         const active = pathname === "/dashboard" && activeSection === item.id;
         return (
