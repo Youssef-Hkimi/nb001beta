@@ -19,7 +19,7 @@ const SITEMAP_COLUMNS = [
   {
     title: "Explore",
     links: [
-      { label: "Explore Nexus", href: "/explore" },
+      { label: "Explore Nexbiy", href: "/explore" },
       { label: "Discord Servers", href: "/server" },
       { label: "Discord Bots", href: "/bots" },
       { label: "Categories", href: "/categories" },
@@ -49,7 +49,7 @@ const SITEMAP_COLUMNS = [
   {
     title: "Company & Legal",
     links: [
-      { label: "About Nexus", href: "/about" },
+      { label: "About Nexbiy", href: "/about" },
       { label: "Contact", href: "/contact" },
       ...siteConfig.legalLinks,
     ],
@@ -96,7 +96,7 @@ export function NexusFooter() {
 
       submittedEmails.current.add(normalizedEmail);
       setEmail("");
-      toast.success("You’re subscribed to Nexus updates.");
+      toast.success("You’re subscribed to Nexbiy updates.");
     } catch {
       toast.danger("We couldn’t subscribe this email. Please try again.");
     } finally {
@@ -116,7 +116,7 @@ export function NexusFooter() {
             id="footer-newsletter-title"
             className="max-w-2xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
           >
-            Discover what’s next on Nexus
+            Discover what’s next on Nexbiy
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-muted sm:text-base">
             Get community highlights, new bot discoveries, platform updates, and creator
@@ -191,11 +191,11 @@ export function NexusFooter() {
           ))}
         </nav>
 
-        <section aria-label="Nexus support" className="mt-16 grid gap-8 md:grid-cols-3 lg:mt-20">
+        <section aria-label="Nexbiy support" className="mt-16 grid gap-8 md:grid-cols-3 lg:mt-20">
           <SupportBlock
             icon={<MessageCircle className="size-5 text-[#629BF8]" aria-hidden />}
             label="Discord support"
-            value="Join the Nexus support community"
+            value="Join the Nexbiy support community"
             href={siteConfig.supportDiscordUrl}
           />
           <SupportBlock
@@ -217,7 +217,7 @@ export function NexusFooter() {
         <div className="grid items-center gap-6 text-center md:grid-cols-[1fr_2fr_1fr] md:text-left">
           <Link
             href={siteConfig.logo.href}
-            aria-label="Nexus home"
+            aria-label="Nexbiy home"
             className="mx-auto inline-flex items-center gap-2.5 text-foreground md:mx-0 md:justify-self-start"
           >
             <Image src="/nexus-logo.jpg" alt="" width={36} height={36} className="size-9 rounded-xl object-cover" />
@@ -225,7 +225,7 @@ export function NexusFooter() {
           </Link>
 
           <p className="text-xs leading-5 text-muted md:text-center">
-            © {currentYear} {siteConfig.name}. Discord is a trademark of Discord Inc. Nexus is not
+            © {currentYear} {siteConfig.name}. Discord is a trademark of Discord Inc. Nexbiy is not
             affiliated with Discord Inc.
           </p>
 

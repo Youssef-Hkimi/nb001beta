@@ -45,7 +45,7 @@ function createBot(seed: BotSeed): BotListing {
     pausedAt: safetyStatus === "PAUSED" ? "2026-07-10" : undefined,
     suspendedAt: safetyStatus === "SUSPENDED" ? "2026-07-11" : undefined,
     previousSafetyStatus: safetyStatus === "PAUSED" ? "SAFE" : undefined,
-    publicStatusReason: safetyStatus === "SUSPENDED" ? "This bot listing is unavailable while Nexus reviews a policy concern." : undefined,
+    publicStatusReason: safetyStatus === "SUSPENDED" ? "This bot listing is unavailable while Nexbiy reviews a policy concern." : undefined,
     botBadge: "BOT",
     clientId,
     prefix: "/",
@@ -164,9 +164,9 @@ export const BOTS: BotListing[] = [
     shortDescription: "Context-aware answers, FAQ automation, and smart onboarding for busy servers.",
     servers: 890000, votes: 39200, category: "AI", tags: ["AI", "Support", "FAQ"],
     botFeatures: ["ai-tools", "tickets", "automations", "welcome-system", "utility"],
-    verified: true, rank: 10, bannerHue: "185", developer: "Nexus Labs", monthlyGrowth: 21, createdAt: "October 2022",
+    verified: true, rank: 10, bannerHue: "185", developer: "Nexbiy Labs", monthlyGrowth: 21, createdAt: "October 2022",
     primaryCommand: { name: "/ask", description: "Ask the assistant a server-aware question.", category: "AI" },
-    safetyStatus: "PENDING_REVIEW", githubUrl: "https://github.com/nexus/helper-ai",
+    safetyStatus: "PENDING_REVIEW", githubUrl: "https://github.com/nexbiy/helper-ai",
   }),
   createBot({
     id: "economy-pro", name: "Economy Pro",
@@ -184,7 +184,7 @@ export const BOTS: BotListing[] = [
     botFeatures: ["moderation", "logging", "automations", "welcome-system", "custom-commands", "utility"],
     verified: true, rank: 12, bannerHue: "0", developer: "Shield Security", monthlyGrowth: 12, createdAt: "October 2022",
     primaryCommand: { name: "/raidmode", description: "Enable emergency anti-raid protection.", category: "Moderation" },
-    safetyStatus: "PENDING_REVIEW", githubUrl: "https://github.com/nexus/shield-mod",
+    safetyStatus: "PENDING_REVIEW", githubUrl: "https://github.com/nexbiy/shield-mod",
   }),
 ];
 

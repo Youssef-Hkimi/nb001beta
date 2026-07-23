@@ -3,13 +3,14 @@ import type { Metadata } from "next";
 import { SiteNavbar } from "@/components/layout/site-navbar";
 import { Providers } from "@/components/providers";
 import { WidgetSetupReminderAlert } from "@/components/dashboard/widget-setup-reminder";
+import { ReferralReceiver } from "@/components/referrals/referral-receiver";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nexus — Discord Server & Bot Discovery",
+  title: "Nexbiy — Discord Server & Bot Discovery",
   description:
-    "Explore thousands of Discord servers and bots. Join communities, find tools, and grow your server on Nexus.",
+    "Explore thousands of Discord servers and bots. Join communities, find tools, and grow your server on Nexbiy.",
 };
 
 export default function RootLayout({
@@ -23,6 +24,7 @@ export default function RootLayout({
         <Providers>
           <SiteNavbar />
           <WidgetSetupReminderAlert />
+          <ReferralReceiver />
           <main className="flex-1">{children}</main>
         </Providers>
       </body>

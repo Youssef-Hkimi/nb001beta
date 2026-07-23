@@ -52,17 +52,24 @@ export function DashboardNav() {
       {SECTIONS.slice(0, 4).map((item) => {
         const Icon = item.icon;
         const active = pathname === "/dashboard" && activeSection === item.id;
+        const isRewards = item.id === "rewards";
         return (
           <button
             key={item.id}
             type="button"
             aria-current={active ? "page" : undefined}
             onClick={() => openSection(item.id)}
-            className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors duration-200 ${
-              active ? "bg-accent/15 text-accent" : "text-foreground hover:bg-default"
+            className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${
+              isRewards
+                ? active
+                  ? "border-[#c0fc1c]/35 bg-gradient-to-r from-[#c0fc1c]/20 to-[#2596be]/25 text-foreground shadow-sm shadow-[#2596be]/10"
+                  : "border-[#2596be]/20 bg-gradient-to-r from-[#c0fc1c]/8 to-[#2596be]/10 text-foreground hover:border-[#c0fc1c]/30 hover:from-[#c0fc1c]/14 hover:to-[#2596be]/18"
+                : active
+                  ? "border-transparent bg-accent/15 text-accent"
+                  : "border-transparent text-foreground hover:bg-default"
             }`}
           >
-            <Icon className="size-4 shrink-0" />
+            <Icon className={isRewards ? "size-4 shrink-0 text-[#71c775]" : "size-4 shrink-0"} />
             {item.label}
           </button>
         );

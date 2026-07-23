@@ -1,4 +1,4 @@
-# Nexus — Design System
+# Nexbiy — Design System
 
 ## Core rules
 
@@ -17,6 +17,8 @@
 
 Gradient text utility: `.nexus-gradient-text`  
 CTA gradient cards: `from-[#629BF8] to-[#82B0F9]`
+
+> Legacy internal `nexus-*` CSS tokens remain in place for compatibility; they are implementation details, not the public brand name.
 
 ## Light mode
 

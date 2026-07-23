@@ -12,9 +12,9 @@ export const MOCK_AUTH_USER: AuthUser = {
     announcements: true,
   },
   socials: {
-    x: "alexnexus",
-    github: "alexnexus",
-    roblox: "AlexNexus",
+    x: "alexnexbiy",
+    github: "alexnexbiy",
+    roblox: "AlexNexbiy",
   },
   avatarUrl: null,
   discordId: "mock_discord_user_123",

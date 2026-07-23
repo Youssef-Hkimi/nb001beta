@@ -1,4 +1,4 @@
-# Nexus — AI Worklog
+# Nexbiy — AI Worklog
 
 Chronological record of major work, failures, and fixes.  
 **Purpose:** new chats should learn from past mistakes instead of repeating them.

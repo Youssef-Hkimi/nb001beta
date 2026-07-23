@@ -3,6 +3,7 @@
 import { Avatar, Button, Drawer, Dropdown, toast } from "@heroui/react";
 import {
   Bell,
+  Gift,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -34,13 +35,23 @@ const NAV_ITEMS = [
   },
 ];
 
+const REWARDS_ITEM = {
+  href: "/rewards",
+  label: "Rewards",
+  match: (p: string) => p.startsWith("/rewards"),
+};
+
 export function SiteNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isReady, logout } = useAuth();
   const accountName = user?.displayName ?? user?.username;
   const inboxEnabled = user?.inboxNotifications !== false;
+  const visibleNavItems =
+    isReady && !isAuthenticated
+      ? [...NAV_ITEMS.slice(0, 3), REWARDS_ITEM, ...NAV_ITEMS.slice(3)]
+      : NAV_ITEMS;
 
   function goDashboard() {
     if (isAuthenticated) router.push("/dashboard");
@@ -57,11 +68,11 @@ export function SiteNavbar() {
       <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 md:px-6 lg:px-8">
         <Link href="/explore" className="flex shrink-0 items-center gap-2.5">
           <Image src="/nexus-logo.jpg" alt="" width={36} height={36} priority className="size-9 rounded-xl object-cover" />
-          <span className="text-lg font-bold tracking-tight text-foreground">Nexus</span>
+          <span className="text-lg font-bold tracking-tight text-foreground">Nexbiy</span>
         </Link>
 
         <nav className="ml-4 hidden items-center gap-5 lg:flex">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = item.match(pathname);
             if (item.href === "/dashboard") {
               return (
@@ -111,15 +122,15 @@ export function SiteNavbar() {
                   >
                     <Dropdown.Item id="listing" textValue="Listing approved">
                       <ShieldCheck className="size-4 text-emerald-500" />
-                      <div><p className="text-sm font-medium">Nexus Hub is live</p><p className="text-xs text-muted">Your listing passed the latest status check.</p></div>
+                      <div><p className="text-sm font-medium">Nexbiy Hub is live</p><p className="text-xs text-muted">Your listing passed the latest status check.</p></div>
                     </Dropdown.Item>
                     <Dropdown.Item id="likes" textValue="Vote milestone">
                       <ThumbsUp className="size-4 text-accent" />
                       <div><p className="text-sm font-medium">New vote milestone</p><p className="text-xs text-muted">Lofi Girl reached 10K votes.</p></div>
                     </Dropdown.Item>
-                    <Dropdown.Item id="announcement" textValue="Nexus announcement">
+                    <Dropdown.Item id="announcement" textValue="Nexbiy announcement">
                       <Megaphone className="size-4 text-violet-400" />
-                      <div><p className="text-sm font-medium">Nexus announcement</p><p className="text-xs text-muted">Verification eligibility has been updated.</p></div>
+                      <div><p className="text-sm font-medium">Nexbiy announcement</p><p className="text-xs text-muted">Verification eligibility has been updated.</p></div>
                     </Dropdown.Item>
                   </Dropdown.Menu>
                 </Dropdown.Popover>
@@ -143,6 +154,7 @@ export function SiteNavbar() {
                 <Dropdown.Menu
                   onAction={(key) => {
                     if (key === "dashboard") router.push("/dashboard");
+                    if (key === "admin") router.push("/admin");
                     if (key === "create") router.push("/dashboard/new");
                     if (key === "logout") {
                       logout();
@@ -154,6 +166,10 @@ export function SiteNavbar() {
                   <Dropdown.Item id="dashboard" textValue="Dashboard">
                     <LayoutDashboard className="size-4" />
                     Dashboard
+                  </Dropdown.Item>
+                  <Dropdown.Item id="admin" textValue="Admin panel">
+                    <ShieldCheck className="size-4" />
+                    Admin panel
                   </Dropdown.Item>
                   <Dropdown.Item id="create" textValue="Create listing">
                     <PlusCircle className="size-4" />
@@ -177,7 +193,7 @@ export function SiteNavbar() {
           <Button
             isIconOnly
             aria-label="Open menu"
-            className="lg:hidden"
+            className="shrink-0"
             variant="ghost"
             onPress={() => setMobileOpen(true)}
           >
@@ -195,7 +211,7 @@ export function SiteNavbar() {
                 <Drawer.Heading>Menu</Drawer.Heading>
               </Drawer.Header>
               <Drawer.Body className="flex flex-col gap-1">
-                {NAV_ITEMS.map((item) => {
+                {visibleNavItems.map((item) => {
                   const active = item.match(pathname);
                   return (
                     <button
@@ -214,6 +230,7 @@ export function SiteNavbar() {
                     >
                       {item.label === "Dashboard" ? <LayoutDashboard className="size-4" /> : null}
                       {item.label === "Explore" ? <Search className="size-4" /> : null}
+                      {item.label === "Rewards" ? <Gift className="size-4" /> : null}
                       {item.label}
                     </button>
                   );
@@ -235,6 +252,17 @@ export function SiteNavbar() {
                     >
                       <PlusCircle className="size-4" />
                       Create listing
+                    </Button>
+                    <Button
+                      className="w-full"
+                      variant="secondary"
+                      onPress={() => {
+                        setMobileOpen(false);
+                        router.push("/admin");
+                      }}
+                    >
+                      <ShieldCheck className="size-4" />
+                      Admin panel
                     </Button>
                     <Button
                       className="w-full"

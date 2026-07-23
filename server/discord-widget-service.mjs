@@ -140,7 +140,7 @@ async function requestDiscordWidget(guildId, { cacheBust = false } = {}) {
             ...(cacheBust
               ? { "Cache-Control": "no-cache", Pragma: "no-cache" }
               : {}),
-            "User-Agent": "Nexus/0.1 (https://github.com/Youssef-Hkimi/NexusBeta)",
+            "User-Agent": "Nexbiy/0.1 (https://github.com/Youssef-Hkimi/NexusBeta)",
           },
           redirect: "follow",
           signal: AbortSignal.timeout(8_000),

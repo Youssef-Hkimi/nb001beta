@@ -4,12 +4,12 @@ export const LISTING_STATUS_CONFIG = {
   PENDING_REVIEW: {
     label: "Pending Review",
     color: "warning",
-    description: "This listing is live, but Nexus has not completed its safety review yet.",
+    description: "This listing is live, but Nexbiy has not completed its safety review yet.",
   },
   SAFE: {
     label: "Safe",
     color: "success",
-    description: "Nexus reviewed this listing and it currently meets our platform requirements.",
+    description: "Nexbiy reviewed this listing and it currently meets our platform requirements.",
   },
   PAUSED: {
     label: "Paused",
@@ -19,7 +19,7 @@ export const LISTING_STATUS_CONFIG = {
   SUSPENDED: {
     label: "Suspended",
     color: "danger",
-    description: "Nexus suspended this listing because of a safety, policy, or verification concern.",
+    description: "Nexbiy suspended this listing because of a safety, policy, or verification concern.",
   },
 } as const;
 

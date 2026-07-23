@@ -1,4 +1,4 @@
-# Nexus — Current State
+# Nexbiy — Current State
 
 **Last updated:** 2026-07-09  
 **Project path:** `C:\Users\noste\nexus`  

@@ -6,11 +6,7 @@ import {
   Card,
   Chip,
   Dropdown,
-  Label,
-  Modal,
   Separator,
-  TextArea,
-  TextField,
   toast,
 } from "@heroui/react";
 import {
@@ -28,6 +24,7 @@ import { useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
 import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-like";
+import { ReportListingDialog } from "@/components/listing/report-listing-dialog";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
@@ -392,44 +389,7 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
         onOpenChange={vote.setDialogOpen}
       />
 
-      {/* Report modal */}
-      <Modal.Backdrop isOpen={reportOpen} onOpenChange={setReportOpen}>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-md">
-            <Modal.CloseTrigger />
-            <Modal.Header>
-              <Modal.Heading>Report {server.name}</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              <p className="text-sm text-muted">
-                Tell us what is wrong with this listing. Reports are mocked in this demo and will
-                not be sent.
-              </p>
-              <Separator className="my-3" />
-              <TextField>
-                <Label>Reason</Label>
-                <TextArea rows={3} placeholder="Spam, scam, inappropriate content..." />
-              </TextField>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button slot="close" variant="secondary">
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                onPress={() => {
-                  toast.danger("Report submitted", {
-                    description: "Our team will review this listing.",
-                  });
-                  setReportOpen(false);
-                }}
-              >
-                Submit report
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+      <ReportListingDialog listingName={server.name} isOpen={reportOpen} onOpenChange={setReportOpen} />
     </div>
   );
 }

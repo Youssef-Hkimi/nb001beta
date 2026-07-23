@@ -63,8 +63,8 @@ export function ListingStatusAlert({ status, type }: { status: ListingSafetyStat
   const config = LISTING_STATUS_CONFIG[status];
   const Icon = STATUS_ICONS[status];
   const pending = type === "bot"
-    ? "This bot was recently listed and is waiting for review by Nexus."
-    : "This server is live and waiting for review by Nexus.";
+    ? "This bot was recently listed and is waiting for review by Nexbiy."
+    : "This server is live and waiting for review by Nexbiy.";
   return (
     <Alert status={config.color === "default" ? "default" : config.color} className="rounded-xl">
       <Alert.Indicator><Icon className="size-4" /></Alert.Indicator>
@@ -79,12 +79,12 @@ export function ListingStatusAlert({ status, type }: { status: ListingSafetyStat
 export function TrustSafetyCard({ status, type }: { status: ListingSafetyStatus; type: ListingType }) {
   const rows = type === "server"
     ? [
-        ["Nexus Review", status === "SAFE" ? "Completed" : status === "PENDING_REVIEW" ? "Not completed" : "Unavailable"],
+        ["Nexbiy Review", status === "SAFE" ? "Completed" : status === "PENDING_REVIEW" ? "Not completed" : "Unavailable"],
         ["Invite Checked", status === "SAFE" ? "Yes" : status === "PENDING_REVIEW" ? "Pending" : "Unavailable"],
         ["Report Available", "Yes"],
       ]
     : [
-        ["Nexus Review", status === "SAFE" ? "Completed" : status === "PENDING_REVIEW" ? "Not completed" : "Unavailable"],
+        ["Nexbiy Review", status === "SAFE" ? "Completed" : status === "PENDING_REVIEW" ? "Not completed" : "Unavailable"],
         ["Discord TOS", status === "SAFE" ? "Currently meets requirements" : status === "PENDING_REVIEW" ? "Awaiting review" : "Unavailable"],
         ["Report Available", "Yes"],
       ];

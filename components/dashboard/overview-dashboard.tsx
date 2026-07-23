@@ -16,18 +16,18 @@ import {
   toast,
 } from "@heroui/react";
 import {
-  CheckSquare2,
+  ChartNoAxesCombined,
   ChevronDown,
   Copy,
   Edit3,
   Eye,
-  MousePointerClick,
+  Layers3,
+  MousePointer2,
   PanelRightClose,
   PanelRightOpen,
   Plus,
   Server,
   ThumbsUp,
-  TrendingUp,
   X,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -40,20 +40,20 @@ import { DASHBOARD_LISTINGS } from "@/lib/data/dashboard";
 import { formatCount, initials } from "@/lib/format";
 
 const STATS = [
-  { label: "Total Views", value: "124.8K", delta: "12.4%", detail: "vs last 7 days", icon: Eye, tone: "bg-blue-500/10 text-blue-500" },
-  { label: "Invite Clicks", value: "18.2K", delta: "9.1%", detail: "vs last 7 days", icon: MousePointerClick, tone: "bg-violet-500/10 text-violet-500" },
-  { label: "Votes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: ThumbsUp, tone: "bg-accent/10 text-accent" },
-  { label: "Total Listings", value: "8", delta: "", detail: "6 Live · 2 Drafts", icon: CheckSquare2, tone: "bg-slate-500/10 text-slate-500" },
-  { label: "Conversion Rate", value: "14.6%", delta: "2.3%", detail: "vs last 7 days", icon: TrendingUp, tone: "bg-blue-500/10 text-blue-500" },
+  { label: "Total Views", value: "124.8K", delta: "12.4%", detail: "vs last 7 days", icon: Eye, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500" },
+  { label: "Invite Clicks", value: "18.2K", delta: "9.1%", detail: "vs last 7 days", icon: MousePointer2, tone: "border-violet-500/15 bg-violet-500/10 text-violet-500" },
+  { label: "Votes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: ThumbsUp, tone: "border-accent/15 bg-accent/10 text-accent" },
+  { label: "Total Listings", value: "8", delta: "", detail: "6 Live · 2 Drafts", icon: Layers3, tone: "border-slate-500/15 bg-slate-500/10 text-slate-500" },
+  { label: "Conversion Rate", value: "14.6%", delta: "2.3%", detail: "vs last 7 days", icon: ChartNoAxesCombined, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500" },
 ] as const;
 
 const BAR_VALUES = [44, 50, 47, 35, 43, 58, 53, 36, 43, 61, 54, 46, 30, 39, 66, 53, 48, 39, 36, 33, 60, 40, 53, 38, 29, 27, 36, 53, 62, 53, 45];
 const LISTING_ORDER = ["nexus-hub", "lofi-girl", "reactflux", "helper-ai", "shield-mod", "minecraft", "ticket-tool", "economy-pro"];
 
 const GETTING_STARTED_ITEMS = [
-  { id: "notifications", title: "Set up notifications", subtitle: "Receive important listing and account updates", content: "Choose the updates you want Nexus to send about reviews, listing status, milestones, and account activity.", action: "Enable notifications", icon: "solar:bell-linear" },
-  { id: "listing", title: "Add a listing", subtitle: "Publish your first Discord server or bot", content: "Create a complete Nexus listing so people can discover your community or add your bot to their servers.", action: "Complete listing step", icon: "solar:add-circle-linear" },
-  { id: "media", title: "Upload a banner and icon", subtitle: "Give your listing a recognizable identity", content: "Add a sharp banner and a clear icon to help your listing stand out across Nexus discovery pages.", action: "Complete media step", icon: "solar:gallery-add-linear" },
+  { id: "notifications", title: "Set up notifications", subtitle: "Receive important listing and account updates", content: "Choose the updates you want Nexbiy to send about reviews, listing status, milestones, and account activity.", action: "Enable notifications", icon: "solar:bell-linear" },
+  { id: "listing", title: "Add a listing", subtitle: "Publish your first Discord server or bot", content: "Create a complete Nexbiy listing so people can discover your community or add your bot to their servers.", action: "Complete listing step", icon: "solar:add-circle-linear" },
+  { id: "media", title: "Upload a banner and icon", subtitle: "Give your listing a recognizable identity", content: "Add a sharp banner and a clear icon to help your listing stand out across Nexbiy discovery pages.", action: "Complete media step", icon: "solar:gallery-add-linear" },
   { id: "votes", title: "Get 10 votes on a listing", subtitle: "Reach your first community milestone", content: "Share your public listing and encourage genuine community members to support it with a vote.", action: "Check progress", icon: "solar:like-linear" },
 ] as const;
 
@@ -83,7 +83,7 @@ export function OverviewDashboard({ username }: { username: string }) {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back, {username}</h1>
-          <p className="mt-1 text-sm text-muted">Here&apos;s what&apos;s happening with your Nexus listings today.</p>
+          <p className="mt-1 text-sm text-muted">Here&apos;s what&apos;s happening with your Nexbiy listings today.</p>
         </div>
         <Select className="w-full sm:w-36" selectedKey="7d" aria-label="Overview date range">
           <Label className="sr-only">Overview date range</Label>
@@ -100,7 +100,7 @@ export function OverviewDashboard({ username }: { username: string }) {
               return (
                 <Card key={stat.label} variant="default" className="gap-3 p-5">
                   <div className="flex items-start gap-3">
-                    <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${stat.tone}`}><Icon className="size-4" /></span>
+                    <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${stat.tone}`}><Icon className="size-5 stroke-[1.8]" /></span>
                     <div className="min-w-0"><p className="text-xs font-medium text-muted">{stat.label}</p><p className="mt-0.5 text-xl font-bold tracking-tight text-foreground">{stat.value}</p></div>
                   </div>
                   <p className="text-[11px] text-muted">{stat.delta ? <span className="mr-1 font-semibold text-emerald-500">↑ {stat.delta}</span> : null}{stat.detail}</p>
@@ -139,7 +139,7 @@ export function OverviewDashboard({ username }: { username: string }) {
               </div>
             </Card.Header>
             <Card.Content>
-              {visibleRows.length ? <><Table><Table.ScrollContainer><Table.Content aria-label="Overview listings" className="min-w-[760px]"><Table.Header><Table.Column isRowHeader>Listing</Table.Column><Table.Column>Type</Table.Column><Table.Column>Status</Table.Column><Table.Column>Views</Table.Column><Table.Column>Clicks</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="text-end">Actions</Table.Column></Table.Header><Table.Body>{visibleRows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><ListingAvatar name={row.name} hue={row.bannerHue} /><span className="font-medium">{row.name}</span></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={row.type === "server" ? "accent" : "default"}><Chip.Label>{row.type === "server" ? "Server" : "Bot"}</Chip.Label></Chip></Table.Cell><Table.Cell><ListingStatusChip status={row.safetyStatus} /></Table.Cell><Table.Cell>{formatCount(row.views)}</Table.Cell><Table.Cell>{formatCount(row.clicks)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex justify-end gap-1"><ActionButton label={`Preview ${row.name}`} icon={Eye} onPress={() => toast.info("Preview ready", { description: row.name })} /><ActionButton label={`Copy ${row.name} link`} icon={Copy} onPress={() => toast.success("Listing link copied")} /><ActionButton label={`Edit ${row.name}`} icon={Edit3} onPress={() => toast.success("Editor ready", { description: row.name })} /></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table><div className="mt-3 flex justify-center"><Pagination><Pagination.Content><Pagination.Item><Pagination.Previous isDisabled={page === 1} onPress={() => setPage(Math.max(1, page - 1))}><Pagination.PreviousIcon /></Pagination.Previous></Pagination.Item>{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <Pagination.Item key={number}><Pagination.Link isActive={page === number} onPress={() => setPage(number)}>{number}</Pagination.Link></Pagination.Item>)}<Pagination.Item><Pagination.Next isDisabled={page === totalPages} onPress={() => setPage(Math.min(totalPages, page + 1))}><Pagination.NextIcon /></Pagination.Next></Pagination.Item></Pagination.Content></Pagination></div></> : <div className="py-10 text-center"><p className="font-semibold">No listings found</p><p className="mt-1 text-sm text-muted">Try a different search or filter.</p></div>}
+              {visibleRows.length ? <><Table><Table.ScrollContainer><Table.Content aria-label="Overview listings" className="min-w-[820px]"><Table.Header><Table.Column isRowHeader>Listing</Table.Column><Table.Column>Type</Table.Column><Table.Column>Status</Table.Column><Table.Column>Views</Table.Column><Table.Column>Clicks</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="w-32 text-end">Actions</Table.Column></Table.Header><Table.Body>{visibleRows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><ListingAvatar name={row.name} hue={row.bannerHue} /><span className="font-medium">{row.name}</span></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={row.type === "server" ? "accent" : "default"}><Chip.Label>{row.type === "server" ? "Server" : "Bot"}</Chip.Label></Chip></Table.Cell><Table.Cell><ListingStatusChip status={row.safetyStatus} /></Table.Cell><Table.Cell>{formatCount(row.views)}</Table.Cell><Table.Cell>{formatCount(row.clicks)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><ActionButton label={`Preview ${row.name}`} icon={Eye} onPress={() => toast.info("Preview ready", { description: row.name })} /><ActionButton label={`Copy ${row.name} link`} icon={Copy} onPress={() => toast.success("Listing link copied")} /><ActionButton label={`Edit ${row.name}`} icon={Edit3} onPress={() => toast.success("Editor ready", { description: row.name })} /></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table><div className="mt-3 flex justify-center"><Pagination><Pagination.Content><Pagination.Item><Pagination.Previous isDisabled={page === 1} onPress={() => setPage(Math.max(1, page - 1))}><Pagination.PreviousIcon /></Pagination.Previous></Pagination.Item>{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <Pagination.Item key={number}><Pagination.Link isActive={page === number} onPress={() => setPage(number)}>{number}</Pagination.Link></Pagination.Item>)}<Pagination.Item><Pagination.Next isDisabled={page === totalPages} onPress={() => setPage(Math.min(totalPages, page + 1))}><Pagination.NextIcon /></Pagination.Next></Pagination.Item></Pagination.Content></Pagination></div></> : <div className="py-10 text-center"><p className="font-semibold">No listings found</p><p className="mt-1 text-sm text-muted">Try a different search or filter.</p></div>}
             </Card.Content>
           </Card>
 
@@ -184,7 +184,7 @@ function GettingStartedAccordion({ onClose }: { onClose: () => void }) {
   return (
     <Card variant="default" className="gap-4 p-4">
       <Card.Header className="flex items-center justify-between gap-3 px-1">
-        <div><Card.Title>Tips &amp; Getting Started</Card.Title><Card.Description className="mt-1">Complete the basics for your Nexus workspace.</Card.Description></div>
+        <div><Card.Title>Tips &amp; Getting Started</Card.Title><Card.Description className="mt-1">Complete the basics for your Nexbiy workspace.</Card.Description></div>
         <div className="flex shrink-0 items-center gap-1"><Chip size="sm" variant="soft" color={completed.size === GETTING_STARTED_ITEMS.length ? "success" : "accent"}><Chip.Label>{completed.size}/{GETTING_STARTED_ITEMS.length}</Chip.Label></Chip><Button isIconOnly size="sm" variant="ghost" aria-label="Close Tips & Getting Started" onPress={onClose}><PanelRightClose className="size-4" /></Button></div>
       </Card.Header>
       <Card.Content>
@@ -225,7 +225,7 @@ function ListingAvatar({ name, hue }: { name: string; hue: string }) {
 }
 
 function ActionButton({ label, icon: Icon, onPress }: { label: string; icon: typeof Eye; onPress: () => void }) {
-  return <Tooltip><Tooltip.Trigger aria-label={label} className="button button--ghost button--sm button--icon-only" onClick={onPress}><Icon className="size-3.5" /></Tooltip.Trigger><Tooltip.Content>{label}</Tooltip.Content></Tooltip>;
+  return <Tooltip><Tooltip.Trigger aria-label={label} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent" onClick={onPress}><Icon className="size-4 shrink-0" /></Tooltip.Trigger><Tooltip.Content>{label}</Tooltip.Content></Tooltip>;
 }
 
 function QuickAction({ title, description, label, icon: Icon, tone, href }: { title: string; description: string; label: string; icon: typeof Server; tone: string; href: string }) {
@@ -239,7 +239,7 @@ function VerificationQuickAction({ listingVisible, onCloseListing, onShowListing
     <div className="nexus-card relative min-h-64 overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_82%_8%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_38%)] p-5 sm:p-7">
       <div className="pointer-events-none absolute -bottom-20 -left-16 size-52 rounded-full bg-accent/8 blur-3xl" />
       <div className="relative z-10 max-w-xl md:max-w-[calc(100%-320px)]">
-        <div className="flex items-center gap-2 text-sm font-semibold text-accent"><VerifiedBadgeIcon className="size-5 text-accent" />Nexus Verification</div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-accent"><VerifiedBadgeIcon className="size-5 text-accent" />Nexbiy Verification</div>
         <h3 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Get your verification badge</h3>
         <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted">Build trust around your server or bot. Review the requirements, then check a listing&apos;s eligibility from its status dashboard.</p>
         <div className="mt-6 flex flex-wrap gap-2">

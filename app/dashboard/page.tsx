@@ -50,7 +50,7 @@ export default function DashboardPage() {
 
       {section === "settings" ? (
         <div id="settings" className="space-y-6">
-          <PageHeader title="Settings" description="Manage how your profile appears across Nexus." />
+          <PageHeader title="Settings" description="Manage how your profile appears across Nexbiy." />
           <UserSettings />
         </div>
       ) : null}

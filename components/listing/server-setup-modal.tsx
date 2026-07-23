@@ -58,7 +58,7 @@ export function ServerSetupModal({
                 </span>
                 <p className="font-semibold text-foreground">Import from Discord</p>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">
-                  Select one of the servers you own or manage. Nexus will prefill basic details to
+                  Select one of the servers you own or manage. Nexbiy will prefill basic details to
                   save time.
                 </p>
               </button>

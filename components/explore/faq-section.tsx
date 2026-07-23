@@ -14,31 +14,31 @@ const FAQ_ITEMS: FAQItemData[] = [
     id: "temporary-listing",
     question: "Is my server listing temporary?",
     answer:
-      "No. Once your server is listed on Nexus, it stays discoverable globally unless you remove it, pause it, or it violates our platform rules. This helps communities keep growing over time without needing to relist.",
+      "No. Once your server is listed on Nexbiy, it stays discoverable globally unless you remove it, pause it, or it violates our platform rules. This helps communities keep growing over time without needing to relist.",
   },
   {
     id: "verified-badge",
     question: "How do I get a verified badge for my server?",
     answer:
-      "To receive a verified badge, a server must meet Nexus verification requirements. This includes following Discord’s Terms of Service, having at least 5,000 members, remaining active and SFW, and passing a Nexus review.",
+      "To receive a verified badge, a server must meet Nexbiy verification requirements. This includes following Discord’s Terms of Service, having at least 5,000 members, remaining active and SFW, and passing a Nexbiy review.",
   },
   {
     id: "private-data",
-    question: "Does Nexus collect or store private Discord user data?",
+    question: "Does Nexbiy collect or store private Discord user data?",
     answer:
-      "Nexus does not collect, sell, or share private Discord user data. We only use the basic information needed to display listings, manage accounts, and keep the platform safe. Private messages, member conversations, and hidden server data are not collected.",
+      "Nexbiy does not collect, sell, or share private Discord user data. We only use the basic information needed to display listings, manage accounts, and keep the platform safe. Private messages, member conversations, and hidden server data are not collected.",
   },
   {
     id: "what-is-nexus",
-    question: "What is Nexus?",
+    question: "What is Nexbiy?",
     answer:
-      "Nexus is a Discord discovery platform where users can find servers, bots, and communities more easily. We help server owners showcase their communities with polished listings, while helping users browse safer and more organized Discord spaces.",
+      "Nexbiy is a Discord discovery platform where users can find servers, bots, and communities more easily. We help server owners showcase their communities with polished listings, while helping users browse safer and more organized Discord spaces.",
   },
   {
     id: "list-server-and-bot",
     question: "Can I list both a server and a bot?",
     answer:
-      "Yes. Nexus supports both Discord server listings and Discord bot listings. Servers and bots have dedicated pages, categories, filters, and dashboard tools.",
+      "Yes. Nexbiy supports both Discord server listings and Discord bot listings. Servers and bots have dedicated pages, categories, filters, and dashboard tools.",
   },
   {
     id: "edit-listing",
@@ -48,9 +48,9 @@ const FAQ_ITEMS: FAQItemData[] = [
   },
   {
     id: "safety",
-    question: "How does Nexus help keep users safe?",
+    question: "How does Nexbiy help keep users safe?",
     answer:
-      "Nexus uses listing reviews, trust signals, report options, and safety checks to help users browse with more confidence. Communities that break safety rules or Discord’s Terms of Service may be removed.",
+      "Nexbiy uses listing reviews, trust signals, report options, and safety checks to help users browse with more confidence. Communities that break safety rules or Discord’s Terms of Service may be removed.",
   },
   {
     id: "pricing",
@@ -99,7 +99,7 @@ export function FAQSection() {
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted sm:mt-4 sm:text-base">
             Everything you need to know about listing, verifying, and discovering communities on
-            Nexus.
+            Nexbiy.
           </p>
         </header>
 

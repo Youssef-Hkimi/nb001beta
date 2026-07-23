@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, AlertDialog, Button, Input, Label, Modal, Spinner, TextField, toast } from "@heroui/react";
-import { Copy, X } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, LayoutDashboard, X } from "lucide-react";
 import { useState } from "react";
 
 import { ListingStatusChip } from "@/components/listing/listing-safety";
@@ -42,6 +42,7 @@ export function ServerWidgetVerificationModal({
       <Modal.Backdrop
         isOpen={Boolean(state)}
         isDismissable={false}
+        isKeyboardDismissDisabled
       >
       <Modal.Container size="lg">
         <Modal.Dialog className="widget-verification-dialog relative sm:max-w-xl">
@@ -57,13 +58,20 @@ export function ServerWidgetVerificationModal({
               <X className="size-4" />
             </Button>
           ) : null}
-          <Modal.Header>
-            <Modal.Heading>
-              {state === "verifying"
-                ? "Verifying your Discord server"
-                : isPublished
-                  ? "Your server is live"
-                  : "Discord server verification"}
+          <Modal.Header className="pr-16">
+            <Modal.Heading className="flex items-center gap-3">
+              {isPublished ? (
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+                  <CheckCircle2 className="size-5" />
+                </span>
+              ) : null}
+              <span>
+                {state === "verifying"
+                  ? "Verifying your Discord server"
+                  : isPublished
+                    ? "Your server is live"
+                    : "Discord server verification"}
+              </span>
             </Modal.Heading>
           </Modal.Header>
           <Modal.Body>
@@ -107,21 +115,26 @@ export function ServerWidgetVerificationModal({
                     </Alert.Title>
                     <Alert.Description>
                       {state === "success"
-                        ? "Your server is publicly listed on Nexus and is waiting for review."
+                        ? "Your server is publicly listed on Nexbiy and is waiting for review."
                         : "Your listing is live. Active members will temporarily match total members until you verify the Discord widget."}
                     </Alert.Description>
                   </Alert.Content>
                 </Alert>
-                <ListingStatusChip status="PENDING_REVIEW" livePrefix />
-                <TextField isReadOnly value={publicUrl}>
-                  <Label>Public link</Label>
-                  <Input />
-                </TextField>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-muted">Listing status</p>
+                  <ListingStatusChip status="PENDING_REVIEW" livePrefix />
+                </div>
+                <div className="rounded-xl border border-border bg-default/25 p-3">
+                  <TextField isReadOnly value={publicUrl}>
+                    <Label>Public link</Label>
+                    <Input />
+                  </TextField>
+                </div>
               </div>
             ) : null}
           </Modal.Body>
           {isPublished ? (
-            <Modal.Footer className="flex-wrap">
+            <Modal.Footer className="flex-wrap border-t border-border/70 pt-4">
               <Button
                 variant="secondary"
                 onPress={() => {
@@ -132,8 +145,14 @@ export function ServerWidgetVerificationModal({
                 <Copy className="size-4" />
                 Copy link
               </Button>
-              <LinkButton href={publicPath} variant="secondary">View page</LinkButton>
-              <LinkButton href="/dashboard">Back to dashboard</LinkButton>
+              <LinkButton href={publicPath} variant="secondary">
+                <ExternalLink className="size-4" />
+                View page
+              </LinkButton>
+              <LinkButton href="/dashboard">
+                <LayoutDashboard className="size-4" />
+                Back to dashboard
+              </LinkButton>
             </Modal.Footer>
           ) : state !== "verifying" ? (
             <Modal.Footer className="flex-wrap">

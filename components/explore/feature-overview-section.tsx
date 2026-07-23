@@ -38,7 +38,7 @@ const RIGHT_FEATURES: FeatureBlockProps[] = [
   {
     title: "Safety Guards",
     description:
-      "Servers and bots listed on Nexus are reviewed and monitored to help protect users while they browse.",
+      "Servers and bots listed on Nexbiy are reviewed and monitored to help protect users while they browse.",
     icon: ShieldAlert,
     accent: "safety",
   },
@@ -89,14 +89,14 @@ export function FeatureOverviewSection() {
               Built for safer Discord discovery
             </h2>
             <p className="mt-4 max-w-[28rem] text-sm leading-relaxed text-muted sm:text-base sm:leading-relaxed">
-              Nexus helps users discover trusted Discord servers and bots while giving creators a
+              Nexbiy helps users discover trusted Discord servers and bots while giving creators a
               clean way to showcase and grow their communities.
             </p>
             <Link
               href="/server"
               className="feature-overview-link mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[#629BF8] sm:mt-7 sm:text-[0.9375rem]"
             >
-              Explore how Nexus works
+              Explore how Nexbiy works
               <ArrowRight className="feature-overview-link-arrow size-4 shrink-0" aria-hidden />
             </Link>
           </div>

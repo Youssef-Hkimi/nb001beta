@@ -1,4 +1,4 @@
-# Nexus
+# Nexbiy
 
 Discord **server & bot discovery** demo — Next.js 16, TypeScript, Tailwind CSS v4, HeroUI v3.
 

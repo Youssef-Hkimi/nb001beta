@@ -29,7 +29,7 @@ server.use("/api/discord/server-widget", createDiscordWidgetRouter());
 server.use((request, response) => nextHandler(request, response));
 
 const httpServer = server.listen(port, hostname, () => {
-  console.log(`Nexus ready at http://localhost:${port}`);
+  console.log(`Nexbiy ready at http://localhost:${port}`);
 });
 
 let isClosing = false;

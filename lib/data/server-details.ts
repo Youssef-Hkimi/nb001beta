@@ -99,14 +99,14 @@ const DETAIL_OVERRIDES: Record<string, Partial<ServerDetail>> = {
     similarServerIds: ["cozy-corner", "study-together", "anime-soul"],
   },
   "nexus-hub": {
-    shortDescription: "Official Nexus community for creators, server owners, and bot builders.",
+    shortDescription: "Official Nexbiy community for creators, server owners, and bot builders.",
     longDescription:
-      "Nexus Hub is the home base for Discord creators listing servers and bots on Nexus. Share feedback, get listing tips, meet other owners, and stay up to date on product updates and community growth strategies.",
+      "Nexbiy Hub is the home base for Discord creators listing servers and bots on Nexbiy. Share feedback, get listing tips, meet other owners, and stay up to date on product updates and community growth strategies.",
     createdAt: "January 2023",
     likes: 8900,
     owner: {
-      name: "Nexus Team",
-      handle: "@nexus",
+      name: "Nexbiy Team",
+      handle: "@nexbiy",
       verified: true,
     },
     stats: {

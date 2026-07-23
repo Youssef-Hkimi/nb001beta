@@ -34,15 +34,15 @@ export default function LoginPage() {
         <div className="flex flex-col items-center text-center">
           <Image
             src="/nexus-logo.jpg"
-            alt="Nexus"
+            alt="Nexbiy"
             width={64}
             height={64}
             priority
             className="size-16 rounded-2xl object-cover shadow-sm"
           />
-          <h1 className="mt-6 text-2xl font-bold tracking-tight sm:text-3xl">{isAuthenticated ? "You’re signed in" : "Log in to Nexus"}</h1>
+          <h1 className="mt-6 text-2xl font-bold tracking-tight sm:text-3xl">{isAuthenticated ? "You’re signed in" : "Log in to Nexbiy"}</h1>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted sm:text-base">
-            {isAuthenticated ? `Connected as ${user?.username ?? "your Discord account"}.` : "Use your Discord account to create listings, manage projects, and access your Nexus dashboard."}
+            {isAuthenticated ? `Connected as ${user?.username ?? "your Discord account"}.` : "Use your Discord account to create listings, manage projects, and access your Nexbiy dashboard."}
           </p>
         </div>
 
@@ -70,12 +70,12 @@ export default function LoginPage() {
             <div className="my-7 flex items-center gap-3"><Separator className="flex-1" /><span className="text-xs font-semibold tracking-wide text-muted uppercase">Secure sign-in</span><Separator className="flex-1" /></div>
 
             <div className="space-y-3">
-              <LoginBenefit icon={ShieldCheck} text="Nexus only requests the Discord access needed for your account and listings." />
-              <LoginBenefit icon={LockKeyhole} text="Your Discord password is never shared with or stored by Nexus." />
+              <LoginBenefit icon={ShieldCheck} text="Nexbiy only requests the Discord access needed for your account and listings." />
+              <LoginBenefit icon={LockKeyhole} text="Your Discord password is never shared with or stored by Nexbiy." />
               <LoginBenefit icon={Check} text="Discord is the only login option for now. More providers may be added later." />
             </div>
 
-            <p className="mt-7 text-center text-xs leading-relaxed text-muted">By continuing, you agree to the Nexus Terms of Service and Privacy Policy.</p>
+            <p className="mt-7 text-center text-xs leading-relaxed text-muted">By continuing, you agree to the Nexbiy Terms of Service and Privacy Policy.</p>
           </>
         )}
       </Card>

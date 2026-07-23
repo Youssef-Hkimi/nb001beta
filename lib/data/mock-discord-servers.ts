@@ -4,7 +4,7 @@ import type { DiscordServer } from "@/lib/types";
 export const MOCK_DISCORD_SERVERS: DiscordServer[] = [
   {
     id: "nexus-hub",
-    name: "Nexus Hub",
+    name: "Nexbiy Hub",
     members: 128400,
     online: 18420,
     role: "Owner",
@@ -12,10 +12,10 @@ export const MOCK_DISCORD_SERVERS: DiscordServer[] = [
     tags: ["Community", "Support", "Events"],
     shortDescription: "Official community for creators and server owners.",
     fullDescription:
-      "Join thousands of Discord creators building better communities with Nexus tools, events, and support.",
+      "Join thousands of Discord creators building better communities with Nexbiy tools, events, and support.",
     language: "English",
     region: "Global",
-    inviteUrl: "https://discord.gg/nexus",
+    inviteUrl: "https://discord.gg/nexbiy",
     bannerHue: "220",
     verified: true,
     createdAt: "March 2021",

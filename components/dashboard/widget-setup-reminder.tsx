@@ -93,7 +93,7 @@ export function WidgetSetupReminderAlert() {
         description: `${selectedReminder.serverName} can now show its live online member count.`,
       });
     } catch {
-      setVerificationError("Nexus could not reach Discord. Please try again.");
+      setVerificationError("Nexbiy could not reach Discord. Please try again.");
     } finally {
       setVerifyingGuildId(null);
     }

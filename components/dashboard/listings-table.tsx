@@ -95,7 +95,7 @@ export function ListingsTable() {
                     <Table.Cell>{formatCount(row.clicks)}</Table.Cell>
                     <Table.Cell className="text-muted">{row.updated}</Table.Cell>
                     <Table.Cell>
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1">
                         <Button
                           isIconOnly
                           size="sm"
@@ -117,9 +117,9 @@ export function ListingsTable() {
                         <Dropdown>
                           <Dropdown.Trigger
                             aria-label="More actions"
-                            className="button button--ghost button--sm button--icon-only"
+                            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"
                           >
-                            <MoreHorizontal className="size-4" />
+                            <MoreHorizontal className="size-4 shrink-0" />
                           </Dropdown.Trigger>
                           <Dropdown.Popover placement="bottom end">
                             <Dropdown.Menu

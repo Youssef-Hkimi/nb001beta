@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
 import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-like";
+import { ReportListingDialog } from "@/components/listing/report-listing-dialog";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
@@ -24,6 +25,7 @@ import type { BotListing } from "@/lib/types";
 export function BotDetailView({ bot }: { bot: BotListing }) {
   const vote = useListingVote({ listingKey: `bot:${bot.slug}`, initialVotes: bot.votes });
   const [galleryImage, setGalleryImage] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const features = useMemo(() => getBotFeatureOptions(bot.botFeatures), [bot.botFeatures]);
   const similar = useMemo(() => getSimilarBots(bot), [bot]);
   const banner = bot.banner || getBotBannerUrl(bot.slug, bot.bannerHue);
@@ -70,7 +72,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
                 <Dropdown.Popover placement="bottom end">
                   <Dropdown.Menu onAction={(key) => {
                     if (key === "copy" && !getListingActionBlockReason(bot.safetyStatus)) { void navigator.clipboard?.writeText(bot.inviteUrl); toast.success("Bot invite copied"); }
-                    if (key === "report") toast.danger("Report submitted for review");
+                    if (key === "report") setReportOpen(true);
                   }}>
                     <Dropdown.Item id="copy" textValue="Copy bot invite" isDisabled={Boolean(getListingActionBlockReason(bot.safetyStatus))}><Copy className="size-4" />Copy bot invite</Dropdown.Item>
                     <Dropdown.Item id="report" textValue="Report bot" variant="danger"><Flag className="size-4" />Report bot</Dropdown.Item>
@@ -127,6 +129,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
         <Modal.Container><Modal.Dialog className="sm:max-w-4xl"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>{bot.name} preview</Modal.Heading></Modal.Header><Modal.Body>{galleryImage ? <img src={galleryImage} alt={`${bot.name} expanded preview`} className="w-full rounded-2xl border border-border" /> : null}</Modal.Body></Modal.Dialog></Modal.Container>
       </Modal.Backdrop>
       <ListingVoteDialog listingName={bot.name} mode={vote.dialogMode} open={vote.dialogOpen} remaining={vote.remaining} onOpenChange={vote.setDialogOpen} />
+      <ReportListingDialog listingName={bot.name} isOpen={reportOpen} onOpenChange={setReportOpen} />
     </div>
   );
 }

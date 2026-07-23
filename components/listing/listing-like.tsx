@@ -113,7 +113,7 @@ export function ListingVoteDialog({
               </span>
               <span className="rounded-full bg-default/70 px-2.5 py-1 text-[11px] font-medium text-muted">6-hour cooldown</span>
             </div>
-            <p className="text-xs leading-relaxed text-muted">Votes help active, useful listings reach more people across Nexus.</p>
+            <p className="text-xs leading-relaxed text-muted">Votes help active, useful listings reach more people across Nexbiy.</p>
           </Modal.Body>
           <Modal.Footer>
             <Button slot="close">Got it</Button>

@@ -112,9 +112,9 @@ function botAnalytics(listingId: string, scale: number): BotAnalytics {
 
 export const SERVER_DASHBOARD_LISTINGS: ServerDashboardListing[] = [
   {
-    id: "nexus-hub", name: "Nexus Hub", type: "server", status: "Live",
+    id: "nexus-hub", name: "Nexbiy Hub", type: "server", status: "Live",
     views: 124850, clicks: 18240, updated: "1 day ago", category: "Social",
-    description: "Official home for Nexus creators, server owners, and growing communities.",
+    description: "Official home for Nexbiy creators, server owners, and growing communities.",
     bannerHue: "220", publicPath: "/server/nexus-hub", members: 128400, online: 18420,
     verified: true, inviteActive: true, inviteOutdated: false, inviteLastChecked: "1 hour ago", listingCompleteness: 85, mediaComplete: true,
     safetyStatus: "SAFE",
@@ -181,7 +181,7 @@ export function getServerGrowthSuggestions(serverId: string) {
     listing.listingCompleteness < 90
       ? { title: "Add community features", description: "More detail helps visitors understand what your server offers.", importance: "Recommended" }
       : { title: "Keep details current", description: "Review your tags and features as the community changes.", importance: "Recommended" },
-    { title: "Share your listing link", description: "Promote your Nexus page in trusted community channels.", importance: "High Impact" },
+    { title: "Share your listing link", description: "Promote your Nexbiy page in trusted community channels.", importance: "High Impact" },
     { title: "Keep the invite active", description: "Test the public invite whenever server permissions change.", importance: "Important" },
   ] as const;
 }

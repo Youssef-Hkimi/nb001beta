@@ -15,7 +15,23 @@ import {
   Tooltip,
   toast,
 } from "@heroui/react";
-import { Bot, CircleHelp, Clock3, Copy, Eye, Plus, Save, Send, Server, Shield, Trash2 } from "lucide-react";
+import {
+  Bot,
+  CheckCircle2,
+  CircleHelp,
+  Clock3,
+  Copy,
+  ExternalLink,
+  Eye,
+  LayoutDashboard,
+  Plus,
+  Save,
+  Send,
+  Server,
+  Shield,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
@@ -162,15 +178,15 @@ const emptyServer = (): ServerForm => ({
 
 const sampleServer = (): ServerForm => ({
   guildId: "",
-  name: "Nexus Hub",
+  name: "Nexbiy Hub",
   shortDescription: "Official community for creators and server owners.",
   fullDescription:
-    "Join thousands of Discord creators building better communities with Nexus tools, events, and support.",
+    "Join thousands of Discord creators building better communities with Nexbiy tools, events, and support.",
   category: "Social",
   tags: ["Community", "Support", "Events"],
   language: "English",
   region: "Global",
-  inviteUrl: "https://discord.gg/nexus",
+  inviteUrl: "https://discord.gg/nexbiy",
   members: "128400",
   online: "18420",
   likes: "8900",
@@ -198,9 +214,9 @@ const sampleBot = (): BotForm => ({
   category: "AI",
   tags: ["AI", "Support", "FAQ"],
   inviteUrl: "https://discord.com/oauth2/authorize?client_id=helper",
-  supportUrl: "https://discord.gg/nexus",
-  websiteUrl: "https://nexus.example/helper",
-  githubUrl: "https://github.com/nexus/helper-ai",
+  supportUrl: "https://discord.gg/nexbiy",
+  websiteUrl: "https://nexbiy.example/helper",
+  githubUrl: "https://github.com/nexbiy/helper-ai",
   commands: [
     { id: "c1", name: "/ban", description: "Ban a user from the server" },
     { id: "c2", name: "/setup", description: "Configure the bot for your server" },
@@ -212,7 +228,7 @@ const sampleBot = (): BotForm => ({
   votes: "39200",
   monthlyGrowth: "21",
   createdAt: "October 2022",
-  developerName: "Nexus Labs",
+  developerName: "Nexbiy Labs",
   avatarPreview: getBotAvatarUrl("Helper AI", "185"),
   bannerPreview: getBotBannerUrl("helper-ai", "185"),
   galleryImages: Array.from({ length: 4 }, (_, index) => getBotGalleryImageUrl("Helper AI", index, "185")),
@@ -574,7 +590,7 @@ export default function NewListingPage() {
       setServerVerificationState("success");
       toast.success("Server verified and published");
     } catch {
-      setServerVerificationError("Nexus could not reach Discord. Please try again.");
+      setServerVerificationError("Nexbiy could not reach Discord. Please try again.");
       setServerVerificationState("error");
     } finally {
       serverVerificationInFlight.current = false;
@@ -731,7 +747,7 @@ export default function NewListingPage() {
               <Alert.Content>
                 <Alert.Title>Community safety</Alert.Title>
                 <Alert.Description>
-                  Servers listed on Nexus should be safe, public-facing communities that follow
+                  Servers listed on Nexbiy should be safe, public-facing communities that follow
                   Discord’s Terms of Service and avoid harmful or misleading content.
                 </Alert.Description>
               </Alert.Content>
@@ -740,7 +756,7 @@ export default function NewListingPage() {
             <section className="space-y-4">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Basic info</h2>
-                <p className="text-xs text-muted">Core details shown across Nexus</p>
+                <p className="text-xs text-muted">Core details shown across Nexbiy</p>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -803,13 +819,13 @@ export default function NewListingPage() {
                     </Label>
                     <Tooltip>
                       <Tooltip.Trigger
-                        aria-label="Why Nexus requires a Discord Server ID"
+                        aria-label="Why Nexbiy requires a Discord Server ID"
                         className="rounded-full text-muted outline-none transition-colors hover:text-accent focus-visible:ring-2 focus-visible:ring-accent"
                       >
                         <CircleHelp className="size-4" />
                       </Tooltip.Trigger>
                       <Tooltip.Content className="max-w-xs">
-                        Nexus uses the Server ID to verify the public Discord widget and sync the official server name and live online count when you publish.
+                        Nexbiy uses the Server ID to verify the public Discord widget and sync the official server name and live online count when you publish.
                       </Tooltip.Content>
                     </Tooltip>
                   </div>
@@ -1031,7 +1047,7 @@ export default function NewListingPage() {
 
             <Alert status="warning" className="rounded-2xl">
               <Alert.Indicator><Clock3 className="size-4" /></Alert.Indicator>
-              <Alert.Content><Alert.Description>New server listings go live with a Pending Review status. Nexus will review the listing for safety and platform compliance.</Alert.Description></Alert.Content>
+              <Alert.Content><Alert.Description>New server listings go live with a Pending Review status. Nexbiy will review the listing for safety and platform compliance.</Alert.Description></Alert.Content>
             </Alert>
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
@@ -1081,7 +1097,7 @@ export default function NewListingPage() {
               <Alert.Content>
                 <Alert.Title>Bot listing rules</Alert.Title>
                 <Alert.Description>
-                  Bots listed on Nexus must follow Discord’s Terms of Service, avoid malicious
+                  Bots listed on Nexbiy must follow Discord’s Terms of Service, avoid malicious
                   behavior, avoid spam, and provide clear functionality for users.
                 </Alert.Description>
               </Alert.Content>
@@ -1430,7 +1446,7 @@ export default function NewListingPage() {
 
             <Alert status="warning" className="rounded-2xl">
               <Alert.Indicator><Clock3 className="size-4" /></Alert.Indicator>
-              <Alert.Content><Alert.Description>New bot listings go live with a Pending Review status. Nexus will review the bot for safety, clear functionality, and Discord Terms of Service compliance.</Alert.Description></Alert.Content>
+              <Alert.Content><Alert.Description>New bot listings go live with a Pending Review status. Nexbiy will review the bot for safety, clear functionality, and Discord Terms of Service compliance.</Alert.Description></Alert.Content>
             </Alert>
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
@@ -1511,22 +1527,62 @@ export default function NewListingPage() {
         onAgree={finalizeBotPublish}
       />
 
-      <Modal.Backdrop isOpen={publishSuccess === "bot"} onOpenChange={(open) => !open && setPublishSuccess(null)}>
+      <Modal.Backdrop
+        isOpen={publishSuccess === "bot"}
+        isDismissable={false}
+        isKeyboardDismissDisabled
+      >
         <Modal.Container>
-          <Modal.Dialog className="sm:max-w-lg">
-            <Modal.CloseTrigger />
-            <Modal.Header><Modal.Heading>Your bot is live</Modal.Heading></Modal.Header>
+          <Modal.Dialog className="widget-verification-dialog relative sm:max-w-lg">
+            <Button
+              isIconOnly
+              aria-label="Close published bot dialog"
+              className="absolute right-4 top-4 z-10"
+              size="sm"
+              variant="tertiary"
+              onPress={() => setPublishSuccess(null)}
+            >
+              <X className="size-4" />
+            </Button>
+            <Modal.Header className="pr-16">
+              <Modal.Heading className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+                  <CheckCircle2 className="size-5" />
+                </span>
+                <span>Your bot is live</span>
+              </Modal.Heading>
+            </Modal.Header>
             <Modal.Body className="space-y-4">
-              <p className="text-sm text-muted">Your bot is now publicly listed on Nexus and is waiting for review.</p>
-              <ListingStatusChip status="PENDING_REVIEW" livePrefix />
-              <TextField isReadOnly value={`http://localhost:3010/bots/${slugify(bot.name)}`}>
-                <Label>Public link</Label><Input />
-              </TextField>
+              <Alert status="success" className="widget-verification-alert">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>Bot published successfully</Alert.Title>
+                  <Alert.Description>
+                    Your bot is publicly listed on Nexbiy and is now waiting for review.
+                  </Alert.Description>
+                </Alert.Content>
+              </Alert>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-muted">Listing status</p>
+                <ListingStatusChip status="PENDING_REVIEW" livePrefix />
+              </div>
+              <div className="rounded-xl border border-border bg-default/25 p-3">
+                <TextField isReadOnly value={`http://localhost:3010/bots/${slugify(bot.name)}`}>
+                  <Label>Public link</Label>
+                  <Input />
+                </TextField>
+              </div>
             </Modal.Body>
-            <Modal.Footer className="flex-wrap">
+            <Modal.Footer className="flex-wrap border-t border-border/70 pt-4">
               <Button variant="secondary" onPress={() => { const url = `http://localhost:3010/bots/${slugify(bot.name)}`; void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
-              <LinkButton href={`/bots/${slugify(bot.name)}`} variant="secondary">View page</LinkButton>
-              <LinkButton href="/dashboard">Back to dashboard</LinkButton>
+              <LinkButton href={`/bots/${slugify(bot.name)}`} variant="secondary">
+                <ExternalLink className="size-4" />
+                View page
+              </LinkButton>
+              <LinkButton href="/dashboard">
+                <LayoutDashboard className="size-4" />
+                Back to dashboard
+              </LinkButton>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

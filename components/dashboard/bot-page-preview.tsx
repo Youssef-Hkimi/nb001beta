@@ -56,25 +56,27 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-[var(--page-bg)]">
-      <div className="hero-image-wrapper h-32 overflow-hidden">
-        {model.bannerPreview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={model.bannerPreview} alt="" className="h-full w-full object-cover" />
-        ) : model.bannerColor ? (
-          <div
-            aria-hidden
-            className="h-full w-full"
-            style={{
-              background: `linear-gradient(135deg, ${model.bannerColor}, color-mix(in srgb, ${model.bannerColor} 68%, #111827))`,
-            }}
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={fallbackBanner} alt="" className="h-full w-full object-cover" />
-        )}
+      <div className="relative">
+        <div className="hero-image-wrapper h-32 overflow-hidden">
+          {model.bannerPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={model.bannerPreview} alt="" className="h-full w-full object-cover" />
+          ) : model.bannerColor ? (
+            <div
+              aria-hidden
+              className="h-full w-full"
+              style={{
+                background: `linear-gradient(135deg, ${model.bannerColor}, color-mix(in srgb, ${model.bannerColor} 68%, #111827))`,
+              }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={fallbackBanner} alt="" className="h-full w-full object-cover" />
+          )}
+        </div>
         <div className="absolute -bottom-7 left-4 z-10">
           <Avatar className="size-16 rounded-2xl border-2 border-background shadow-md">
-            {model.avatarPreview ? <Avatar.Image src={model.avatarPreview} alt="" /> : null}
+            {model.avatarPreview ? <Avatar.Image src={model.avatarPreview} alt="" className="object-cover" /> : null}
             <Avatar.Fallback className="rounded-2xl bg-accent/20 text-sm font-bold text-accent">{initials(name)}</Avatar.Fallback>
           </Avatar>
         </div>

@@ -53,14 +53,14 @@ export const DASHBOARD_LISTINGS: DashboardListing[] = [
   },
   {
     id: "nexus-hub",
-    name: "Nexus Hub",
+    name: "Nexbiy Hub",
     type: "server",
     status: "Live",
     views: 59100,
     clicks: 8900,
     updated: "1 day ago",
     category: "Social",
-    description: "Official home for Nexus creators and communities.",
+    description: "Official home for Nexbiy creators and communities.",
     bannerHue: "220",
     safetyStatus: "SAFE",
   },
@@ -140,7 +140,7 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
   {
     id: "4",
     icon: "views",
-    text: "Nexus Hub gained 1,200 views",
+    text: "Nexbiy Hub gained 1,200 views",
     time: "5 hours ago",
   },
   {

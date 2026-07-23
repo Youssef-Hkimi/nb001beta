@@ -41,7 +41,7 @@ export function BotReviewModal({ isOpen, onOpenChange, onAgree }: Props) {
               <ShieldAlert className="size-5" aria-hidden />
             </div>
             <p className="text-sm leading-relaxed text-muted">
-              Your Discord bot will be reviewed by Nexus to make sure it meets our criteria and
+              Your Discord bot will be reviewed by Nexbiy to make sure it meets our criteria and
               follows Discord’s Terms of Service. If the bot violates our rules, the listing may be
               taken down and your account may be flagged. Your bot can still appear live while it is
               pending review.

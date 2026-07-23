@@ -4,9 +4,9 @@ export type NexusLanguage = {
 };
 
 export const siteConfig = {
-  name: "Nexus",
+  name: "Nexbiy",
   logo: {
-    label: "Nexus",
+    label: "Nexbiy",
     href: "/explore",
   },
   supportEmail: process.env.NEXT_PUBLIC_NEXUS_SUPPORT_EMAIL ?? "",

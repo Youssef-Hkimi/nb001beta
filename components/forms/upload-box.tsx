@@ -115,7 +115,7 @@ export function UploadBox({
       canvas.toBlob(resolve, "image/webp", 0.92),
     );
     if (!blob) return;
-    const filename = `${pendingBanner.file.name.replace(/\.[^.]+$/, "")}-nexus-banner.webp`;
+    const filename = `${pendingBanner.file.name.replace(/\.[^.]+$/, "")}-nexbiy-banner.webp`;
     const croppedFile = new File([blob], filename, { type: "image/webp" });
     const croppedUrl = URL.createObjectURL(croppedFile);
     onFile?.(croppedFile, croppedUrl);
@@ -209,7 +209,7 @@ export function UploadBox({
             </Modal.Header>
             <Modal.Body className="space-y-5">
               <p className="text-sm text-muted">
-                Nexus banners use a fixed 960×320 resolution. Reposition and resize your image before applying it.
+                Nexbiy banners use a fixed 960×320 resolution. Reposition and resize your image before applying it.
               </p>
               <div
                 className="aspect-[3/1] w-full overflow-hidden rounded-2xl border border-border bg-default/40"

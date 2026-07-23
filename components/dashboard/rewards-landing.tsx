@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 
 const REWARD_SERVERS = [
-  { id: "nexus-hub", name: "Nexus Hub" },
+  { id: "nexus-hub", name: "Nexbiy Hub" },
   { id: "lofi-girl", name: "Lofi Girl" },
   { id: "reactflux", name: "ReactFlux" },
 ];
@@ -16,6 +16,17 @@ const MOCK_REFERRALS = [
   { id: "maya", name: "Maya", status: "Signed up", completed: false, reward: 0 },
   { id: "kai", name: "Kai", status: "Signed up", completed: true, reward: 10 },
 ];
+
+function getDailyResetCountdown() {
+  const now = new Date();
+  const nextReset = new Date(now);
+  nextReset.setHours(24, 0, 0, 0);
+  const remainingSeconds = Math.max(0, Math.floor((nextReset.getTime() - now.getTime()) / 1000));
+  const hours = Math.floor(remainingSeconds / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+}
 
 function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -42,23 +53,22 @@ function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolea
     if (!canvas || !ctx) return;
     const drawingContext = ctx;
 
-    let width = window.innerWidth;
-    let height = window.innerHeight;
+    let width = Math.max(1, canvas.clientWidth);
+    let height = Math.max(1, canvas.clientHeight);
     let animationFrame = 0;
     let lastFrameTime = performance.now();
+    let disposed = false;
+    let started = false;
 
     const resizeCanvas = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
+      width = Math.max(1, canvas.clientWidth);
+      height = Math.max(1, canvas.clientHeight);
       canvas.width = width;
       canvas.height = height;
     };
     resizeCanvas();
-
-    const handleResize = () => {
-      resizeCanvas();
-    };
-    window.addEventListener("resize", handleResize);
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+    resizeObserver.observe(canvas);
 
     const normalConfig = {
       density: 96,
@@ -80,27 +90,34 @@ function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolea
       sway: 0,
     };
 
-    const mouse = { x: -1000, y: -1000, vx: 0, vy: 0, lastX: -1000, lastY: -1000, radius: 120 };
-    const handleMouseMove = (event: MouseEvent) => {
-      if (mouse.x === -1000) {
-        mouse.x = event.clientX;
-        mouse.y = event.clientY;
-        mouse.lastX = event.clientX;
-        mouse.lastY = event.clientY;
-        return;
-      }
-      mouse.lastX = mouse.x;
-      mouse.lastY = mouse.y;
-      mouse.x = event.clientX;
-      mouse.y = event.clientY;
-      mouse.vx = mouse.x - mouse.lastX;
-      mouse.vy = mouse.y - mouse.lastY;
+    const mouse = {
+      x: -1000,
+      y: -1000,
+      targetX: -1000,
+      targetY: -1000,
+      vx: 0,
+      vy: 0,
+      radius: 120,
+      active: false,
     };
-    window.addEventListener("mousemove", handleMouseMove);
+    const handlePointerMove = (event: PointerEvent) => {
+      const bounds = canvas.getBoundingClientRect();
+      mouse.targetX = event.clientX - bounds.left;
+      mouse.targetY = event.clientY - bounds.top;
+      if (!mouse.active) {
+        mouse.x = mouse.targetX;
+        mouse.y = mouse.targetY;
+      }
+      mouse.active = true;
+    };
+    const handlePointerLeave = (event: PointerEvent) => {
+      if (event.relatedTarget === null) mouse.active = false;
+    };
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerout", handlePointerLeave, { passive: true });
 
     const img = new Image();
     img.decoding = "async";
-    img.src = normalConfig.imgSrc;
     const sprite = document.createElement("canvas");
     const spriteSize = 320;
     sprite.width = spriteSize;
@@ -140,23 +157,27 @@ function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolea
         const sway = normalConfig.sway + (burstConfig.sway - normalConfig.sway) * intensity;
         const rotationSpeed = normalConfig.rotSpeed + (burstConfig.rotSpeed - normalConfig.rotSpeed) * intensity;
 
+        const dx = this.x - mouse.x;
+        const dy = this.y - mouse.y;
+        const distSq = dx * dx + dy * dy;
+        const visualSize = (normalConfig.size + (burstConfig.size - normalConfig.size) * intensity) * this.size;
+        const interactionRadius = mouse.radius + visualSize * 0.35;
+        const radSq = interactionRadius * interactionRadius;
+
+        if (mouse.active && distSq < radSq && distSq > 0) {
+          const dist = Math.sqrt(distSq);
+          const force = 1 - dist / interactionRadius;
+          const angle = Math.atan2(dy, dx);
+          const pointerSpeed = Math.min(8, Math.hypot(mouse.vx, mouse.vy) * 0.55);
+          const push = force * (3 + pointerSpeed);
+          this.vx += Math.cos(angle) * push + mouse.vx * 0.14;
+          this.vy += Math.sin(angle) * push + mouse.vy * 0.14;
+        }
+
         this.y += (speed + this.speed + this.vy) * delta;
         this.x += (wind + this.vx + (sway === 0 ? 0 : Math.sin(this.y * this.swayFreq + this.swayOffset) * sway)) * delta;
         this.vx *= Math.pow(0.92, delta);
         this.vy *= Math.pow(0.92, delta);
-
-        const dx = this.x - mouse.x;
-        const dy = this.y - mouse.y;
-        const distSq = dx * dx + dy * dy;
-        const radSq = mouse.radius * mouse.radius;
-
-        if (distSq < radSq && distSq > 0) {
-          const dist = Math.sqrt(distSq);
-          const force = 1 - dist / mouse.radius;
-          const angle = Math.atan2(dy, dx);
-          this.vx += Math.cos(angle) * force * 3 + mouse.vx * 0.15;
-          this.vy += Math.sin(angle) * force * 3 + mouse.vy * 0.15;
-        }
 
         if (normalConfig.rotation) this.angle += this.rotSpeed * rotationSpeed * delta;
         const edgeMargin = burstConfig.size;
@@ -192,20 +213,34 @@ function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolea
       const target = burstRef.current ? 1 : 0;
       const easing = target > intensity ? 0.09 : 0.018;
       intensity += (target - intensity) * (1 - Math.pow(1 - easing, delta));
+      if (mouse.active) {
+        const previousX = mouse.x;
+        const previousY = mouse.y;
+        const pointerEasing = 1 - Math.pow(0.24, delta);
+        mouse.x += (mouse.targetX - mouse.x) * pointerEasing;
+        mouse.y += (mouse.targetY - mouse.y) * pointerEasing;
+        mouse.vx = mouse.x - previousX;
+        mouse.vy = mouse.y - previousY;
+      } else {
+        mouse.x = -1000;
+        mouse.y = -1000;
+        mouse.vx = 0;
+        mouse.vy = 0;
+      }
       const activeDensity = normalConfig.density + (burstConfig.density - normalConfig.density) * intensity;
       for (let index = 0; index < burstConfig.density; index += 1) {
         const visibility = index < normalConfig.density ? 1 : Math.max(0, Math.min(1, activeDensity - index));
         particles[index].update(delta);
         if (visibility > 0) particles[index].draw(visibility);
       }
-      mouse.vx *= Math.pow(0.72, delta);
-      mouse.vy *= Math.pow(0.72, delta);
       drawingContext.setTransform(1, 0, 0, 1, 0, 0);
       drawingContext.globalAlpha = 1;
       animationFrame = window.requestAnimationFrame(loop);
     }
 
-    img.onload = () => {
+    function startAnimation() {
+      if (disposed || started || img.naturalWidth === 0) return;
+      started = true;
       sprite.height = Math.round(spriteSize * (img.naturalHeight / img.naturalWidth));
       const spriteContext = sprite.getContext("2d");
       spriteContext?.drawImage(img, 0, 0, sprite.width, sprite.height);
@@ -214,12 +249,21 @@ function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolea
         particles.push(new Particle(true));
       }
       animationFrame = window.requestAnimationFrame(loop);
-    };
+    }
+
+    img.onload = startAnimation;
+    img.src = normalConfig.imgSrc;
+    if (img.complete && img.naturalWidth > 0) {
+      window.requestAnimationFrame(startAnimation);
+    }
 
     return () => {
+      disposed = true;
+      img.onload = null;
       cancelAnimationFrame(animationFrame);
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("mousemove", handleMouseMove);
+      resizeObserver.disconnect();
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerout", handlePointerLeave);
     };
   }, []);
 
@@ -228,7 +272,7 @@ function RewardsFallEffect({ burst, visible }: { burst: boolean; visible: boolea
       ref={canvasRef}
       id="fallingCanvas"
       aria-hidden="true"
-      className={`pointer-events-none fixed top-0 left-0 z-[9999] size-full transform-gpu contain-strict transition-opacity duration-700 ease-in-out ${painted ? "opacity-100" : "opacity-0"}`}
+      className={`pointer-events-none fixed inset-0 z-[60] h-screen w-screen transform-gpu contain-strict transition-opacity duration-700 ease-in-out ${painted ? "opacity-100" : "opacity-0"}`}
     />
   );
 }
@@ -245,16 +289,24 @@ export function RewardsLanding() {
   const [activeTab, setActiveTab] = useState("referral");
   const [selectedRewardServer, setSelectedRewardServer] = useState("nexus-hub");
   const [availablePoints, setAvailablePoints] = useState(10);
+  const [dailyResetCountdown, setDailyResetCountdown] = useState("24:00:00");
   const timersRef = useRef<number[]>([]);
   const giftUnmountTimerRef = useRef<number | null>(null);
   const referralSlug = (user?.username ?? user?.displayName ?? "alex")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "alex";
-  const referralLink = `nexus.gg/ref/${referralSlug}`;
+  const referralLink = `nexbiy.gg/ref/${referralSlug}`;
 
   useEffect(() => {
     return () => timersRef.current.forEach((timer) => window.clearTimeout(timer));
+  }, []);
+
+  useEffect(() => {
+    const updateCountdown = () => setDailyResetCountdown(getDailyResetCountdown());
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(interval);
   }, []);
 
   function acceptAgreement() {
@@ -296,7 +348,7 @@ export function RewardsLanding() {
   }
 
   async function copyReferralLink() {
-    await navigator.clipboard.writeText(`https://${referralLink}`);
+    await navigator.clipboard.writeText(`${window.location.origin}/ref/${referralSlug}`);
     toast.success("Referral link copied", { description: "Share it with friends to start earning Growth Points." });
   }
 
@@ -312,11 +364,11 @@ export function RewardsLanding() {
   }
 
   return (
-    <section aria-labelledby="rewards-heading">
-      <Card className="nexus-card relative isolate min-h-[min(720px,calc(100vh-8rem))] overflow-hidden rounded-3xl">
+    <section aria-labelledby="rewards-heading" className="mx-auto w-full max-w-[980px]">
+      <Card className={`nexus-card relative isolate overflow-hidden rounded-3xl ${programStarted && !transitioning ? "" : "min-h-[min(680px,calc(100vh-8rem))]"}`}>
         {giftsMounted ? <RewardsFallEffect burst={burst} visible={showGifts || burst} /> : null}
         <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_5%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_44%)]" />
-        <Card.Content className="relative z-10 flex min-h-[min(720px,calc(100vh-8rem))] flex-col p-6 sm:p-10">
+        <Card.Content className={`relative z-10 flex flex-col p-6 sm:p-8 ${programStarted && !transitioning ? "" : "min-h-[min(680px,calc(100vh-8rem))]"}`}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-accent">
               <span className="flex size-9 items-center justify-center rounded-xl bg-accent/12">
@@ -340,16 +392,16 @@ export function RewardsLanding() {
               </span>
             </div>
           ) : programStarted ? (
-            <div className="flex flex-1 flex-col justify-start py-6 animate-[verification-tab-blend_500ms_ease-out] sm:py-8">
-              <div className="mx-auto w-full max-w-[1040px] text-center">
+            <div className="flex flex-col justify-start py-5 animate-[verification-tab-blend_500ms_ease-out] sm:py-6">
+              <div className="mx-auto w-full max-w-[820px] text-center">
                 <Chip color="accent" variant="soft">
                   <Sparkles className="size-3.5" />
                   <Chip.Label>Referral Program</Chip.Label>
                 </Chip>
-                <h1 id="rewards-heading" className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Grow Nexus. Earn rewards.</h1>
+                <h1 id="rewards-heading" className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Grow Nexbiy. Earn rewards.</h1>
                 <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted">Share your personal referral link and earn Growth Points from qualified signups.</p>
 
-                <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(String(key))} className="mt-8 w-full" variant="primary">
+                <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(String(key))} className="mt-6 w-full" variant="primary">
                   <Tabs.ListContainer className="mx-auto max-w-md">
                     <Tabs.List aria-label="Referral rewards sections">
                       <Tabs.Tab id="referral">Referral</Tabs.Tab>
@@ -374,54 +426,59 @@ export function RewardsLanding() {
                     </Card>
                   </Tabs.Panel>
 
-                  <Tabs.Panel id="tracking" className="pt-8">
-                    <div className="mx-auto max-w-[1040px] space-y-4 text-left">
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.35fr]">
-                        <Card className="nexus-card-elevated">
-                          <Card.Content className="flex h-full flex-col justify-between gap-5 p-4">
-                            <span className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                              <MousePointerClick className="size-5" />
-                            </span>
-                            <div>
-                              <p className="text-sm font-medium text-muted">Referral clicks</p>
-                              <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">2</p>
-                            </div>
-                          </Card.Content>
-                        </Card>
-
-                        <Card className="nexus-card-elevated">
-                          <Card.Content className="flex h-full flex-col justify-between gap-5 p-4">
-                            <span className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                              <Clock3 className="size-5" />
-                            </span>
-                            <div>
-                              <p className="text-sm font-medium text-muted">Daily Growth Point limit</p>
-                              <p className="mt-1 text-2xl font-bold text-foreground">10 points</p>
-                              <p className="mt-1 text-xs text-muted">Resets every day</p>
-                            </div>
-                          </Card.Content>
-                        </Card>
-
-                        <Card className="nexus-card-elevated md:col-span-2 lg:col-span-1">
-                          <Card.Content className="flex h-full flex-col gap-3 p-4">
+                  <Tabs.Panel id="tracking" className="pt-5">
+                    <div className="mx-auto max-w-[820px] space-y-4 text-left">
+                      <div className="grid items-stretch gap-3 md:grid-cols-3">
+                        <Card className="nexus-card-elevated h-36">
+                          <Card.Content className="flex h-full flex-col p-4">
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-medium text-muted">Available Growth Points</p>
-                                <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">{availablePoints}</p>
+                              <div className="min-w-0">
+                              <p className="text-xs font-medium text-muted">Referral clicks</p>
+                              <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">2</p>
                               </div>
-                              <span className="flex size-10 items-center justify-center rounded-xl bg-success/10 text-success">
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                                <MousePointerClick className="size-4.5" />
+                              </span>
+                            </div>
+                            <p className="mt-auto text-[11px] text-muted">Qualified link visits</p>
+                          </Card.Content>
+                        </Card>
+
+                        <Card className="nexus-card-elevated h-36">
+                          <Card.Content className="flex h-full flex-col p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                              <p className="text-xs font-medium text-muted">Daily point limit</p>
+                              <p className="mt-0.5 text-xl font-bold text-foreground">10 points</p>
+                              </div>
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                                <Clock3 className="size-4.5" />
+                              </span>
+                            </div>
+                            <p className="mt-auto text-[11px] text-muted">Resets in <span className="font-semibold tabular-nums text-foreground">{dailyResetCountdown}</span></p>
+                          </Card.Content>
+                        </Card>
+
+                        <Card className="nexus-card-elevated h-36 md:col-span-1">
+                          <Card.Content className="flex h-full flex-col p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-muted">Available Growth Points</p>
+                                <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">{availablePoints}</p>
+                              </div>
+                              <span className="flex size-9 items-center justify-center rounded-xl bg-success/10 text-success">
                                 <Trophy className="size-5" />
                               </span>
                             </div>
-                            <div className="mt-auto flex items-end gap-2">
+                            <div className="mt-auto flex items-center gap-2">
                               <Select
                                 className="min-w-0 flex-1"
                                 selectedKey={selectedRewardServer}
                                 onSelectionChange={(key) => setSelectedRewardServer(String(key))}
                               >
-                                <Label className="text-xs">Server to reward</Label>
-                                <Select.Trigger>
-                                  <Select.Value />
+                                <Label className="sr-only">Server to reward</Label>
+                                <Select.Trigger className="h-9 min-w-0">
+                                  <Select.Value className="truncate" />
                                   <Select.Indicator />
                                 </Select.Trigger>
                                 <Select.Popover>
@@ -435,7 +492,7 @@ export function RewardsLanding() {
                                   </ListBox>
                                 </Select.Popover>
                               </Select>
-                              <Button variant="primary" isDisabled={availablePoints === 0} onPress={claimGrowthPoints}>Claim</Button>
+                              <Button size="sm" variant="primary" isDisabled={availablePoints === 0} onPress={claimGrowthPoints}>Claim</Button>
                             </div>
                           </Card.Content>
                         </Card>
@@ -493,16 +550,16 @@ export function RewardsLanding() {
             <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center py-16 text-center animate-[verification-tab-blend_500ms_ease-out] sm:py-24">
               <Chip color="accent" variant="soft">
                 <Sparkles className="size-3.5" />
-                <Chip.Label>Nexus Referral Rewards</Chip.Label>
+                <Chip.Label>Nexbiy Referral Rewards</Chip.Label>
               </Chip>
 
               <h1 id="rewards-heading" className="mt-7 max-w-5xl text-4xl leading-[1.08] font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                <span className="block text-foreground">Invite friends to Nexus.</span>
+                <span className="block text-foreground">Invite friends to Nexbiy.</span>
                 <span className="block bg-gradient-to-r from-[#629BF8] to-[#82B0F9] bg-clip-text text-transparent">Earn Growth Points.</span>
                 <span className="block text-foreground">Use them to promote your listings.</span>
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg">
-                Share Nexus with friends and earn points when qualified referrals join. Redeem them for temporary visibility boosts across Nexus.
+                Share Nexbiy with friends and earn points when qualified referrals join. Redeem them for temporary visibility boosts across Nexbiy.
               </p>
 
               <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
@@ -536,7 +593,7 @@ export function RewardsLanding() {
                 <AlertDialog.Heading>Referral Program Agreement</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body className="space-y-4">
-                <p className="text-sm leading-6 text-muted">A fair referral program keeps rewards valuable for every Nexus owner.</p>
+                <p className="text-sm leading-6 text-muted">A fair referral program keeps rewards valuable for every Nexbiy owner.</p>
                 <div className="grid gap-2.5">
                   <div className="flex gap-3 rounded-xl border border-border bg-default/35 p-3.5">
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">

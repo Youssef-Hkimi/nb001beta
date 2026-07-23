@@ -290,7 +290,7 @@ export function ServerOwnerDashboard() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">My Servers</h1>
-          <p className="mt-1 max-w-3xl text-muted">Manage your Discord server listings, analytics, and Nexus status.</p>
+          <p className="mt-1 max-w-3xl text-muted">Manage your Discord server listings, analytics, and Nexbiy status.</p>
         </div>
         <LinkButton href="/dashboard/new?type=server"><Plus className="size-4" />Add Server</LinkButton>
       </header>
@@ -372,7 +372,7 @@ export function ServerOwnerDashboard() {
                 )}
               </div>
 
-              <EditSection title="Basic info" description="Core information shown across Nexus.">
+              <EditSection title="Basic info" description="Core information shown across Nexbiy.">
                 <div className="grid gap-4 md:grid-cols-2">
                   <TextField isRequired value={editForm.name} onChange={(name) => setEditForm((form) => ({ ...form, name }))}>
                     <Label>Server name</Label>
@@ -444,7 +444,7 @@ export function ServerOwnerDashboard() {
                 </div>
               </EditSection>
 
-              <EditSection title="Server media" description="Update the server icon and banner used on Nexus.">
+              <EditSection title="Server media" description="Update the server icon and banner used on Nexbiy.">
                 <div className="grid gap-4 md:grid-cols-2">
                   <UploadBox
                     title="Server icon"
@@ -587,7 +587,7 @@ function OverviewTab({ servers, onCopy, onDelete, onDismissUpdate, onEdit, onInv
           <Card variant="secondary" className="items-center p-10 text-center">
             <Server className="size-6 text-muted" />
             <h3 className="font-semibold text-foreground">No server projects</h3>
-            <p className="text-sm text-muted">Add a server to start managing a Nexus listing.</p>
+            <p className="text-sm text-muted">Add a server to start managing a Nexbiy listing.</p>
           </Card>
         )}
         {servers.map((server) => (
@@ -605,12 +605,17 @@ function OverviewTab({ servers, onCopy, onDelete, onDismissUpdate, onEdit, onInv
                   <p className="mt-2 text-xs text-muted">{server.category} · {formatCount(server.members)} members · Updated {server.updated}</p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 lg:justify-end">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
                 <Button size="sm" variant="secondary" onPress={() => onEdit(server)}><Pencil className="size-4" />Edit</Button>
                 <Button size="sm" variant="secondary" onPress={() => onInvite(server)}><Link2 className="size-4" />Update Invite</Button>
                 <LinkButton href={server.publicPath} size="sm" variant="ghost"><ExternalLink className="size-4" />Public Page</LinkButton>
                 <Dropdown>
-                  <Dropdown.Trigger aria-label={`More actions for ${server.name}`} className="button button--ghost button--sm button--icon-only"><MoreHorizontal className="size-4" /></Dropdown.Trigger>
+                  <Dropdown.Trigger
+                    aria-label={`More actions for ${server.name}`}
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <MoreHorizontal className="size-4 shrink-0" />
+                  </Dropdown.Trigger>
                   <Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => { if (key === "copy") onCopy(server); if (key === "toggle") onToggle(server); }}>
                     <Dropdown.Item id="copy" textValue="Copy listing link"><Copy className="size-4" />Copy Listing Link</Dropdown.Item>
                     <Dropdown.Item id="toggle" textValue={server.status === "Paused" ? "Resume listing" : "Pause listing"}>{server.status === "Paused" ? "Resume Listing" : "Pause Listing"}</Dropdown.Item>
@@ -681,7 +686,7 @@ function StatusTab({ servers, onInvite }: { servers: ServerDashboardListing[]; o
   const verificationChecks = selected ? [
     { label: "At least 5,000 members", passed: selected.members >= 5000 },
     { label: "Listing is live", passed: selected.status === "Live" },
-    { label: "Nexus safety review completed", passed: selected.safetyStatus === "SAFE" },
+    { label: "Nexbiy safety review completed", passed: selected.safetyStatus === "SAFE" },
     { label: "Discord invite is active and current", passed: selected.inviteActive && !selected.inviteOutdated },
     { label: "Listing is at least 80% complete", passed: selected.listingCompleteness >= 80 },
   ] : [];
@@ -700,22 +705,22 @@ function StatusTab({ servers, onInvite }: { servers: ServerDashboardListing[]; o
       </div>
 
       {!selected ? (
-        <Card variant="secondary" className="items-center p-10 text-center"><span className="flex size-12 items-center justify-center rounded-2xl bg-accent/10 text-accent"><ShieldCheck className="size-6" /></span><h3 className="font-semibold text-foreground">Select a server to run a status check</h3><p className="max-w-md text-sm text-muted">Nexus will show its current visibility, review state, verification readiness, and invite health.</p></Card>
+        <Card variant="secondary" className="items-center p-10 text-center"><span className="flex size-12 items-center justify-center rounded-2xl bg-accent/10 text-accent"><ShieldCheck className="size-6" /></span><h3 className="font-semibold text-foreground">Select a server to run a status check</h3><p className="max-w-md text-sm text-muted">Nexbiy will show its current visibility, review state, verification readiness, and invite health.</p></Card>
       ) : (
         <div className="space-y-5">
           <Card variant="default" className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><ServerAvatar server={selected} className="size-12" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-foreground">{selected.name}</h3><ListingStatusChip status={selected.safetyStatus} livePrefix /></div><p className="mt-1 text-sm text-muted">{LISTING_STATUS_CONFIG[selected.safetyStatus].description}</p></div></div><LinkButton href={selected.publicPath} target="_blank" size="sm" variant="secondary"><ExternalLink className="size-4" />View public page</LinkButton></div></Card>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatusCheck title="Listing" value={selected.status === "Live · Pending Review" ? "Live" : selected.status} detail="Public listing visibility" icon={Eye} tone={selected.status.startsWith("Live") ? "success" : "warning"} />
-            <StatusCheck title="Nexus review" value={selected.safetyStatus === "SAFE" ? "Completed" : LISTING_STATUS_CONFIG[selected.safetyStatus].label} detail="Trust and safety review" icon={ShieldCheck} tone={selected.safetyStatus === "SAFE" ? "success" : "warning"} />
-            <StatusCheck title="Verification" value={selected.verified ? "Verified by Nexus" : eligible ? "Eligible" : "Not eligible yet"} detail={`${passedChecks}/${verificationChecks.length} requirements met`} icon={VerifiedBadgeIcon} tone={selected.verified || eligible ? "success" : "default"} />
+            <StatusCheck title="Nexbiy review" value={selected.safetyStatus === "SAFE" ? "Completed" : LISTING_STATUS_CONFIG[selected.safetyStatus].label} detail="Trust and safety review" icon={ShieldCheck} tone={selected.safetyStatus === "SAFE" ? "success" : "warning"} />
+            <StatusCheck title="Verification" value={selected.verified ? "Verified by Nexbiy" : eligible ? "Eligible" : "Not eligible yet"} detail={`${passedChecks}/${verificationChecks.length} requirements met`} icon={VerifiedBadgeIcon} tone={selected.verified || eligible ? "success" : "default"} />
             <StatusCheck title="Invite link" value={!selected.inviteActive ? "Unavailable" : selected.inviteOutdated ? "Outdated" : "Up to date"} detail={`Checked ${selected.inviteLastChecked}`} icon={Link2} tone={!selected.inviteActive || selected.inviteOutdated ? "danger" : "success"} />
           </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
-            <Card variant="default" className="gap-4 p-5"><Card.Header className="flex items-center justify-between gap-3"><div><Card.Title>Verification eligibility</Card.Title><Card.Description>Baseline requirements for a Nexus review.</Card.Description></div><Chip size="sm" variant="soft" color={selected.verified || eligible ? "success" : "default"}><Chip.Label>{selected.verified ? "Verified" : eligible ? "Eligible" : `${passedChecks}/${verificationChecks.length}`}</Chip.Label></Chip></Card.Header><Card.Content className="space-y-2">{verificationChecks.map((check) => <div key={check.label} className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5"><span className={`flex size-7 items-center justify-center rounded-lg ${check.passed ? "bg-emerald-500/10 text-emerald-500" : "bg-default text-muted"}`}>{check.passed ? <CheckCircle2 className="size-4" /> : <CircleAlert className="size-4" />}</span><span className="text-sm text-foreground">{check.label}</span></div>)}</Card.Content></Card>
+            <Card variant="default" className="gap-4 p-5"><Card.Header className="flex items-center justify-between gap-3"><div><Card.Title>Verification eligibility</Card.Title><Card.Description>Baseline requirements for a Nexbiy review.</Card.Description></div><Chip size="sm" variant="soft" color={selected.verified || eligible ? "success" : "default"}><Chip.Label>{selected.verified ? "Verified" : eligible ? "Eligible" : `${passedChecks}/${verificationChecks.length}`}</Chip.Label></Chip></Card.Header><Card.Content className="space-y-2">{verificationChecks.map((check) => <div key={check.label} className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5"><span className={`flex size-7 items-center justify-center rounded-lg ${check.passed ? "bg-emerald-500/10 text-emerald-500" : "bg-default text-muted"}`}>{check.passed ? <CheckCircle2 className="size-4" /> : <CircleAlert className="size-4" />}</span><span className="text-sm text-foreground">{check.label}</span></div>)}</Card.Content></Card>
 
-            <Card variant="default" className="gap-4 p-5"><Card.Header><Card.Title>Discord invite health</Card.Title><Card.Description>Nexus periodically checks whether visitors can still join.</Card.Description></Card.Header><Card.Content className="space-y-4"><div className={`rounded-2xl border p-4 ${selected.inviteActive && !selected.inviteOutdated ? "border-emerald-500/25 bg-emerald-500/5" : "border-red-500/25 bg-red-500/5"}`}><div className="flex items-start gap-3"><span className={`flex size-9 items-center justify-center rounded-xl ${selected.inviteActive && !selected.inviteOutdated ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>{selected.inviteActive && !selected.inviteOutdated ? <CheckCircle2 className="size-5" /> : <CircleAlert className="size-5" />}</span><div><p className="text-sm font-semibold text-foreground">{selected.inviteActive && !selected.inviteOutdated ? "Invite is healthy" : selected.inviteActive ? "Invite needs to be refreshed" : "Invite is unavailable"}</p><p className="mt-1 text-xs leading-relaxed text-muted">Last checked {selected.inviteLastChecked}. {selected.inviteOutdated ? "Update it to prevent failed join attempts." : "No action is currently required."}</p></div></div></div><Button variant={selected.inviteOutdated || !selected.inviteActive ? "primary" : "secondary"} onPress={() => onInvite(selected)}><Clock3 className="size-4" />{selected.inviteOutdated || !selected.inviteActive ? "Update invite link" : "Replace invite link"}</Button></Card.Content></Card>
+            <Card variant="default" className="gap-4 p-5"><Card.Header><Card.Title>Discord invite health</Card.Title><Card.Description>Nexbiy periodically checks whether visitors can still join.</Card.Description></Card.Header><Card.Content className="space-y-4"><div className={`rounded-2xl border p-4 ${selected.inviteActive && !selected.inviteOutdated ? "border-emerald-500/25 bg-emerald-500/5" : "border-red-500/25 bg-red-500/5"}`}><div className="flex items-start gap-3"><span className={`flex size-9 items-center justify-center rounded-xl ${selected.inviteActive && !selected.inviteOutdated ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"}`}>{selected.inviteActive && !selected.inviteOutdated ? <CheckCircle2 className="size-5" /> : <CircleAlert className="size-5" />}</span><div><p className="text-sm font-semibold text-foreground">{selected.inviteActive && !selected.inviteOutdated ? "Invite is healthy" : selected.inviteActive ? "Invite needs to be refreshed" : "Invite is unavailable"}</p><p className="mt-1 text-xs leading-relaxed text-muted">Last checked {selected.inviteLastChecked}. {selected.inviteOutdated ? "Update it to prevent failed join attempts." : "No action is currently required."}</p></div></div></div><Button variant={selected.inviteOutdated || !selected.inviteActive ? "primary" : "secondary"} onPress={() => onInvite(selected)}><Clock3 className="size-4" />{selected.inviteOutdated || !selected.inviteActive ? "Update invite link" : "Replace invite link"}</Button></Card.Content></Card>
           </div>
         </div>
       )}

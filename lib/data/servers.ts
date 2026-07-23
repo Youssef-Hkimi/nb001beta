@@ -3,8 +3,8 @@ import type { ListingSafetyFields, ListingSafetyStatus, ServerListing } from "@/
 const SERVER_SEEDS: Omit<ServerListing, keyof ListingSafetyFields>[] = [
   {
     id: "nexus-hub",
-    name: "Nexus Hub",
-    description: "Official Nexus community for creators, server owners, and bot builders.",
+    name: "Nexbiy Hub",
+    description: "Official Nexbiy community for creators, server owners, and bot builders.",
     members: 128400,
     online: 18420,
     category: "Social",
@@ -206,7 +206,7 @@ export const SERVERS: ServerListing[] = SERVER_SEEDS.map((server) => {
     pausedAt: safetyStatus === "PAUSED" ? "2026-07-10" : undefined,
     suspendedAt: safetyStatus === "SUSPENDED" ? "2026-07-11" : undefined,
     previousSafetyStatus: safetyStatus === "PAUSED" ? "SAFE" : undefined,
-    publicStatusReason: safetyStatus === "SUSPENDED" ? "This listing is unavailable while Nexus reviews a policy concern." : undefined,
+    publicStatusReason: safetyStatus === "SUSPENDED" ? "This listing is unavailable while Nexbiy reviews a policy concern." : undefined,
   };
 });
 

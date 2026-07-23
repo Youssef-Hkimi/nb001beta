@@ -33,7 +33,6 @@ function getInitials(value: string) {
 }
 
 type ProfileForm = {
-  displayName: string;
   bio: string;
   x: string;
   github: string;
@@ -82,7 +81,6 @@ function SectionHeader({icon, title, description}: {icon: ReactNode; title: stri
 export function UserSettings() {
   const {user, updateUser} = useAuth();
   const [profile, setProfile] = useState<ProfileForm>({
-    displayName: user?.displayName ?? user?.username ?? "",
     bio: user?.bio ?? "",
     x: user?.socials?.x ?? "",
     github: user?.socials?.github ?? "",
@@ -105,7 +103,6 @@ export function UserSettings() {
 
   const saveProfile = () => {
     updateUser({
-      displayName: profile.displayName.trim(),
       bio: profile.bio.trim(),
       inboxNotifications: profile.inboxNotifications,
       notificationPreferences: profile.notifications,
@@ -126,17 +123,17 @@ export function UserSettings() {
         <Card.Content className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
           <Avatar className="size-16 rounded-2xl ring-1 ring-border">
             {user?.avatarUrl ? <Avatar.Image alt={user.username} src={user.avatarUrl} /> : null}
-            <Avatar.Fallback>{getInitials(profile.displayName || user?.username || "Nexus")}</Avatar.Fallback>
+            <Avatar.Fallback>{getInitials(user?.displayName || user?.username || "Nexbiy")}</Avatar.Fallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-semibold">{profile.displayName || user?.username || "Nexus user"}</h2>
+              <h2 className="truncate text-lg font-semibold">{user?.displayName || user?.username || "Nexbiy user"}</h2>
               <Chip color="success" size="sm" variant="soft">
                 <IconifyIcon className="size-3.5" icon="ic:baseline-discord" />
                 Discord connected
               </Chip>
             </div>
-            <p className="mt-1 text-sm text-muted">@{user?.username ?? "nexus-user"}</p>
+            <p className="mt-1 text-sm text-muted">@{user?.username ?? "nexbiy-user"}</p>
           </div>
           <p className="max-w-sm text-sm leading-5 text-muted sm:text-right">
             Your avatar and Discord identity are synced from your connected account.
@@ -151,16 +148,17 @@ export function UserSettings() {
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="nexus-card">
           <Card.Header className="p-5 pb-0">
-            <SectionHeader description="Control the information visitors see across Nexus." icon={<UserRound className="size-5" />} title="Public profile" />
+            <SectionHeader description="Control the information visitors see across Nexbiy." icon={<UserRound className="size-5" />} title="Public profile" />
           </Card.Header>
           <Card.Content className="grid gap-4 p-5">
-            <TextField isRequired name="displayName">
-              <Label>Display name</Label>
-              <Input maxLength={32} placeholder="Your display name" value={profile.displayName} onChange={(event) => updateField("displayName", event.target.value)} />
+            <TextField isReadOnly name="username">
+              <Label>Discord username</Label>
+              <Input value={user?.username ?? ""} />
+              <p className="text-xs text-muted">Synced from Discord and cannot be changed on Nexbiy.</p>
             </TextField>
             <TextField name="bio">
-              <div className="flex items-center justify-between gap-3"><Label>Bio</Label><span className="text-xs text-muted">{profile.bio.length}/240</span></div>
-              <TextArea className="min-h-32" maxLength={240} placeholder="Tell people about yourself and what you build." value={profile.bio} onChange={(event) => updateField("bio", event.target.value)} />
+              <div className="flex items-center justify-between gap-3"><Label>Short bio</Label><span className="text-xs text-muted">{profile.bio.length}/120</span></div>
+              <TextArea className="min-h-24" maxLength={120} placeholder="A short introduction about you." value={profile.bio} onChange={(event) => updateField("bio", event.target.value)} />
             </TextField>
           </Card.Content>
         </Card>
@@ -182,7 +180,7 @@ export function UserSettings() {
               <Label className="flex items-center gap-2"><IconifyIcon className="size-4" icon="simple-icons:roblox" />Roblox</Label>
               <Input placeholder="Username" value={profile.roblox} onChange={(event) => updateField("roblox", event.target.value)} />
             </TextField>
-            <p className="text-xs leading-5 text-muted">Enter usernames only. Nexus will build the public profile links for you.</p>
+            <p className="text-xs leading-5 text-muted">Enter usernames only. Nexbiy will build the public profile links for you.</p>
           </Card.Content>
         </Card>
       </div>
@@ -193,11 +191,11 @@ export function UserSettings() {
             <SectionHeader description="Choose which listing activity appears in your header inbox." icon={<Bell className="size-5" />} title="Inbox notifications" />
           </Card.Header>
           <Card.Content className="grid gap-3 p-5">
-            <SettingsSwitch description="Keep important Nexus activity available from the site header." isSelected={profile.inboxNotifications} title="Enable inbox notifications" onChange={(selected) => updateField("inboxNotifications", selected)} />
+            <SettingsSwitch description="Keep important Nexbiy activity available from the site header." isSelected={profile.inboxNotifications} title="Enable inbox notifications" onChange={(selected) => updateField("inboxNotifications", selected)} />
             <Separator className="my-1" />
             <SettingsSwitch description="Review decisions, suspensions, and listing status changes." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.listingUpdates} title="Listing updates" onChange={(selected) => updateNotification("listingUpdates", selected)} />
             <SettingsSwitch description="Celebrate when a listing reaches a new vote milestone." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.likeMilestones} title="Vote milestones" onChange={(selected) => updateNotification("likeMilestones", selected)} />
-            <SettingsSwitch description="Product updates, verification news, and platform notices." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.announcements} title="Nexus announcements" onChange={(selected) => updateNotification("announcements", selected)} />
+            <SettingsSwitch description="Product updates, verification news, and platform notices." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.announcements} title="Nexbiy announcements" onChange={(selected) => updateNotification("announcements", selected)} />
           </Card.Content>
         </Card>
 

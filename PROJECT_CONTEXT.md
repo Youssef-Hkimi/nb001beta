@@ -1,8 +1,8 @@
-# Nexus — Project Context
+# Nexbiy — Project Context
 
 ## Vision
 
-**Nexus** is a polished demo of a **Discord server and bot discovery platform**.
+**Nexbiy** is a polished demo of a **Discord server and bot discovery platform**.
 
 It should feel like:
 

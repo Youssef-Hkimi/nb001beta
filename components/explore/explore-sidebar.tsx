@@ -57,11 +57,11 @@ export function ExploreSidebar() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#102033]/85 via-[#102033]/68 to-[#2D2E33]/78" />
         <div className="relative z-10 space-y-3 p-5">
           <p className="text-xs font-semibold tracking-wide text-white/80 uppercase">
-            Grow on Nexus
+            Grow on Nexbiy
           </p>
           <h3 className="text-xl font-bold leading-snug">Create. Connect. Grow.</h3>
           <p className="text-sm leading-relaxed text-white/90">
-            Add your server or bot to Nexus and reach millions of Discord users.
+            Add your server or bot to Nexbiy and reach millions of Discord users.
           </p>
           <LinkButton
             className="mt-1 w-full bg-white text-[#102033] hover:bg-white/90"
