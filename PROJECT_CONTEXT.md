@@ -10,7 +10,7 @@ It should feel like:
 - **Discord Explore** (discovery and browsing)
 - **Product Hunt / modern creator marketplace** (alive, clickable, not empty SaaS)
 
-It is a **front-end product demo** with **mock data only** for now. No real Discord OAuth, no real invites, no real uploads. Interactions (toasts, modals, filters, likes) must still feel production-ready.
+It is still a **mock-first product demo**, but it includes a local test Discord OAuth flow (`identify` + `guilds`) and live Discord widget verification. Listings, analytics, moderation, rewards, votes, notifications, and admin data remain mocked. Interactions must still feel production-ready.
 
 ## Stack
 
@@ -21,19 +21,17 @@ It is a **front-end product demo** with **mock data only** for now. No real Disc
 | Styling | **Tailwind CSS v4** |
 | UI library | **HeroUI React v3** (`@heroui/react` + `@heroui/styles`) |
 | Theme | **next-themes** (`class` strategy on `<html>`) |
-| Icons | **lucide-react only** — **never emojis as UI icons** |
+| Icons | **lucide-react** for general UI; Iconify for branded/platform icons; never emojis as UI icons |
 | Data | Mock modules under `lib/data/` |
 
 ### Project location
 
-```
-C:\Users\noste\nexus
-```
+`/Users/yobbiy/Documents/NexusEdits`
 
 ### Run locally
 
 ```bash
-cd C:\Users\noste\nexus
+cd /Users/yobbiy/Documents/NexusEdits
 npm run dev -- -p 3010
 ```
 
@@ -55,8 +53,14 @@ npm run build
 | `/server` | Server catalog only (filters + grid + pagination) |
 | `/server/[slug]` | Public server detail / profile page |
 | `/bots` | Bot catalog only (filters + grid + pagination) |
-| `/dashboard` | Creator dashboard (stats, listings table, activity) |
+| `/bots/[slug]` | Public bot detail / profile page |
+| `/login` | Discord-only login |
+| `/verification` | Server and bot verification requirements |
+| `/rewards` | Public rewards explanation and Discord login CTA |
+| `/ref/[slug]` | Mock referral receiver and reward-claim flow |
+| `/dashboard` | Creator dashboard: Overview, My Servers, My Bots, Rewards, Settings |
 | `/dashboard/new` | Create server or bot listing (form + live preview) |
+| `/admin` | Mock staff control center for listings, users, reports, rewards, reviews, and platform health |
 
 There are **no** dedicated Categories or Leaderboard pages (removed from nav).
 
@@ -65,7 +69,9 @@ There are **no** dedicated Categories or Leaderboard pages (removed from nav).
 1. **Discover** — Explore, browse servers, browse bots  
 2. **Inspect** — Open a real-feeling public server profile  
 3. **List** — Dashboard + create-listing flow for owners  
-4. **Feel alive** — Hover, filters, skeletons, modals, toasts, light/dark  
+4. **Reward growth** — referrals, Growth Points, votes, and transparent cooldowns
+5. **Operate safely** — verification, reports, moderation queues, roles, and protected admin actions
+6. **Feel alive** — hover, filters, skeletons, modals, toasts, motion, and light/dark
 
 ## HeroUI is mandatory
 
@@ -94,3 +100,12 @@ There are **no** dedicated Categories or Leaderboard pages (removed from nav).
 - Brand blue accents  
 - Wide listing cards, clean server profiles  
 - Sharp server banners with **tiny** theme-aware bottom fade only  
+- Clear creator tooling without exposing internal/admin-only metrics
+- Public engagement is called **Votes** and uses the thumbs-up icon
+
+## Integration boundary
+
+- Discord OAuth and guild import are local test integrations, not production authentication.
+- Discord widget checks are live and cache-busted only on manual publish/retry requests.
+- Production persistence, file storage, rate limiting, RBAC/2FA, analytics, notifications, and anti-abuse are not connected yet.
+- Never commit OAuth secrets or `.env.local`.

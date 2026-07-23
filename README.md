@@ -32,5 +32,16 @@ Open http://localhost:3010
 - `/server` — server listings  
 - `/server/[slug]` — server profile  
 - `/bots` — bot listings  
-- `/dashboard` — creator dashboard  
+- `/bots/[slug]` — bot profile
+- `/login` — Discord login
+- `/verification` — verification requirements
+- `/rewards` — public referral rewards
+- `/ref/[slug]` — referral receiver
+- `/dashboard` — creator dashboard
 - `/dashboard/new` — create listing  
+- `/admin` — mock staff control center
+
+## Backup
+
+The project backup remote is `git@github.com:Youssef-Hkimi/nb001.git` (local remote name: `nexbiy`).
+Root handoff documents are the durable project memory; update them before major backup pushes.

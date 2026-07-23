@@ -1,75 +1,92 @@
 # Nexbiy — Next Work
 
-## Do NOT redo these (already shipped & accepted)
+## Do not redo
 
-The following were requested earlier and are **already implemented with good results**.  
-**Do not re-implement or “fix” them unless the user reports a regression.**
+These are shipped and should only change when the user reports a specific regression:
 
-| Item | Where it lives |
-|------|----------------|
-| Server detail banner: sharp, no heavy blur/fog, tiny theme-aware bottom fade | `globals.css` (`.server-hero-banner`), `lib/server-banner.ts`, `server-detail-view.tsx` |
-| Server listing cards wider + less rounded (card/banner/icon) | `globals.css` (`.server-listing-*`), `server-card.tsx`, explore/server grids |
-| Compact Join button on cards | `server-card.tsx` |
-| Like instead of Save/Bookmark on server detail | `server-detail-view.tsx` |
-| Server Stats: members/online/growth/join clicks; **no** likes metric, **no** review score | `server-detail-view.tsx` |
-| Server Details: Created + Region with **simple icons** (no square backgrounds) | `server-detail-view.tsx` |
-| No server reviews / gallery / rules on server detail | removed from detail view + data model |
-| Checkbox/Switch working (HeroUI Content wrapping Control) | `listing-filters.tsx`, server/bots pages, create form |
-| Dropdown without nested Button | listings table + server detail |
-| Dashboard new listing without Tabs.Indicator crash | button tab strip in `dashboard/new/page.tsx` |
-| Categories/Leaderboard removed from nav; Trending Tags removed from explore | navbar + explore sidebar |
+| Completed behavior | Owner files/areas |
+|---|---|
+| Public rebrand from Nexus to Nexbiy | UI copy, metadata, package/docs |
+| Legacy internal keys preserved for compatibility | `nexus-*` CSS/storage/cookies/env names, logo filename, historical slug |
+| Theme-aware rotating Explore artwork and bottom blend | `components/explore/hero-section.tsx`, `app/globals.css` |
+| Sharp server/bot banners with smooth light/dark fade and no fog | detail/preview components, `app/globals.css` |
+| Votes terminology with thumbs-up icon and six-hour cooldown | public listing views and dashboard metrics |
+| Server pages contain no reviews/gallery/rules/FAQ/highlights/contact-owner | server detail |
+| Bot detail route and bot preview | `/bots/[slug]`, bot components |
+| Global formatted descriptions and opt-in expanded preview | listing create/edit components |
+| Banner crop/fallback color/icon color suggestion | listing media controls |
+| Discord OAuth test login and guild icon import | auth API routes, login/listing flow |
+| Server ID and widget verification/skip/retry/reminder flow | widget API and listing modals |
+| My Servers Overview/Analytics/Status | creator dashboard |
+| My Bots developer controls and full edit/delete flow | creator dashboard |
+| Dashboard/Public Rewards and referral receiver mock | rewards/referral components/routes |
+| Dense mock admin control center | `/admin` |
+| Top-center toasts, stable close-only publish modal | providers and listing flow |
+| HeroUI compound-component fixes | Switch/Checkbox/Dropdown/Tabs patterns |
 
-If the user asks to “fix banner fog” or “make cards wider” again, first **verify current code** — these are already done.
+## Next product work
 
----
+### 1. Production data foundation
 
-## Real remaining / next product tasks
+- Connect Supabase/Postgres (or the final chosen database) for users, listings, listing media, votes, reports, notifications, referrals, moderation, and audit logs.
+- Define migrations, row-level security, indexes, retention, and backup/restore.
+- Keep mock adapters available until each real feature is migrated safely.
 
-### High value (product completeness)
+### 2. Production authentication
 
-1. **Bot detail page** — `/bots/[slug]`
-   - Mirror server detail quality
-   - Include **gallery / screenshot previews** (allowed on bots; not on servers)
-   - Wire bot card **View** → detail route
-   - Invite / Vote / View actions stay distinct
+- Replace local test sessions with durable encrypted sessions.
+- Rotate the exposed test Discord secret before any public deployment.
+- Validate OAuth state/PKCE, callback origins, token refresh/revocation, ownership permissions, and logout.
+- Add admin/staff RBAC, scoped moderator roles, 2FA, recovery, and audit events.
 
-2. **Bot create-form gallery**
-   - Already has upload placeholders on `/dashboard/new`
-   - Later: live preview of mock gallery for bots only
+### 3. Listing persistence and media
 
-3. **Server/bot public consistency**
-   - Shared patterns for hero, sidebar, trust, similar items
-   - Keep server rules: no gallery/reviews on servers
+- Persist draft/publish/edit/delete/status workflows.
+- Add storage/CDN uploads with MIME/size checks, image optimization, crop metadata, and cleanup.
+- Validate Discord guild ownership and invite URLs server-side.
+- Schedule safe guild/widget synchronization with rate limits and retry/backoff.
 
-4. **Polish empty/loading states**
-   - Ensure bot listing skeleton matches server listing grid classes if desired
+### 4. Votes and discovery ranking
 
-### Medium
+- Persist six-hour vote windows atomically.
+- Prevent duplicate/self-abuse with account, listing, IP/device-risk, and rate-limit signals.
+- Define transparent ranking inputs for relevance, freshness, votes, safety, and featured placement.
+- Never allow unlogged manual vote changes outside protected staff workflows.
 
-5. **Accessibility pass**
-   - Dropdown PressResponder warnings if still present
-   - Focus order on server hero actions
+### 5. Rewards and referral integrity
 
-6. **Search behavior**
-   - Navbar search currently decorative — wire to `/server` or `/bots` query params
+- Persist referral attribution once per user.
+- Enforce qualification rules, 10-point daily application limit, ledgers, idempotency, reversals, and cooldowns.
+- Detect self-referrals, multi-account abuse, suspicious devices/IPs, and burst patterns.
+- Require staff reason + audit entry for balance adjustments or suspensions.
 
-7. **Explore light-mode artwork**
-   - Add real light banner asset if user provides one; currently CSS gradient
+### 6. Moderation and trust
 
-### Later / backend (out of current mock scope)
+- Persist reports, review queues, evidence, notes, severity, assignees, escalations, and appeals.
+- Add server-side authorization for every admin action.
+- Require 2FA/re-authentication for destructive actions.
+- Add moderation notifications, policy templates, and immutable audit logs.
 
-8. Production-grade Discord OAuth persistence (the local test flow is implemented)
-9. Real invite validation  
-10. Real image uploads / CDN  
-11. Persistence for likes, listings, reviews (if product wants reviews later — **not** on servers for now)
+### 7. Analytics and notifications
 
----
+- Replace demo metrics with event ingestion for impressions, page views, invite clicks, votes, referrals, and conversions.
+- Keep Members Left and Removed Servers hidden/Coming Soon until reliable data exists.
+- Add export jobs, time zones, bot filtering, and privacy retention.
+- Connect inbox notifications and global announcements; add email only after consent/preferences.
 
-## How to take tasks in a new session
+### 8. Deployment and operations
 
-1. Read `PROJECT_CONTEXT.md`, `DESIGN_SYSTEM.md`, `CURRENT_STATE.md`, this file, `AI_WORKLOG.md`.  
-2. Confirm the user request is not already completed (table above).  
-3. Make **minimal, scoped** changes — do not redesign the whole site.  
-4. Prefer HeroUI components and follow composition rules in `DESIGN_SYSTEM.md`.  
-5. Run `npm run build` or at least `npx tsc --noEmit` after non-trivial edits.  
-6. Dev server: `npm run dev -- -p 3010` if 3000 is busy.  
+- Configure Vercel project/environment variables and production callback URLs.
+- Add Supabase production/staging projects if chosen.
+- Add CI for typecheck, lint, tests, build, migration checks, and dependency/security review.
+- Add monitoring, structured logs, error reporting, health checks, rate limits, WAF, and incident runbooks.
+- Test accessibility, responsive layouts, performance, SEO, OpenGraph, and browser compatibility.
+
+## Session workflow
+
+1. Read `AGENTS.md`, `PROJECT_CONTEXT.md`, `DESIGN_SYSTEM.md`, `CURRENT_STATE.md`, this file, and `AI_WORKLOG.md`.
+2. Check the Do not redo table before coding.
+3. Make minimal scoped changes and preserve legacy compatibility identifiers.
+4. Use HeroUI v3 patterns and read the installed Next.js guide before API changes.
+5. Run `npx tsc --noEmit`; run `npm run build` for release/deployment work.
+6. Update these docs and push to `git@github.com:Youssef-Hkimi/nb001.git` after major milestones.

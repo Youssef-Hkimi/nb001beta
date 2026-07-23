@@ -221,3 +221,59 @@ Only listing cards/grid — not navbar, not filters redesign, not bots cards unl
 - HeroUI `Tooltip.Trigger` renders a `div` by default, but `VerifiedBadgeIcon` is frequently used inside paragraph text.
 - This created invalid `p > div` HTML and a React hydration error.
 - Permanent fix: render the shared tooltip trigger as an inline `span` in `components/ui/verified-badge-icon.tsx`.
+
+---
+
+## 2026-07-23 — Nexbiy rebrand and durable project handoff
+
+### Public rebrand
+
+- Changed the visible product name from **Nexus** to **Nexbiy** across navigation, metadata, login, discovery, verification, rewards, admin, dashboard, mock copy, and package metadata.
+- Kept legacy internal identifiers where changing them would break compatibility: `nexus-*` CSS classes/tokens, existing storage/cookie names, OAuth environment names, `/nexus-logo.jpg`, and the historical `nexus-hub` slug.
+- Permanent rule: public copy is Nexbiy; internal identifiers require an explicit migration rather than a global search/replace.
+
+### Discovery and listing polish
+
+- Explore now uses synchronized light/dark artwork pairs and rotates them every 15 minutes.
+- Server and bot detail/preview banners use a sharp image plus a smooth theme-aware overlay. Do not reintroduce masks that create a foggy light band.
+- Fixed card tag/action alignment, More trigger sizing, responsive menu behavior, and imported bot/server icon previews.
+- Verification badges use the shared stroke icon with an inline-safe tooltip containing only “Verified”.
+
+### Listing workflow and Discord integration
+
+- Added local-test Discord OAuth2 with `identify` and `guilds`; imported guilds include their Discord icons.
+- Server ID is required for server publishing.
+- Manual widget verification performs a cache-busted Discord request, distinguishes disabled widgets from missing invite channels, and leaves background reads cache-safe.
+- Widget-disabled owners can watch the setup video, retry, or skip after confirmation. Skipped listings remain live with active members temporarily matching total members and a persistent compact reminder.
+- Publish-success and verification dialogs are controlled overlays to prevent flicker. Publish-success dialogs close only with X unless navigation intentionally changes route.
+- Required-field failures now focus/scroll to the field and highlight it, rather than showing only a generic alert.
+
+### Dashboard and engagement
+
+- Platform engagement terminology is now **Votes**, with the existing thumbs-up icon and six-hour cooldown.
+- My Servers includes Overview, Analytics, and Status; Members Left is explicitly Coming Soon.
+- My Bots has developer controls, full edit/delete/refresh interactions, optional support server URL, and no Successful Installations metric. Removed Servers is Coming Soon.
+- Settings keep Discord identity read-only while allowing a short bio, X/GitHub/Roblox links, and inbox preferences.
+- Events and update toasts appear at top center.
+
+### Rewards and referrals
+
+- Added Dashboard Rewards setup, agreement, referral link, tracking, daily countdown, listing target, and activity table.
+- Product term is **Growth Points**; maximum applicable amount is 10 per day.
+- Added public `/rewards` and receiver `/ref/[slug]` mock flows.
+- Gift rain uses the supplied Cloudinary WebP across the full viewport, supports smooth mouse repulsion after refresh/toggle, and can be disabled. Current public effect is not drag-and-drop.
+- Mock receiver flow awards 10 Growth Points after an accepted referral login and allows only one referral attribution.
+
+### Admin control center
+
+- Added a dense mock `/admin` dashboard for overview analytics, moderation urgency, listings, users, reports, pending review, rewards risk, featured placement, moderators, support, announcements, health, and audit logs.
+- Featured listings use search rather than a fixed select.
+- Manual staff vote adjustment is capped at +10 and marked as 2FA-protected.
+- User Hammer actions and custom staff notifications expose multiple moderation simulations.
+- Permanent production rule: authorization must be enforced server-side; destructive actions require RBAC, re-authentication/2FA, a reason, and an audit record.
+
+### Backup state
+
+- Accumulated product work and rebrand were committed as `5333a24` and pushed over SSH to `git@github.com:Youssef-Hkimi/nb001.git` on `main`.
+- Root handoff documents were refreshed immediately afterward so future ChatGPT/Codex tasks can recover without conversation memory.
+- Local remote name is `nexbiy`; the working branch tracks `nexbiy/main`.

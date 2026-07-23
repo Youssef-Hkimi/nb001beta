@@ -1,138 +1,181 @@
 # Nexbiy — Current State
 
-**Last updated:** 2026-07-09  
-**Project path:** `C:\Users\noste\nexus`  
-**Stack versions:** Next `16.2.10`, React `19.2.4`, HeroUI `3.2.2`, Tailwind `4`, next-themes `0.4.6`, lucide-react  
+**Last updated:** 2026-07-23
+**Project path:** `/Users/yobbiy/Documents/NexusEdits`
+**Stack:** Next.js 16.2.10, React 19, TypeScript, Tailwind CSS 4, HeroUI 3, next-themes, lucide-react, Iconify
 
-## What works today
+## Product state
 
-### App shell
+Nexbiy is a high-fidelity Discord server/bot discovery demo. It remains mock-first, with two live local-test integrations:
 
-- Global layout: `app/layout.tsx` + `globals.css` + Geist fonts  
-- Providers: `components/providers.tsx` (next-themes + `Toast.Provider`)  
-- Sticky navbar: Explore, Servers, Bots, Dashboard + search + theme toggle + Login toast  
-- Test-only Discord OAuth (`identify` + `guilds`) now powers login and server import; sessions use local test storage and listing data remains mocked
-- **No** Categories / Leaderboard nav items  
-- Theme: light/dark, soft charcoal dark  
-- Root `/` → `/explore`  
-- `/Explore` → `/explore` via `proxy.ts` (case-sensitive; next.config redirects caused loops on Windows)
+1. Discord OAuth2 (`identify` + `guilds`) for login and importing manageable guilds.
+2. Discord’s official server widget endpoint for publish-time online-member verification.
 
-### Pages
+Everything else—including listings persistence, analytics, votes, referrals, moderation, notifications, and admin actions—is interactive mock data.
 
-| Route | Status | Notes |
-|--------|--------|--------|
-| `/explore` | Done | Hero artwork, category chips, featured server grid, sidebar (Top Bots + CTA). No Trending Tags. |
-| `/server` | Done | Search, sort, verified switch, filters, grid, skeleton, empty, pagination, load more |
-| `/server/[slug]` | Done | Full public server profile; SSG via `generateStaticParams` |
-| `/bots` | Done | Bot listing mirror of servers (no bot detail route yet) |
-| `/dashboard` | Done | Stats, listings table, chart, activity, modals, quick actions |
-| `/dashboard/new` | Done | Server/bot forms, upload placeholders, live preview, toasts; tab strip = Buttons not Tabs.Indicator |
+## Routes
 
-### Components (high level)
+| Route | State | Purpose |
+|---|---|---|
+| `/` | Done | Redirects to `/explore` |
+| `/explore` | Done | Discovery hero, rotating theme artwork, categories, featured listings, sidebar, CTA, footer |
+| `/server` | Done | Server catalog with filters, search, sort, pagination |
+| `/server/[slug]` | Done | Public server profile |
+| `/bots` | Done | Bot catalog |
+| `/bots/[slug]` | Done | Public bot profile |
+| `/login` | Done | Discord-only OAuth test login |
+| `/verification` | Done | Server/bot eligibility, animated examples, three-step process |
+| `/rewards` | Done | Public referral-rewards explanation for logged-out users |
+| `/ref/[slug]` | Done | Mock referral receiver and login/decline flow |
+| `/dashboard` | Done | Overview, My Servers, My Bots, Rewards, Settings |
+| `/dashboard/new` | Done | Create/edit-quality server and bot listing forms with live preview |
+| `/admin` | Done (mock) | Staff control center with protected-action simulations |
 
-```
-components/
-  cards/server-card.tsx, bot-card.tsx
-  layout/site-navbar.tsx, theme-toggle.tsx
-  explore/hero-section.tsx, explore-sidebar.tsx
-  filters/category-chips.tsx, listing-filters.tsx
-  server/server-detail-view.tsx, server-detail-client.tsx
-  dashboard/* (sidebar, stats, table, chart, activity)
-  forms/upload-dropzone.tsx
-  ui/link-button.tsx, empty-state.tsx, card-skeleton.tsx, gradient-banner.tsx
-  providers.tsx
-```
+## Global shell
 
-### Mock data
+- Public brand is **Nexbiy**; app/package metadata is updated.
+- The logo asset remains `/nexus-logo.jpg` for compatibility.
+- Sticky responsive header: Explore, Servers, Bots, Rewards when logged out, Dashboard when logged in, theme toggle, inbox, account/login.
+- The old global search field is intentionally removed.
+- Toasts appear at top center.
+- Soft light/dark themes use `#2D2E33` / `#323339` and Nexbiy blue `#629BF8` / `#82B0F9`.
+- Mobile navigation opens only at its intended breakpoint.
 
-| Module | Contents |
-|--------|----------|
-| `lib/data/servers.ts` | Server listings (13 servers, featured flags) |
-| `lib/data/server-details.ts` | Detail enrichments: likes, createdAt, region, atmosphere, features, highlights, faq, trust, owner |
-| `lib/data/bots.ts` | 12 bots + top bots |
-| `lib/data/categories.ts` | Categories, tags, sort options, languages, sizes |
-| `lib/data/dashboard.ts` | Stats, listings table rows, activity, chart series |
-| `lib/server-banner.ts` | Per-slug cinematic SVG banner data-URLs |
-| `lib/types.ts` | Shared TypeScript models |
-| `lib/format.ts` | `formatCount` (null-safe), `initials`, `bannerStyle` (cards) |
+## Discovery and public listings
 
-### Server listing cards (Explore + Servers)
+- Explore rotates `ChillDark/ChillLight` and `disdark/dislight` artwork pairs every 15 minutes.
+- Artwork, category marquee, feature CTA, top-bot sidebar, verification promo, FAQ, and footer are theme-aware.
+- Server/bot cards have fixed banner geometry, aligned tags, compact actions, and correctly sized More menus.
+- Detail and preview banners are sharp with a smooth theme-aware bottom overlay; the prior foggy light band is removed.
+- Server public pages exclude reviews, gallery, rules, FAQ, Community Highlights, and Contact Owner.
+- Bot public pages may show bot-specific commands/features/gallery.
+- Verified listings use the shared stroke badge with a **Verified** tooltip.
 
-- Wider shell (max **1600px**), tighter padding  
-- Grid 1/2/3 with 20–24px gaps  
-- Card radius ~**15px**, banner ~**13px**, icon rounded square ~**13px**  
-- Join button **compact** (not full-width)  
-- View → `/server/{id}`  
-- Join → toast mock  
+## Votes
 
-### Server detail page (`/server/[slug]`) — accepted design
+- Platform terminology is **Vote**, not Like or Save.
+- The thumbs-up icon remains the vote icon.
+- A listing may be voted for again after a six-hour cooldown.
+- The vote result modal explains the next available vote window.
+- Counts and cooldown behavior are mock/local for now.
 
-**Hero**
+## Listing creation and editing
 
-- Tall sharp banner from `getServerBannerUrl`  
-- Tiny bottom fade into `--page-bg` only  
-- Avatar overlaps banner edge; title/meta/actions below  
-- Actions: **Like** (+ count) · Copy Invite · Join · More  
-- No Save/Bookmark  
+- Server and bot forms expose owner-editable listing fields only; Discord-derived counts/creation data are not editable.
+- Description formatting is global across create/edit flows: bold, italic, heading, link, and bullet list.
+- The expanded formatted preview is opt-in, not open by default.
+- Missing required fields are scrolled into view, focused, and highlighted red.
+- Live Listing Preview and Page Preview update as forms change.
+- Server icon and 960×320 banner upload/crop previews sit side by side where possible.
+- A fallback banner color can be chosen; icon upload suggests a matching color.
+- Bot support server URL is optional.
+- Verified status cannot be selected by owners.
+- Publish success dialogs are controlled and close only via X unless a navigation action leaves the route.
 
-**Left**
+## Discord OAuth and guild import
 
-- About (description only)  
-- Atmosphere  
-- What you can do here  
-- Community Highlights  
-- FAQ  
+- Routes:
+  - `/api/auth/discord`
+  - `/api/auth/callback/discord`
+  - `/api/auth/session`
+  - `/api/auth/logout`
+- OAuth scopes: `identify guilds`.
+- Local redirect: `http://localhost:3010/api/auth/callback/discord`.
+- Imported guilds include the Discord server icon.
+- Sessions use local test storage/cookies and are not production-grade.
+- OAuth secrets belong only in `.env.local`; never commit them.
 
-**Right**
+## Discord widget verification
 
-- Server Stats (members, online, growth, join clicks) + Server Details (Created, Region) with **plain icons** (no square backgrounds)  
-- Owner / Staff  
-- Trust & Safety  
-- Similar Servers  
-- Sticky join CTA  
+- Server ID is a required form field with explanatory help.
+- Manual publish/retry checks call `/api/discord/server-widget`.
+- The manual check cache-busts with `?t=${Date.now()}` and `cache: "no-store"`; this behavior is intentionally not used for page-load/background reads.
+- Outcomes:
+  - `200`: reads server name and `presence_count`.
+  - `widget_disabled`: public widget is unavailable.
+  - `widget_no_channel`: widget is enabled but no public invite channel is selected.
+- The guide modal uses:
+  - `https://res.cloudinary.com/zux0o0wz/video/upload/v1784559620/WIDGETGUIDE_vtxvge.mp4`
+  - Text path: **Server Settings → Engagement → Widget**
+- Owners may skip after a confirmation. The listing still publishes, active members temporarily equal total members, and a compact reminder persists.
+- Verify Now lets the owner select the pending listing and retry the existing check.
+- Optional MongoDB caching is supported for safe shared/background reads via `MONGODB_URI`.
 
-**Explicitly removed from server detail**
+## Creator dashboard
 
-- Reviews / review score / write review  
-- Rules  
-- Gallery / screenshots  
-- Likes metric inside Server Stats (kept only on Like button)  
+### Overview
 
-### Known good interactions
+- Summary metrics, performance chart, listings table, collapsible Tips & Getting Started, inbox, and verification promotion.
+- Verification Learn More opens `/verification` in a new tab.
+- Quick actions and table actions are fully clickable mock interactions.
 
-- Theme toggle  
-- Filters / verified switch (after Checkbox/Switch composition fix)  
-- Copy invite toast  
-- Like toggle + count + toast  
-- Report modal  
-- Dashboard delete/preview modals  
-- Create listing draft/publish toasts + live preview  
+### My Servers
 
-## Important architectural decisions
+- Tabs: Overview, Analytics, Status.
+- Select, preview, edit, update invite, delete one/multiple, and status inspection.
+- Analytics update per selected server.
+- **Members Left** is labelled **Coming Soon**; no fake value is presented.
 
-1. **Mock-first** — no backend; keep UX dense and interactive.  
-2. **HeroUI v3 compound components** — follow Content/Control patterns.  
-3. **LinkButton** helper for navigation styled as buttons.  
-4. **Server banners** are generated SVG scenes, not flat gradients.  
-5. **Dashboard new listing** uses Button tab strip to avoid Tabs.Indicator SharedElement crash.  
-6. **Windows path case** — `/Explore` handled in `proxy.ts`, not next.config redirects.  
+### My Bots
 
-## Assets
+- Developer-focused controls for listing details, commands/features, links/integrations, and media/settings.
+- Full edit flow, refresh, preview, public page, and multi-select delete confirmation.
+- Successful Installations was removed.
+- **Removed Servers** is labelled **Coming Soon**; no fake value is presented.
 
-- `public/artworkdark1.png` — explore dark hero artwork  
-- Light explore hero uses CSS gradients (no light artwork file found)  
+### Rewards
 
-## Build status
+- Setup landing and referral-program agreement.
+- Product term is **Growth Points**.
+- Limit: up to 10 applicable Growth Points per day.
+- Referral tab provides a copyable mock referral URL.
+- Tracking tab includes clicks, countdown to the daily reset, available balance, listing reward target, and activity table.
+- Gift rain uses the Cloudinary WebP, runs across the viewport, fades smoothly, supports mouse repulsion, and can be toggled.
+- Rewards nav accent blends `#c0fc1c` and `#2596be`.
 
-`npm run build` has succeeded with static generation for server slugs (when last verified during this workstream). Re-run after large changes.
+### Settings
 
-## What is NOT built yet
+- Discord username/display identity is read-only.
+- Users can edit a short bio.
+- Social fields: X, GitHub, Roblox with Iconify marks.
+- Inbox notification preferences are interactive mock settings.
 
-- Bot detail page `/bots/[slug]`  
-- Production Discord auth/session persistence, real invites, and uploads
-- Real search/backend  
-- Categories or Leaderboard product pages  
-- Full visual QA automation  
+## Public referral flow
 
-See `TODO_NEXT.md` for prioritized remaining work.  
-See `AI_WORKLOG.md` for how we got here (including fixed bugs — do not re-open them as fresh tasks).  
+- `/rewards` explains the program and has a Discord login CTA.
+- `/ref/[slug]` displays a receiver offer after three seconds.
+- Accept continues to login; decline resumes normal browsing.
+- Mock policy: one referral per user; qualified referrer and receiver each earn 10 Growth Points.
+- The receiver confirmation directs the user to Dashboard → Rewards.
+
+## Admin dashboard (mock)
+
+`/admin` is intentionally dense and staff-oriented:
+
+- Overview metrics, time ranges, traffic status, export simulation, moderation urgency queue, and quick controls.
+- Listings: inspect/edit/status/verification/featured placement/pause/suspend/delete.
+- Featured placement uses search, not a fixed select.
+- Manual vote adjustment is capped at +10 and shown as 2FA-protected.
+- Users: identity, role, status, listings, activity, history, Hammer action menu, freeze/notify/suspend/delete simulations.
+- Staff notifications accept custom text.
+- Reports: reporter, target, listing, reason, severity, notify, pass, dismiss.
+- Pending Review: separate server/bot queue with inspect, accept, reject, and moderation notes.
+- Rewards: points issued, referrals, balances, risk review, adjustment/suspension controls.
+- Featured servers and recommended bots are managed separately.
+- Moderators, limited permissions, support tickets, announcements, site health, and audit-log simulations.
+- Permanent/destructive actions are documented as RBAC + 2FA requirements for production.
+
+## Important compatibility decisions
+
+- Public copy says Nexbiy.
+- Legacy internal `nexus-*` CSS names, storage/cookie keys, OAuth environment names, logo filename, and `nexus-hub` slug remain intentionally.
+- Do not rename them without a migration.
+- Continue using Button tab strips where `Tabs.Indicator` would trigger SharedElement crashes.
+- Keep `Switch.Control` / `Checkbox.Control` inside Content.
+- Never nest a Button inside `Dropdown.Trigger`.
+
+## Verification status
+
+- Latest accumulated product changes were typechecked before the rebrand backup.
+- Re-run `npx tsc --noEmit` after implementation changes.
+- Use `npm run build` before deployment; production deployment is not configured yet.
