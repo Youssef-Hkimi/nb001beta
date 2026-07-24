@@ -277,3 +277,12 @@ Only listing cards/grid — not navbar, not filters redesign, not bots cards unl
 - Accumulated product work and rebrand were committed as `5333a24` and pushed over SSH to `git@github.com:Youssef-Hkimi/nb001.git` on `main`.
 - Root handoff documents were refreshed immediately afterward so future ChatGPT/Codex tasks can recover without conversation memory.
 - Local remote name is `nexbiy`; the working branch tracks `nexbiy/main`.
+
+---
+
+## 2026-07-24 — Final mock-demo checkpoint
+
+- Explore Browse More now loads at most four additional servers per action.
+- Removed the bulk “Show all remaining” action so the Explore page cannot suddenly render the full catalog.
+- Kept the full server catalog link for users who want unrestricted browsing.
+- This checkpoint is the preserved mock-first state before Nexbiy begins its full-stack production migration.

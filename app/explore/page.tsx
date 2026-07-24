@@ -1,7 +1,7 @@
 "use client";
 
 import { Dropdown, toast } from "@heroui/react";
-import { ChevronDown, LayoutGrid, ListPlus, Server } from "lucide-react";
+import { ChevronDown, ListPlus, Server } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -16,7 +16,7 @@ import { SERVERS } from "@/lib/data/servers";
 import { isPubliclyDiscoverable } from "@/lib/listing-safety";
 
 const INITIAL_VISIBLE = 6;
-const LOAD_MORE_COUNT = 6;
+const LOAD_MORE_COUNT = 4;
 
 export default function ExplorePage() {
   // Empty string = show all; tag click filters the grid
@@ -53,14 +53,6 @@ export default function ExplorePage() {
     const added = next - visible;
     setVisible(next);
     toast.success(added === 1 ? "Loaded 1 more server" : `Loaded ${added} more servers`);
-  }
-
-  function loadAll() {
-    const added = filteredServers.length - visible;
-    setVisible(filteredServers.length);
-    if (added > 0) {
-      toast.success(added === 1 ? "Loaded 1 more server" : `Loaded ${added} more servers`);
-    }
   }
 
   return (
@@ -104,7 +96,6 @@ export default function ExplorePage() {
                     <Dropdown.Menu
                       onAction={(key) => {
                         if (key === "more" && hasMore) loadMore();
-                        if (key === "all" && hasMore) loadAll();
                         if (key === "catalog") router.push("/server");
                       }}
                     >
@@ -119,17 +110,6 @@ export default function ExplorePage() {
                           <span className="ml-auto text-xs text-muted">
                             +{Math.min(LOAD_MORE_COUNT, remaining)}
                           </span>
-                        ) : null}
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        id="all"
-                        textValue="Show all remaining"
-                        isDisabled={!hasMore}
-                      >
-                        <LayoutGrid className="size-4" />
-                        Show all remaining
-                        {hasMore ? (
-                          <span className="ml-auto text-xs text-muted">{remaining}</span>
                         ) : null}
                       </Dropdown.Item>
                       <Dropdown.Item id="catalog" textValue="View full catalog">

@@ -46,6 +46,7 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 - Explore rotates `ChillDark/ChillLight` and `disdark/dislight` artwork pairs every 15 minutes.
 - Artwork, category marquee, feature CTA, top-bot sidebar, verification promo, FAQ, and footer are theme-aware.
 - Server/bot cards have fixed banner geometry, aligned tags, compact actions, and correctly sized More menus.
+- Explore Browse More loads at most four additional servers per action; the bulk “Show all remaining” action is intentionally removed.
 - Detail and preview banners are sharp with a smooth theme-aware bottom overlay; the prior foggy light band is removed.
 - Server public pages exclude reviews, gallery, rules, FAQ, Community Highlights, and Contact Owner.
 - Bot public pages may show bot-specific commands/features/gallery.

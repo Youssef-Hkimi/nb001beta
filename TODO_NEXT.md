@@ -9,6 +9,7 @@ These are shipped and should only change when the user reports a specific regres
 | Public rebrand from Nexus to Nexbiy | UI copy, metadata, package/docs |
 | Legacy internal keys preserved for compatibility | `nexus-*` CSS/storage/cookies/env names, logo filename, historical slug |
 | Theme-aware rotating Explore artwork and bottom blend | `components/explore/hero-section.tsx`, `app/globals.css` |
+| Explore Browse More loads four servers at most; no Show All action | `app/explore/page.tsx` |
 | Sharp server/bot banners with smooth light/dark fade and no fog | detail/preview components, `app/globals.css` |
 | Votes terminology with thumbs-up icon and six-hour cooldown | public listing views and dashboard metrics |
 | Server pages contain no reviews/gallery/rules/FAQ/highlights/contact-owner | server detail |
