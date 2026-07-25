@@ -599,7 +599,7 @@ export default function NewListingPage() {
       ];
       if (media.length) await uploadListingMedia(listing.id, media);
       setBot((current) => ({...current, statusLabel: "Pending Review"}));
-      setPublishedBotPath(`/dashboard/preview/${listing.id}`);
+      setPublishedBotPath(`/bots/${listing.slug}`);
       setReviewOpen(false);
       setPublishSuccess("bot");
       toast.success("Bot submitted for review");
@@ -654,7 +654,7 @@ export default function NewListingPage() {
           ? String(result.error)
           : "";
 
-      if (error === "widget_disabled") {
+      if (error === "widget_disabled" || error === "widget_no_channel") {
         setServerVerificationState("widget_disabled");
         return;
       }
@@ -705,7 +705,7 @@ export default function NewListingPage() {
         ...(serverMediaFiles.banner ? [{kind: "banner" as const, file: serverMediaFiles.banner}] : []),
       ];
       if (media.length) await uploadListingMedia(listing.id, media);
-      setPublishedServerPath(`/dashboard/preview/${listing.id}`);
+      setPublishedServerPath(`/server/${listing.slug}`);
       removeWidgetSetupReminder(server.guildId.trim());
       setServerVerificationState("success");
       toast.success("Server submitted for review");
@@ -753,7 +753,7 @@ export default function NewListingPage() {
         members: String(memberCount),
         online: String(memberCount),
       }));
-      setPublishedServerPath(`/dashboard/preview/${listing.id}`);
+      setPublishedServerPath(`/server/${listing.slug}`);
       addWidgetSetupReminder({guildId, serverName: listing.name, memberCount, createdAt: Date.now()});
       setServerVerificationState("success_unverified");
       toast.success("Server submitted with widget setup pending");
@@ -1656,7 +1656,7 @@ export default function NewListingPage() {
                 <Alert.Content>
                   <Alert.Title>Bot submitted successfully</Alert.Title>
                   <Alert.Description>
-                    Nexbiy will review your bot before its public page becomes visible.
+                    Your public page is live while Nexbiy completes its review.
                   </Alert.Description>
                 </Alert.Content>
               </Alert>
@@ -1666,15 +1666,15 @@ export default function NewListingPage() {
               </div>
               <div className="rounded-xl border border-border bg-default/25 p-3">
                 <TextField isReadOnly value={publishedBotPath || `/bots/${slugify(bot.name)}`}>
-                  <Label>Owner preview</Label>
+                  <Label>Public link</Label>
                   <Input />
                 </TextField>
               </div>
             </Modal.Body>
             <Modal.Footer className="flex-wrap border-t border-border/70 pt-4">
-              <Button variant="secondary" onPress={() => { const url = new URL(publishedBotPath || `/bots/${slugify(bot.name)}`, window.location.origin).toString(); void navigator.clipboard?.writeText(url); toast.success("Preview link copied"); }}><Copy className="size-4" />Copy preview link</Button>
+              <Button variant="secondary" onPress={() => { const url = new URL(publishedBotPath || `/bots/${slugify(bot.name)}`, window.location.origin).toString(); void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
               <LinkButton href={publishedBotPath || `/bots/${slugify(bot.name)}`} target="_blank">
-                View owner preview
+                View public page
               </LinkButton>
               <LinkButton href="/dashboard">
                 <LayoutDashboard className="size-4" />

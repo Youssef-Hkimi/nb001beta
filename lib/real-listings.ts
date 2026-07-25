@@ -76,7 +76,7 @@ function dashboardStatus(status: ApiListing["status"]): ListingStatus {
   if (status === "live") return "Live";
   if (status === "draft") return "Draft";
   if (status === "paused") return "Paused";
-  if (status === "pending_review") return "Under Review";
+  if (status === "pending_review") return "Live";
   if (status === "suspended") return "Suspended";
   if (status === "rejected") return "Rejected";
   return "Paused";

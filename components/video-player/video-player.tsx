@@ -35,6 +35,7 @@ export function VideoPlayer({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -89,12 +90,26 @@ export function VideoPlayer({
         onClick={togglePlayback}
         onDurationChange={(event) => setDuration(event.currentTarget.duration || 0)}
         onEnded={() => setIsPlaying(false)}
+        onError={() => setHasError(true)}
+        onLoadedData={() => setHasError(false)}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
-      >
-        <track kind="captions" label="English" srcLang="en" />
-      </video>
+      />
+
+      {hasError ? (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/90 p-6 text-center text-white">
+          <p className="text-sm">The video guide could not load in this browser.</p>
+          <a
+            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black"
+            href={src}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open video guide
+          </a>
+        </div>
+      ) : null}
 
       {!isPlaying ? (
         <button

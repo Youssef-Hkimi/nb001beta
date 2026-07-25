@@ -112,6 +112,12 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (min-width: 1024px) {
+  html {
+    font-size: 110%;
+  }
+}
+
 html,
 body,
 .theme-surface,

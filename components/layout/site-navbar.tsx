@@ -17,10 +17,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { IconifyIcon } from "@/components/ui/iconify-icon";
+import { DiscordMark } from "@/components/ui/discord-mark";
 import { useAuth } from "@/lib/auth/auth-context";
 import { initials } from "@/lib/format";
 
@@ -45,6 +45,15 @@ export function SiteNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+    action_url: string | null;
+    read_at: string | null;
+  }>>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, isAuthenticated, isReady, logout } = useAuth();
   const accountName = user?.displayName ?? user?.username;
   const inboxEnabled = user?.inboxNotifications !== false;
@@ -52,6 +61,33 @@ export function SiteNavbar() {
     isReady && !isAuthenticated
       ? [...NAV_ITEMS.slice(0, 3), REWARDS_ITEM, ...NAV_ITEMS.slice(3)]
       : NAV_ITEMS;
+
+  useEffect(() => {
+    if (!isAuthenticated || !inboxEnabled) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    const controller = new AbortController();
+    void fetch("/api/notifications", {cache: "no-store", signal: controller.signal})
+      .then(async (response) => {
+        if (!response.ok) return;
+        const result = await response.json() as {
+          notifications?: typeof notifications;
+          unreadCount?: number;
+        };
+        setNotifications(result.notifications || []);
+        setUnreadCount(result.unreadCount || 0);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [inboxEnabled, isAuthenticated]);
+
+  function notificationIcon(type: string) {
+    if (type.includes("vote")) return <ThumbsUp className="size-4 text-accent" />;
+    if (type.includes("announcement")) return <Megaphone className="size-4 text-violet-400" />;
+    return <ShieldCheck className="size-4 text-emerald-500" />;
+  }
 
   function goDashboard() {
     if (isAuthenticated) router.push("/dashboard");
@@ -109,29 +145,44 @@ export function SiteNavbar() {
                   className="relative inline-flex size-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-default hover:text-foreground"
                 >
                   <Bell className="size-5" />
-                  {inboxEnabled ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent ring-2 ring-background" /> : null}
+                  {unreadCount > 0 ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent ring-2 ring-background" /> : null}
                 </Dropdown.Trigger>
                 <Dropdown.Popover placement="bottom end" className="w-[min(92vw,23rem)]">
                   <Dropdown.Menu
                     aria-label="Inbox notifications"
                     onAction={(key) => {
-                      if (key === "listing") router.push("/dashboard");
-                      if (key === "likes") router.push("/dashboard?tab=servers");
-                      if (key === "announcement") router.push("/verification");
+                      const selected = notifications.find((item) => item.id === String(key));
+                      if (!selected) return;
+                      if (!selected.read_at) {
+                        setNotifications((items) => items.map((item) => (
+                          item.id === selected.id ? {...item, read_at: new Date().toISOString()} : item
+                        )));
+                        setUnreadCount((count) => Math.max(0, count - 1));
+                        void fetch("/api/notifications", {
+                          method: "PATCH",
+                          headers: {"Content-Type": "application/json"},
+                          body: JSON.stringify({id: selected.id}),
+                        });
+                      }
+                      if (selected.action_url?.startsWith("/")) router.push(selected.action_url);
                     }}
                   >
-                    <Dropdown.Item id="listing" textValue="Listing approved">
-                      <ShieldCheck className="size-4 text-emerald-500" />
-                      <div><p className="text-sm font-medium">Nexbiy Hub is live</p><p className="text-xs text-muted">Your listing passed the latest status check.</p></div>
-                    </Dropdown.Item>
-                    <Dropdown.Item id="likes" textValue="Vote milestone">
-                      <ThumbsUp className="size-4 text-accent" />
-                      <div><p className="text-sm font-medium">New vote milestone</p><p className="text-xs text-muted">Lofi Girl reached 10K votes.</p></div>
-                    </Dropdown.Item>
-                    <Dropdown.Item id="announcement" textValue="Nexbiy announcement">
-                      <Megaphone className="size-4 text-violet-400" />
-                      <div><p className="text-sm font-medium">Nexbiy announcement</p><p className="text-xs text-muted">Verification eligibility has been updated.</p></div>
-                    </Dropdown.Item>
+                    {notifications.length ? notifications.map((item) => (
+                      <Dropdown.Item key={item.id} id={item.id} textValue={item.title}>
+                        {notificationIcon(item.type)}
+                        <div className={item.read_at ? "opacity-70" : ""}>
+                          <p className="text-sm font-medium">{item.title}</p>
+                          <p className="line-clamp-2 text-xs text-muted">{item.body}</p>
+                        </div>
+                      </Dropdown.Item>
+                    )) : (
+                      <Dropdown.Item id="empty" textValue="No notifications" isDisabled>
+                        <Bell className="size-4 text-muted" />
+                        <p className="text-sm text-muted">
+                          {inboxEnabled ? "No notifications yet." : "Inbox notifications are disabled."}
+                        </p>
+                      </Dropdown.Item>
+                    )}
                   </Dropdown.Menu>
                 </Dropdown.Popover>
               </Dropdown>
@@ -185,7 +236,7 @@ export function SiteNavbar() {
             </>
           ) : (
             <Button className="hidden sm:inline-flex" onPress={() => router.push("/login")}>
-              <IconifyIcon icon="ic:baseline-discord" className="size-4" />
+              <DiscordMark className="size-4" />
               Login with Discord
             </Button>
           )}
@@ -286,7 +337,7 @@ export function SiteNavbar() {
                       router.push("/login");
                     }}
                   >
-                    <IconifyIcon icon="ic:baseline-discord" className="size-4" />
+                    <DiscordMark className="size-4" />
                     Login with Discord
                   </Button>
                 )}

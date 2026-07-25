@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { IconifyIcon } from "@/components/ui/iconify-icon";
+import { DiscordMark } from "@/components/ui/discord-mark";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function LoginPage() {
@@ -63,7 +63,7 @@ export default function LoginPage() {
               </Alert>
             ) : null}
             <Button className="mt-8 w-full" size="lg" isPending={connecting} onPress={continueWithDiscord}>
-              <IconifyIcon icon="ic:baseline-discord" className="size-5" />
+              <DiscordMark className="size-5" />
               {connecting ? "Connecting…" : "Continue with Discord"}
             </Button>
 

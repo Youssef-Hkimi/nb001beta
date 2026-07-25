@@ -97,7 +97,9 @@ export async function GET(request: NextRequest) {
     const lifetimeViews = listingRows.reduce((sum, listing) => sum + Number(listing.views_count || 0), 0);
     const lifetimeClicks = listingRows.reduce((sum, listing) => sum + Number(listing.clicks_count || 0), 0);
     const lifetimeVotes = listingRows.reduce((sum, listing) => sum + Number(listing.votes_count || 0), 0);
-    const liveCount = listingRows.filter((listing) => listing.status === "live").length;
+    const liveCount = listingRows.filter(
+      (listing) => listing.status === "live" || listing.status === "pending_review",
+    ).length;
     const draftCount = listingRows.filter((listing) => listing.status === "draft").length;
     const mediaByListing = new Map<string, Set<string>>();
     for (const item of media) {

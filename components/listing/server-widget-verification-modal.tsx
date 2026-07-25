@@ -34,7 +34,7 @@ export function ServerWidgetVerificationModal({
   onClose,
 }: Props) {
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
-  const previewUrl = publicPath;
+  const publicUrl = publicPath;
   const isSubmitted = state === "success" || state === "success_unverified";
 
   return (
@@ -115,8 +115,8 @@ export function ServerWidgetVerificationModal({
                     </Alert.Title>
                     <Alert.Description>
                       {state === "success"
-                        ? "Nexbiy will review your server before its public page becomes visible."
-                        : "Your submission is saved for review. Active members will temporarily match total members until you verify the Discord widget."}
+                        ? "Your public page is live while Nexbiy completes its review."
+                        : "Your public page is live. Active members will temporarily match total members until you verify the Discord widget."}
                     </Alert.Description>
                   </Alert.Content>
                 </Alert>
@@ -125,8 +125,8 @@ export function ServerWidgetVerificationModal({
                   <ListingStatusChip status="PENDING_REVIEW" />
                 </div>
                 <div className="rounded-xl border border-border bg-default/25 p-3">
-                  <TextField isReadOnly value={previewUrl}>
-                    <Label>Owner preview</Label>
+                  <TextField isReadOnly value={publicUrl}>
+                    <Label>Public link</Label>
                     <Input />
                   </TextField>
                 </div>
@@ -139,14 +139,14 @@ export function ServerWidgetVerificationModal({
                 variant="secondary"
                 onPress={() => {
                   void navigator.clipboard?.writeText(new URL(publicPath, window.location.origin).toString());
-                  toast.success("Preview link copied");
+                  toast.success("Public link copied");
                 }}
               >
                 <Copy className="size-4" />
-                Copy preview link
+                Copy link
               </Button>
               <LinkButton href={publicPath} target="_blank">
-                View owner preview
+                View public page
               </LinkButton>
               <LinkButton href="/dashboard">
                 <LayoutDashboard className="size-4" />

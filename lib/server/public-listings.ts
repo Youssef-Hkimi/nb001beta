@@ -10,7 +10,7 @@ export async function getPublicListing(type: "server" | "bot", slug: string) {
     .select("*,listing_media(*),profiles!listings_owner_id_fkey(username,display_name,avatar_url)")
     .eq("type", type)
     .eq("slug", slug)
-    .eq("status", "live")
+    .in("status", ["live", "pending_review"])
     .eq("visibility", "public")
     .is("deleted_at", null)
     .maybeSingle();

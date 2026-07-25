@@ -16,13 +16,34 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
     const {id} = await context.params;
     listingId = id;
     const fingerprint = getRequestFingerprint(request);
-    const {data, error} = await getSupabaseAdmin().rpc("cast_listing_vote", {
+    const db = getSupabaseAdmin();
+    const {data, error} = await db.rpc("cast_listing_vote", {
       p_listing_id: id,
       p_user_id: session.userId,
       p_visitor_hash: fingerprint.ipHash,
     });
     if (error) throw error;
-    return Response.json({vote: data?.[0]});
+    const vote = data?.[0];
+    const voteCount = Number(vote?.votes_count || 0);
+    if ([10, 50, 100].includes(voteCount) || (voteCount > 100 && voteCount % 100 === 0)) {
+      const {data: listing} = await db
+        .from("listings")
+        .select("owner_id,name,type,slug")
+        .eq("id", id)
+        .maybeSingle();
+      if (listing) {
+        await db.from("notifications").insert({
+          user_id: listing.owner_id,
+          type: "vote_milestone",
+          title: `${listing.name} reached ${voteCount} votes`,
+          body: "Your community helped this listing reach a new voting milestone.",
+          action_url: listing.type === "server"
+            ? `/server/${listing.slug}`
+            : `/bots/${listing.slug}`,
+        });
+      }
+    }
+    return Response.json({vote});
   } catch (error) {
     if (
       error instanceof Error &&

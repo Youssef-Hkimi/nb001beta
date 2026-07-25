@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       query = query.eq("owner_id", session.userId).neq("status", "deleted");
     } else {
       query = query
-        .eq("status", "live")
+        .in("status", ["live", "pending_review"])
         .eq("visibility", "public")
         .is("deleted_at", null);
     }
@@ -134,6 +134,13 @@ export async function POST(request: NextRequest) {
         // Listing creation must not fail if Discord's CDN is temporarily unavailable.
       }
     }
+    await db.from("notifications").insert({
+      user_id: session.userId,
+      type: "listing_status",
+      title: `${data.name} is live and pending review`,
+      body: "Your public listing is live while the Nexbiy team completes its review.",
+      action_url: input.type === "server" ? `/server/${data.slug}` : `/bots/${data.slug}`,
+    });
     return Response.json({listing: data, importedIconUrl}, {status: 201});
   } catch (error) {
     return apiErrorResponse(error);

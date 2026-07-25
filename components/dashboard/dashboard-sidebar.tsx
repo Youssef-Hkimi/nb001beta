@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Gem, Gift, LayoutDashboard, PlusCircle, Server, Settings } from "lucide-react";
+import { Bot, Gift, LayoutDashboard, PlusCircle, Server, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -106,18 +106,6 @@ export function DashboardNav() {
         );
       })}
 
-      {pathname === "/dashboard" && activeSection === "overview" ? (
-        <div className="mt-10 hidden rounded-2xl border border-border bg-default/30 p-4 text-center lg:block">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <Gem className="size-6" />
-          </span>
-          <p className="mt-3 text-sm font-bold text-foreground">Upgrade to Pro</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted">Unlock advanced analytics, custom branding, and more.</p>
-          <Link href="/dashboard#settings" className="button button--secondary mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl text-xs font-semibold text-accent">
-            Upgrade Now
-          </Link>
-        </div>
-      ) : null}
     </aside>
   );
 }

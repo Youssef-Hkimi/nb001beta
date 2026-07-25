@@ -40,14 +40,14 @@ export function ListingStatusTooltip({
 
 export function ListingStatusChip({
   status,
-  livePrefix = false,
+  livePrefix: _livePrefix = false,
 }: {
   status: ListingSafetyStatus;
   livePrefix?: boolean;
 }) {
   const config = LISTING_STATUS_CONFIG[status];
   const Icon = STATUS_ICONS[status];
-  const label = livePrefix && status === "PENDING_REVIEW" ? "Live · Pending Review" : config.label;
+  const label = status === "PENDING_REVIEW" ? "Live · Pending Review" : config.label;
   return (
     <ListingStatusTooltip status={status}>
       <Chip size="sm" variant="soft" color={config.color}>

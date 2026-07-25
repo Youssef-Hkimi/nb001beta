@@ -51,7 +51,9 @@ export async function importDiscordGuildIcon(input: {
   return db.storage.from("listing-icons").getPublicUrl(objectPath).data.publicUrl;
 }
 
-export function addPublicMediaUrls<T extends {listing_media?: Array<{bucket: string; object_path: string}>}>(
+export function addPublicMediaUrls<
+  T extends {listing_media?: Array<{id?: string; bucket: string; object_path: string}>},
+>(
   listing: T,
 ) {
   const db = getSupabaseAdmin();
@@ -59,7 +61,11 @@ export function addPublicMediaUrls<T extends {listing_media?: Array<{bucket: str
     ...listing,
     listing_media: (listing.listing_media || []).map((media) => ({
       ...media,
-      url: db.storage.from(media.bucket).getPublicUrl(media.object_path).data.publicUrl,
+      // Route media through Nexbiy so browser/CDN policy changes cannot break
+      // owner uploads that are valid in Supabase Storage.
+      url: media.id
+        ? `/api/media/${media.id}`
+        : db.storage.from(media.bucket).getPublicUrl(media.object_path).data.publicUrl,
     })),
   };
 }
