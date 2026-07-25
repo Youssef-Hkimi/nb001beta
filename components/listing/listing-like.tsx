@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Modal } from "@heroui/react";
+import { Button, Modal, toast } from "@heroui/react";
 import { Clock3, ThumbsUp } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -18,9 +18,11 @@ function formatRemaining(milliseconds: number) {
 
 export function useListingVote({
   listingKey,
+  listingId,
   initialVotes,
 }: {
   listingKey: string;
+  listingId?: string;
   initialVotes: number;
 }) {
   const { requireAuth } = useAuth();
@@ -46,7 +48,7 @@ export function useListingVote({
   }, []);
 
   const addVote = () => {
-    requireAuth(() => {
+    requireAuth(async () => {
       const pressedAt = Date.now();
       setNow(pressedAt);
       if (nextVoteAt > pressedAt) {
@@ -55,12 +57,45 @@ export function useListingVote({
         return;
       }
 
-      const nextAvailable = pressedAt + VOTE_COOLDOWN_MS;
-      setVoteCount((count) => count + 1);
-      setNextVoteAt(nextAvailable);
-      window.localStorage.setItem(storageKey, String(nextAvailable));
-      setDialogMode("success");
-      setDialogOpen(true);
+      if (!listingId) {
+        const nextAvailable = pressedAt + VOTE_COOLDOWN_MS;
+        setVoteCount((count) => count + 1);
+        setNextVoteAt(nextAvailable);
+        window.localStorage.setItem(storageKey, String(nextAvailable));
+        setDialogMode("success");
+        setDialogOpen(true);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/listings/${listingId}/vote`, {method: "POST"});
+        const result = await response.json().catch(() => null) as {
+          error?: string;
+          nextVoteAt?: string | null;
+          vote?: {votes_count?: number; next_vote_at?: string};
+        } | null;
+        if (response.status === 409 && result?.error === "vote_cooldown_active") {
+          const nextAvailable = result.nextVoteAt ? new Date(result.nextVoteAt).getTime() : pressedAt + VOTE_COOLDOWN_MS;
+          setNextVoteAt(nextAvailable);
+          setDialogMode("cooldown");
+          setDialogOpen(true);
+          return;
+        }
+        if (!response.ok) throw new Error(result?.error || "vote_failed");
+        const nextAvailable = result?.vote?.next_vote_at
+          ? new Date(result.vote.next_vote_at).getTime()
+          : pressedAt + VOTE_COOLDOWN_MS;
+        if (typeof result?.vote?.votes_count === "number") {
+          setVoteCount(result.vote.votes_count);
+        } else {
+          setVoteCount((count) => count + 1);
+        }
+        setNextVoteAt(nextAvailable);
+        window.localStorage.setItem(storageKey, String(nextAvailable));
+        setDialogMode("success");
+        setDialogOpen(true);
+      } catch {
+        toast.danger("Vote could not be recorded", {description: "Please try again."});
+      }
     });
   };
 

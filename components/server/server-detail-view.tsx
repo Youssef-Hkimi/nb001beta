@@ -20,7 +20,7 @@ import {
   ThumbsUp,
   Users,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
 import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-like";
@@ -33,34 +33,43 @@ import { getSimilarServers } from "@/lib/data/server-details";
 import { formatCount, initials } from "@/lib/format";
 import { getServerBannerUrl } from "@/lib/server-banner";
 import { getListingActionBlockReason } from "@/lib/listing-safety";
+import {trackListingEvent} from "@/lib/listing-events";
 import type { ServerDetail } from "@/lib/types";
 
 export function ServerDetailView({ server }: { server: ServerDetail }) {
-  const similar = useMemo(() => getSimilarServers(server), [server]);
+  const similar = useMemo(
+    () => server.databaseId ? [] : getSimilarServers(server),
+    [server],
+  );
   const communityFeatures = useMemo(
     () => getCommunityFeatureOptions(server.communityFeatures),
     [server.communityFeatures],
   );
   const vote = useListingVote({
     listingKey: `server:${server.slug}`,
+    listingId: server.databaseId,
     initialVotes: typeof server.likes === "number" ? server.likes : server.stats?.likes ?? 0,
   });
   const [reportOpen, setReportOpen] = useState(false);
 
+  useEffect(() => {
+    trackListingEvent(server.databaseId, "view");
+  }, [server.databaseId]);
+
   const copyInvite = () => {
+    trackListingEvent(server.databaseId, "link_copy");
     void navigator.clipboard?.writeText(server.inviteUrl).catch(() => undefined);
     toast.success("Invite copied", { description: server.inviteUrl });
   };
 
   const joinServer = () => {
-    toast.success(`Joining ${server.name}`, {
-      description: "Invite flow is mocked in this demo.",
-    });
+    trackListingEvent(server.databaseId, "invite_click");
+    window.open(server.inviteUrl, "_blank", "noopener,noreferrer");
   };
 
   const bannerUrl = useMemo(
-    () => getServerBannerUrl(server.slug, server.bannerHue),
-    [server.slug, server.bannerHue],
+    () => server.bannerUrl || getServerBannerUrl(server.slug, server.bannerHue),
+    [server.bannerUrl, server.slug, server.bannerHue],
   );
 
   return (
@@ -78,6 +87,7 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
           <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 pb-8 md:flex-row md:items-end md:justify-between md:px-6 lg:px-8">
             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
               <Avatar className="server-hero-avatar size-24 shrink-0 rounded-3xl border-4 border-background shadow-lg md:size-28">
+                {server.iconUrl ? <Avatar.Image src={server.iconUrl} alt="" className="rounded-3xl object-cover" /> : null}
                 <Avatar.Fallback
                   className="rounded-3xl text-xl font-bold text-white"
                   style={{
@@ -390,7 +400,7 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
         onOpenChange={vote.setDialogOpen}
       />
 
-      <ReportListingDialog listingName={server.name} isOpen={reportOpen} onOpenChange={setReportOpen} />
+      <ReportListingDialog listingId={server.databaseId} listingName={server.name} isOpen={reportOpen} onOpenChange={setReportOpen} />
     </div>
   );
 }

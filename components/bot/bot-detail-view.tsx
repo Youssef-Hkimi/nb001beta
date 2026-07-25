@@ -7,7 +7,7 @@ import {
   ExternalLink, Flag, GitBranch, Globe2, Link2, MessageSquare, MoreHorizontal,
   Server, TerminalSquare, ThumbsUp, TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { FormattedDescription } from "@/components/forms/rich-description-editor";
 import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-like";
@@ -20,16 +20,23 @@ import { getBotFeatureOptions } from "@/lib/data/bot-features";
 import { getSimilarBots } from "@/lib/data/bots";
 import { formatCount, initials } from "@/lib/format";
 import { getListingActionBlockReason } from "@/lib/listing-safety";
+import {trackListingEvent} from "@/lib/listing-events";
 import type { BotListing } from "@/lib/types";
 
 export function BotDetailView({ bot }: { bot: BotListing }) {
-  const vote = useListingVote({ listingKey: `bot:${bot.slug}`, initialVotes: bot.votes });
+  const vote = useListingVote({ listingKey: `bot:${bot.slug}`, listingId: bot.databaseId, initialVotes: bot.votes });
   const [galleryImage, setGalleryImage] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const features = useMemo(() => getBotFeatureOptions(bot.botFeatures), [bot.botFeatures]);
   const similar = useMemo(() => getSimilarBots(bot), [bot]);
   const banner = bot.banner || getBotBannerUrl(bot.slug, bot.bannerHue);
-  const openExternal = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
+  useEffect(() => {
+    trackListingEvent(bot.databaseId, "view");
+  }, [bot.databaseId]);
+  const openExternal = (url: string, event?: "invite_click" | "link_copy") => {
+    if (event) trackListingEvent(bot.databaseId, event);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
   const links = [
     bot.githubUrl ? { label: "GitHub Repository", url: bot.githubUrl, icon: GitBranch } : null,
     bot.websiteUrl ? { label: "Website", url: bot.websiteUrl, icon: Globe2 } : null,
@@ -65,14 +72,14 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 md:justify-end md:pb-1">
-              <ListingActionGuard status={bot.safetyStatus} onPress={() => openExternal(bot.inviteUrl)}><Link2 className="size-4" />Invite Bot</ListingActionGuard>
+              <ListingActionGuard status={bot.safetyStatus} onPress={() => openExternal(bot.inviteUrl, "invite_click")}><Link2 className="size-4" />Invite Bot</ListingActionGuard>
               <ListingActionGuard status={bot.safetyStatus} variant={vote.isCoolingDown ? "primary" : "secondary"} onPress={vote.addVote}><ThumbsUp className={`size-4 ${vote.isCoolingDown ? "fill-current" : ""}`} />Vote</ListingActionGuard>
               {bot.supportServerUrl ? <ListingActionGuard status={bot.safetyStatus} variant="secondary" onPress={() => openExternal(bot.supportServerUrl)}><MessageSquare className="size-4" />Support Server</ListingActionGuard> : null}
               <Dropdown>
                 <Dropdown.Trigger aria-label="More actions" className="button button--ghost button--icon-only"><MoreHorizontal className="size-4" /></Dropdown.Trigger>
                 <Dropdown.Popover placement="bottom end">
                   <Dropdown.Menu onAction={(key) => {
-                    if (key === "copy" && !getListingActionBlockReason(bot.safetyStatus)) { void navigator.clipboard?.writeText(bot.inviteUrl); toast.success("Bot invite copied"); }
+                    if (key === "copy" && !getListingActionBlockReason(bot.safetyStatus)) { trackListingEvent(bot.databaseId, "link_copy"); void navigator.clipboard?.writeText(bot.inviteUrl); toast.success("Bot invite copied"); }
                     if (key === "report") setReportOpen(true);
                   }}>
                     <Dropdown.Item id="copy" textValue="Copy bot invite" isDisabled={Boolean(getListingActionBlockReason(bot.safetyStatus))}><Copy className="size-4" />Copy bot invite</Dropdown.Item>
@@ -130,7 +137,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
         <Modal.Container><Modal.Dialog className="sm:max-w-4xl"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>{bot.name} preview</Modal.Heading></Modal.Header><Modal.Body>{galleryImage ? <img src={galleryImage} alt={`${bot.name} expanded preview`} className="w-full rounded-2xl border border-border" /> : null}</Modal.Body></Modal.Dialog></Modal.Container>
       </Modal.Backdrop>
       <ListingVoteDialog listingName={bot.name} mode={vote.dialogMode} open={vote.dialogOpen} remaining={vote.remaining} onOpenChange={vote.setDialogOpen} />
-      <ReportListingDialog listingName={bot.name} isOpen={reportOpen} onOpenChange={setReportOpen} />
+      <ReportListingDialog listingId={bot.databaseId} listingName={bot.name} isOpen={reportOpen} onOpenChange={setReportOpen} />
     </div>
   );
 }

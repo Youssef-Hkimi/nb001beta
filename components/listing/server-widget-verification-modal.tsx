@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, AlertDialog, Button, Input, Label, Modal, Spinner, TextField, toast } from "@heroui/react";
-import { CheckCircle2, Copy, ExternalLink, LayoutDashboard, X } from "lucide-react";
+import { CheckCircle2, Copy, LayoutDashboard, X } from "lucide-react";
 import { useState } from "react";
 
 import { ListingStatusChip } from "@/components/listing/listing-safety";
@@ -34,8 +34,8 @@ export function ServerWidgetVerificationModal({
   onClose,
 }: Props) {
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
-  const publicUrl = `http://localhost:3010${publicPath}`;
-  const isPublished = state === "success" || state === "success_unverified";
+  const publicUrl = publicPath;
+  const isSubmitted = state === "success" || state === "success_unverified";
 
   return (
     <>
@@ -60,7 +60,7 @@ export function ServerWidgetVerificationModal({
           ) : null}
           <Modal.Header className="pr-16">
             <Modal.Heading className="flex items-center gap-3">
-              {isPublished ? (
+              {isSubmitted ? (
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
                   <CheckCircle2 className="size-5" />
                 </span>
@@ -68,8 +68,8 @@ export function ServerWidgetVerificationModal({
               <span>
                 {state === "verifying"
                   ? "Verifying your Discord server"
-                  : isPublished
-                    ? "Your server is live"
+                  : isSubmitted
+                    ? "Your server was submitted"
                     : "Discord server verification"}
               </span>
             </Modal.Heading>
@@ -103,52 +103,48 @@ export function ServerWidgetVerificationModal({
               </Alert>
             ) : null}
 
-            {isPublished ? (
+            {isSubmitted ? (
               <div className="space-y-4">
                 <Alert status={state === "success" ? "success" : "warning"} className="widget-verification-alert">
                   <Alert.Indicator />
                   <Alert.Content>
                     <Alert.Title>
                       {state === "success"
-                        ? "Server verified and published"
-                        : "Server published — widget setup pending"}
+                        ? "Server verified and submitted"
+                        : "Server submitted — widget setup pending"}
                     </Alert.Title>
                     <Alert.Description>
                       {state === "success"
-                        ? "Your server is publicly listed on Nexbiy and is waiting for review."
-                        : "Your listing is live. Active members will temporarily match total members until you verify the Discord widget."}
+                        ? "Nexbiy will review your server before its public page becomes visible."
+                        : "Your submission is saved for review. Active members will temporarily match total members until you verify the Discord widget."}
                     </Alert.Description>
                   </Alert.Content>
                 </Alert>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-muted">Listing status</p>
-                  <ListingStatusChip status="PENDING_REVIEW" livePrefix />
+                  <ListingStatusChip status="PENDING_REVIEW" />
                 </div>
                 <div className="rounded-xl border border-border bg-default/25 p-3">
                   <TextField isReadOnly value={publicUrl}>
-                    <Label>Public link</Label>
+                    <Label>Reserved public link</Label>
                     <Input />
                   </TextField>
                 </div>
               </div>
             ) : null}
           </Modal.Body>
-          {isPublished ? (
+          {isSubmitted ? (
             <Modal.Footer className="flex-wrap border-t border-border/70 pt-4">
               <Button
                 variant="secondary"
                 onPress={() => {
-                  void navigator.clipboard?.writeText(publicUrl);
+                  void navigator.clipboard?.writeText(new URL(publicPath, window.location.origin).toString());
                   toast.success("Public link copied");
                 }}
               >
                 <Copy className="size-4" />
                 Copy link
               </Button>
-              <LinkButton href={publicPath} variant="secondary">
-                <ExternalLink className="size-4" />
-                View page
-              </LinkButton>
               <LinkButton href="/dashboard">
                 <LayoutDashboard className="size-4" />
                 Back to dashboard

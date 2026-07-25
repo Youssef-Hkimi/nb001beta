@@ -31,8 +31,7 @@ import {
   SORT_OPTIONS,
   TRENDING_TAGS,
 } from "@/lib/data/categories";
-import { SERVERS } from "@/lib/data/servers";
-import { isPubliclyDiscoverable } from "@/lib/listing-safety";
+import { usePublicServerListings } from "@/lib/use-public-listings";
 
 const defaultFilters: FilterState = {
   categories: [],
@@ -59,6 +58,11 @@ export default function ServerPage() {
   const [visible, setVisible] = useState(24);
   const [loading, setLoading] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const {
+    listings: publicServers,
+    loading: listingsLoading,
+    error: listingsError,
+  } = usePublicServerListings();
 
   useEffect(() => {
     setLoading(true);
@@ -67,7 +71,7 @@ export default function ServerPage() {
   }, [search, category, sort, filters]);
 
   const filtered = useMemo(() => {
-    let list = SERVERS.filter(isPubliclyDiscoverable);
+    let list = [...publicServers];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -116,7 +120,7 @@ export default function ServerPage() {
     }
 
     return list;
-  }, [search, category, sort, filters]);
+  }, [publicServers, search, category, sort, filters]);
 
   // Paginate through the currently visible slice of results
   const pageSize = 15;
@@ -249,12 +253,19 @@ export default function ServerPage() {
             </Button>
           </div>
 
-          {loading ? (
+          {loading || listingsLoading ? (
             <div className="server-listing-grid">
               {Array.from({ length: 6 }).map((_, i) => (
                 <CardSkeleton key={i} />
               ))}
             </div>
+          ) : listingsError ? (
+            <EmptyState
+              title="Servers could not be loaded"
+              description="Please refresh and try again."
+              actionLabel="Refresh"
+              onAction={() => window.location.reload()}
+            />
           ) : pageItems.length === 0 ? (
             <EmptyState
               title="No servers match"

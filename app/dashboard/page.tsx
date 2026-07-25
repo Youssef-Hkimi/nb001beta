@@ -11,12 +11,26 @@ import { ServerOwnerDashboard } from "@/components/dashboard/server-owner-dashbo
 import { UserSettings } from "@/components/dashboard/user-settings";
 import { LinkButton } from "@/components/ui/link-button";
 import { useAuth } from "@/lib/auth/auth-context";
+import {
+  apiListingToBotDashboard,
+  apiListingToDashboard,
+  apiListingToServerDashboard,
+} from "@/lib/real-listings";
+import { useMyListings } from "@/lib/use-my-listings";
 
 type DashboardSection = "overview" | "servers" | "bots" | "rewards" | "settings";
 
 export default function DashboardPage() {
   const [section, setSection] = useState<DashboardSection>("overview");
   const { user } = useAuth();
+  const {listings, loading, error, refresh} = useMyListings();
+  const dashboardListings = listings.map(apiListingToDashboard);
+  const serverListings = listings
+    .filter((listing) => listing.type === "server")
+    .map(apiListingToServerDashboard);
+  const botListings = listings
+    .filter((listing) => listing.type === "bot")
+    .map(apiListingToBotDashboard);
 
   useEffect(() => {
     const sync = () => {
@@ -33,15 +47,20 @@ export default function DashboardPage() {
       <div className="lg:hidden"><DashboardNav /></div>
 
       {section === "overview" ? (
-        <OverviewDashboard username={user?.displayName ?? user?.username ?? "Alex"} />
+        <OverviewDashboard
+          username={user?.displayName ?? user?.username ?? "Owner"}
+          listings={dashboardListings}
+          loading={loading}
+          error={error}
+        />
       ) : null}
 
       {section === "servers" ? (
-        <ServerOwnerDashboard />
+        <ServerOwnerDashboard listings={serverListings} loading={loading} onRefresh={refresh} />
       ) : null}
 
       {section === "bots" ? (
-        <BotOwnerDashboard />
+        <BotOwnerDashboard listings={botListings} loading={loading} onRefresh={refresh} />
       ) : null}
 
       {section === "rewards" ? (

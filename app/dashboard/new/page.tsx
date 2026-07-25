@@ -69,7 +69,6 @@ import { DEFAULT_COMMUNITY_FEATURE_IDS } from "@/lib/data/community-features";
 import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { getBotAvatarUrl, getBotBannerUrl, getBotGalleryImageUrl } from "@/lib/bot-visuals";
 import { bannerColorFromHue, extractMatchingBannerColor } from "@/lib/image-color";
-import { writeStatusOverride } from "@/lib/listing-status";
 import {
   addWidgetSetupReminder,
   removeWidgetSetupReminder,
@@ -148,6 +147,12 @@ type BotField =
   | "inviteUrl"
   | "commands"
   | "avatar";
+
+type CreatedListing = {
+  id: string;
+  slug: string;
+  name: string;
+};
 
 const emptyServer = (): ServerForm => ({
   guildId: "",
@@ -237,6 +242,26 @@ const sampleBot = (): BotForm => ({
   bannerColor: "#256b73",
 });
 
+const emptyBot = (): BotForm => ({
+  ...sampleBot(),
+  name: "",
+  clientId: "",
+  shortDescription: "",
+  fullDescription: "",
+  tags: [],
+  inviteUrl: "",
+  supportUrl: "",
+  websiteUrl: "",
+  githubUrl: "",
+  commands: [
+    {id: crypto.randomUUID(), name: "", description: ""},
+    {id: crypto.randomUUID(), name: "", description: ""},
+  ],
+  avatarPreview: null,
+  bannerPreview: null,
+  galleryImages: [],
+});
+
 function num(value: string, fallback = 0) {
   const n = Number(String(value).replace(/,/g, ""));
   return Number.isFinite(n) ? n : fallback;
@@ -278,11 +303,22 @@ export default function NewListingPage() {
   const router = useRouter();
   const { discordServers } = useAuth();
   const [tab, setTab] = useState<"server" | "bot">("server");
-  const [server, setServer] = useState(sampleServer);
-  const [bot, setBot] = useState(sampleBot);
+  const [server, setServer] = useState(emptyServer);
+  const [bot, setBot] = useState(emptyBot);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("listing");
   const [modalOpen, setModalOpen] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState<"bot" | null>(null);
+  const [publishedServerPath, setPublishedServerPath] = useState<string | null>(null);
+  const [publishedBotPath, setPublishedBotPath] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [serverMediaFiles, setServerMediaFiles] = useState<{
+    icon: File | null;
+    banner: File | null;
+  }>({icon: null, banner: null});
+  const [botMediaFiles, setBotMediaFiles] = useState<{
+    icon: File | null;
+    banner: File | null;
+  }>({icon: null, banner: null});
 
   const [typeModalOpen, setTypeModalOpen] = useState(true);
   const [pendingType, setPendingType] = useState<ListingType | null>(null);
@@ -394,7 +430,7 @@ export default function NewListingPage() {
     } else {
       setBotFieldErrors({});
       setCommandError(null);
-      setBot(sampleBot());
+      setBot(emptyBot());
       setFlowReady(true);
     }
   }
@@ -417,6 +453,62 @@ export default function NewListingPage() {
 
   function validCommands(commands: BotCommand[]) {
     return commands.filter((c) => c.name.trim() && c.description.trim());
+  }
+
+  async function uploadListingMedia(
+    listingId: string,
+    entries: Array<{kind: "icon" | "banner" | "gallery"; file: File; position?: number}>,
+  ) {
+    for (const entry of entries) {
+      const form = new FormData();
+      form.set("kind", entry.kind);
+      form.set("file", entry.file);
+      if (entry.position !== undefined) form.set("position", String(entry.position));
+      const response = await fetch(`/api/listings/${listingId}/media`, {
+        method: "POST",
+        body: form,
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null) as {error?: string} | null;
+        throw new Error(result?.error || "media_upload_failed");
+      }
+    }
+  }
+
+  async function createListing(payload: Record<string, unknown>) {
+    const response = await fetch("/api/listings", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => null) as {
+      error?: string;
+      fields?: Record<string, string[]>;
+      listing?: CreatedListing;
+    } | null;
+    if (!response.ok || !result?.listing) {
+      const fieldMessage = result?.fields
+        ? Object.values(result.fields).flat().find(Boolean)
+        : null;
+      throw new Error(fieldMessage || result?.error || "listing_publish_failed");
+    }
+    return result.listing;
+  }
+
+  async function saveDraft(type: "server" | "bot") {
+    const payload = type === "server"
+      ? {...server, iconPreview: null, bannerPreview: null}
+      : {...bot, avatarPreview: null, bannerPreview: null, galleryImages: []};
+    const response = await fetch("/api/listings/drafts", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({type, payload}),
+    });
+    if (!response.ok) {
+      toast.danger("Draft could not be saved", {description: "Please try again."});
+      return;
+    }
+    toast.success("Draft saved securely");
   }
 
   function focusListingField(field: ServerField | BotField, kind: "server" | "bot") {
@@ -479,22 +571,45 @@ export default function NewListingPage() {
     setReviewOpen(true);
   }
 
-  function finalizeBotPublish() {
-    const id = slugify(bot.name || "bot");
-    setBot((b) => ({ ...b, statusLabel: "Live · Pending Review" }));
-    writeStatusOverride({
-      id,
-      name: bot.name || "Untitled Bot",
-      type: "bot",
-      status: "Live · Pending Review",
-      safetyStatus: "PENDING_REVIEW",
-      updated: "Just now",
-      category: bot.category,
-      description: bot.shortDescription,
-      bannerHue: bot.bannerHue,
-    });
-    setPublishSuccess("bot");
-    toast.success("Bot listing published");
+  async function finalizeBotPublish() {
+    if (isPublishing) return;
+    setIsPublishing(true);
+    try {
+      const listing = await createListing({
+        type: "bot",
+        discordId: bot.clientId.trim(),
+        name: bot.name.trim(),
+        shortDescription: bot.shortDescription.trim(),
+        longDescription: bot.fullDescription.trim(),
+        category: bot.category,
+        tags: bot.tags,
+        featureIds: bot.botFeatures,
+        inviteUrl: bot.inviteUrl.trim(),
+        supportUrl: bot.supportUrl.trim(),
+        websiteUrl: bot.websiteUrl.trim(),
+        githubUrl: bot.githubUrl.trim(),
+        botPrefix: bot.prefix.trim(),
+        botCommands: validCommands(bot.commands).map(({name, description}) => ({name, description})),
+        premium: bot.premium,
+        bannerColor: bot.bannerColor,
+      });
+      const media = [
+        ...(botMediaFiles.icon ? [{kind: "icon" as const, file: botMediaFiles.icon}] : []),
+        ...(botMediaFiles.banner ? [{kind: "banner" as const, file: botMediaFiles.banner}] : []),
+      ];
+      if (media.length) await uploadListingMedia(listing.id, media);
+      setBot((current) => ({...current, statusLabel: "Pending Review"}));
+      setPublishedBotPath(`/bots/${listing.slug}`);
+      setReviewOpen(false);
+      setPublishSuccess("bot");
+      toast.success("Bot submitted for review");
+    } catch (error) {
+      toast.danger("Bot could not be published", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
   }
 
   async function publishServer() {
@@ -565,74 +680,89 @@ export default function NewListingPage() {
       }
 
       const verifiedName = guild.name;
-      const id = slugify(verifiedName);
       setServer((current) => ({
         ...current,
         name: verifiedName,
         online: String(guild.presenceCount),
       }));
-      writeStatusOverride({
-        id,
-        name: verifiedName,
+      const listing = await createListing({
         type: "server",
-        status: "Live · Pending Review",
-        safetyStatus: "PENDING_REVIEW",
-        updated: "Just now",
+        discordId: server.guildId.trim(),
+        name: verifiedName,
+        shortDescription: server.shortDescription.trim(),
+        longDescription: server.fullDescription.trim(),
         category: server.category,
-        description: server.shortDescription,
-        bannerHue: server.bannerHue,
-        guildId: server.guildId.trim(),
-        members: num(server.members),
-        online: guild.presenceCount,
-        widgetSetupPending: false,
+        tags: server.tags,
+        featureIds: server.communityFeatures,
+        language: server.language,
+        region: server.region,
+        inviteUrl: server.inviteUrl.trim(),
+        bannerColor: server.bannerColor,
+        skipWidgetVerification: false,
       });
+      const media = [
+        ...(serverMediaFiles.icon ? [{kind: "icon" as const, file: serverMediaFiles.icon}] : []),
+        ...(serverMediaFiles.banner ? [{kind: "banner" as const, file: serverMediaFiles.banner}] : []),
+      ];
+      if (media.length) await uploadListingMedia(listing.id, media);
+      setPublishedServerPath(`/server/${listing.slug}`);
       removeWidgetSetupReminder(server.guildId.trim());
       setServerVerificationState("success");
-      toast.success("Server verified and published");
-    } catch {
-      setServerVerificationError("Nexbiy could not reach Discord. Please try again.");
+      toast.success("Server submitted for review");
+    } catch (error) {
+      setServerVerificationError(
+        error instanceof Error ? error.message : "Nexbiy could not reach Discord. Please try again.",
+      );
       setServerVerificationState("error");
     } finally {
       serverVerificationInFlight.current = false;
     }
   }
 
-  function publishServerWithoutWidget() {
+  async function publishServerWithoutWidget() {
+    if (serverVerificationInFlight.current) return;
+    serverVerificationInFlight.current = true;
     const guildId = server.guildId.trim();
     const importedServer = discordServers.find((item) => item.id === guildId);
     const memberCount = num(server.members, importedServer?.members ?? 0);
     const serverName = server.name.trim() || importedServer?.name || "Untitled Server";
-    const id = slugify(serverName);
-
-    setServer((current) => ({
-      ...current,
-      name: serverName,
-      members: String(memberCount),
-      online: String(memberCount),
-    }));
-    writeStatusOverride({
-      id,
-      name: serverName,
-      type: "server",
-      status: "Live · Pending Review",
-      safetyStatus: "PENDING_REVIEW",
-      updated: "Just now",
-      category: server.category,
-      description: server.shortDescription,
-      bannerHue: server.bannerHue,
-      guildId,
-      members: memberCount,
-      online: memberCount,
-      widgetSetupPending: true,
-    });
-    addWidgetSetupReminder({
-      guildId,
-      serverName,
-      memberCount,
-      createdAt: Date.now(),
-    });
-    setServerVerificationState("success_unverified");
-    toast.success("Server published with widget setup pending");
+    try {
+      const listing = await createListing({
+        type: "server",
+        discordId: guildId,
+        name: serverName,
+        shortDescription: server.shortDescription.trim(),
+        longDescription: server.fullDescription.trim(),
+        category: server.category,
+        tags: server.tags,
+        featureIds: server.communityFeatures,
+        language: server.language,
+        region: server.region,
+        inviteUrl: server.inviteUrl.trim(),
+        bannerColor: server.bannerColor,
+        skipWidgetVerification: true,
+      });
+      const media = [
+        ...(serverMediaFiles.icon ? [{kind: "icon" as const, file: serverMediaFiles.icon}] : []),
+        ...(serverMediaFiles.banner ? [{kind: "banner" as const, file: serverMediaFiles.banner}] : []),
+      ];
+      if (media.length) await uploadListingMedia(listing.id, media);
+      setServer((current) => ({
+        ...current,
+        name: listing.name,
+        members: String(memberCount),
+        online: String(memberCount),
+      }));
+      setPublishedServerPath(`/server/${listing.slug}`);
+      addWidgetSetupReminder({guildId, serverName: listing.name, memberCount, createdAt: Date.now()});
+      setServerVerificationState("success_unverified");
+      toast.success("Server submitted with widget setup pending");
+    } catch (error) {
+      setServerVerificationError(error instanceof Error ? error.message : "Please try again.");
+      setServerVerificationState("error");
+    } finally {
+      serverVerificationInFlight.current = false;
+    }
   }
 
   function updateCommand(id: string, patch: Partial<BotCommand>) {
@@ -645,6 +775,7 @@ export default function NewListingPage() {
   }
 
   async function handleServerIcon(file: File, iconPreview: string) {
+    setServerMediaFiles((current) => ({...current, icon: file}));
     setServer((current) => ({ ...current, iconPreview }));
     try {
       const bannerColor = await extractMatchingBannerColor(file);
@@ -656,6 +787,7 @@ export default function NewListingPage() {
   }
 
   async function handleBotAvatar(file: File, avatarPreview: string) {
+    setBotMediaFiles((current) => ({...current, icon: file}));
     setBot((current) => ({ ...current, avatarPreview }));
     try {
       const bannerColor = await extractMatchingBannerColor(file);
@@ -998,6 +1130,7 @@ export default function NewListingPage() {
                   onFile={handleServerIcon}
                   onClear={() => {
                     setServer((current) => ({ ...current, iconPreview: null }));
+                    setServerMediaFiles((current) => ({...current, icon: null}));
                     setServerColorMatched(false);
                   }}
                 />
@@ -1007,12 +1140,14 @@ export default function NewListingPage() {
                   sizeHint="Recommended 960×320"
                   variant="banner"
                   previewUrl={server.bannerPreview}
-                  onFile={(_, bannerPreview) =>
-                    setServer((current) => ({ ...current, bannerPreview }))
-                  }
-                  onClear={() =>
-                    setServer((current) => ({ ...current, bannerPreview: null }))
-                  }
+                  onFile={(file, bannerPreview) => {
+                    setServer((current) => ({ ...current, bannerPreview }));
+                    setServerMediaFiles((current) => ({...current, banner: file}));
+                  }}
+                  onClear={() => {
+                    setServer((current) => ({ ...current, bannerPreview: null }));
+                    setServerMediaFiles((current) => ({...current, banner: null}));
+                  }}
                 />
               </div>
               <BannerColorPicker
@@ -1025,51 +1160,21 @@ export default function NewListingPage() {
               />
             </section>
 
-            <div className="max-w-md">
-              <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Featured</p>
-                  <p className="text-xs text-muted">Request featured placement</p>
-                </div>
-                <Switch
-                  aria-label="Featured"
-                  isSelected={server.featured}
-                  onChange={(v) => setServer((s) => ({ ...s, featured: v }))}
-                >
-                  <Switch.Content>
-                    <Switch.Control>
-                      <Switch.Thumb />
-                    </Switch.Control>
-                  </Switch.Content>
-                </Switch>
-              </div>
-            </div>
-
             <Alert status="warning" className="rounded-2xl">
               <Alert.Indicator><Clock3 className="size-4" /></Alert.Indicator>
-              <Alert.Content><Alert.Description>New server listings go live with a Pending Review status. Nexbiy will review the listing for safety and platform compliance.</Alert.Description></Alert.Content>
+              <Alert.Content><Alert.Description>New server listings are submitted for review. Their public pages appear after Nexbiy approves them for safety and platform compliance.</Alert.Description></Alert.Content>
             </Alert>
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 variant="secondary"
                 onPress={() => {
-                  writeStatusOverride({
-                    id: slugify(server.name || "server-draft"),
-                    name: server.name || "Untitled Server",
-                    type: "server",
-                    status: "Draft",
-                    updated: "Just now",
-                    category: server.category,
-                    description: server.shortDescription,
-                    bannerHue: server.bannerHue,
-                  });
-                  toast.success("Draft saved");
+                  void saveDraft("server");
                 }}
               >
                 <Save className="size-4" />
                 Save Draft
               </Button>
-              <Button onPress={publishServer}>
+              <Button isDisabled={isPublishing || serverVerificationState === "verifying"} onPress={publishServer}>
                 <Send className="size-4" />
                 Publish Server
               </Button>
@@ -1373,6 +1478,7 @@ export default function NewListingPage() {
                     }}
                     onClear={() => {
                       setBot((current) => ({ ...current, avatarPreview: null }));
+                      setBotMediaFiles((current) => ({...current, icon: null}));
                       setBotColorMatched(false);
                     }}
                   />
@@ -1384,12 +1490,14 @@ export default function NewListingPage() {
                   sizeHint="Recommended 960×320"
                   variant="banner"
                   previewUrl={bot.bannerPreview}
-                  onFile={(_, bannerPreview) =>
-                    setBot((current) => ({ ...current, bannerPreview }))
-                  }
-                  onClear={() =>
-                    setBot((current) => ({ ...current, bannerPreview: null }))
-                  }
+                  onFile={(file, bannerPreview) => {
+                    setBot((current) => ({ ...current, bannerPreview }));
+                    setBotMediaFiles((current) => ({...current, banner: file}));
+                  }}
+                  onClear={() => {
+                    setBot((current) => ({ ...current, bannerPreview: null }));
+                    setBotMediaFiles((current) => ({...current, banner: null}));
+                  }}
                 />
               </div>
               <BannerColorPicker
@@ -1446,29 +1554,19 @@ export default function NewListingPage() {
 
             <Alert status="warning" className="rounded-2xl">
               <Alert.Indicator><Clock3 className="size-4" /></Alert.Indicator>
-              <Alert.Content><Alert.Description>New bot listings go live with a Pending Review status. Nexbiy will review the bot for safety, clear functionality, and Discord Terms of Service compliance.</Alert.Description></Alert.Content>
+              <Alert.Content><Alert.Description>New bot listings are submitted for review. Their public pages appear after Nexbiy approves them for safety, clear functionality, and Discord Terms of Service compliance.</Alert.Description></Alert.Content>
             </Alert>
             <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 variant="secondary"
                 onPress={() => {
-                  writeStatusOverride({
-                    id: slugify(bot.name || "bot-draft"),
-                    name: bot.name || "Untitled Bot",
-                    type: "bot",
-                    status: "Draft",
-                    updated: "Just now",
-                    category: bot.category,
-                    description: bot.shortDescription,
-                    bannerHue: bot.bannerHue,
-                  });
-                  toast.success("Draft saved");
+                  void saveDraft("bot");
                 }}
               >
                 <Save className="size-4" />
                 Save Draft
               </Button>
-              <Button onPress={tryPublishBot}>
+              <Button isDisabled={isPublishing} onPress={tryPublishBot}>
                 <Send className="size-4" />
                 Publish Bot
               </Button>
@@ -1515,16 +1613,16 @@ export default function NewListingPage() {
       <ServerWidgetVerificationModal
         state={serverVerificationState}
         errorMessage={serverVerificationError}
-        publicPath={`/server/${slugify(server.name || "server")}`}
+        publicPath={publishedServerPath || `/server/${slugify(server.name || "server")}`}
         onRetry={() => void publishServer()}
-        onSkip={publishServerWithoutWidget}
+        onSkip={() => void publishServerWithoutWidget()}
         onClose={() => setServerVerificationState(null)}
       />
 
       <BotReviewModal
         isOpen={reviewOpen}
         onOpenChange={setReviewOpen}
-        onAgree={finalizeBotPublish}
+        onAgree={() => void finalizeBotPublish()}
       />
 
       <Modal.Backdrop
@@ -1549,16 +1647,16 @@ export default function NewListingPage() {
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
                   <CheckCircle2 className="size-5" />
                 </span>
-                <span>Your bot is live</span>
+                <span>Your bot was submitted</span>
               </Modal.Heading>
             </Modal.Header>
             <Modal.Body className="space-y-4">
               <Alert status="success" className="widget-verification-alert">
                 <Alert.Indicator />
                 <Alert.Content>
-                  <Alert.Title>Bot published successfully</Alert.Title>
+                  <Alert.Title>Bot submitted successfully</Alert.Title>
                   <Alert.Description>
-                    Your bot is publicly listed on Nexbiy and is now waiting for review.
+                    Nexbiy will review your bot before its public page becomes visible.
                   </Alert.Description>
                 </Alert.Content>
               </Alert>
@@ -1567,18 +1665,14 @@ export default function NewListingPage() {
                 <ListingStatusChip status="PENDING_REVIEW" livePrefix />
               </div>
               <div className="rounded-xl border border-border bg-default/25 p-3">
-                <TextField isReadOnly value={`http://localhost:3010/bots/${slugify(bot.name)}`}>
-                  <Label>Public link</Label>
+                <TextField isReadOnly value={publishedBotPath || `/bots/${slugify(bot.name)}`}>
+                  <Label>Reserved public link</Label>
                   <Input />
                 </TextField>
               </div>
             </Modal.Body>
             <Modal.Footer className="flex-wrap border-t border-border/70 pt-4">
-              <Button variant="secondary" onPress={() => { const url = `http://localhost:3010/bots/${slugify(bot.name)}`; void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
-              <LinkButton href={`/bots/${slugify(bot.name)}`} variant="secondary">
-                <ExternalLink className="size-4" />
-                View page
-              </LinkButton>
+              <Button variant="secondary" onPress={() => { const url = new URL(publishedBotPath || `/bots/${slugify(bot.name)}`, window.location.origin).toString(); void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
               <LinkButton href="/dashboard">
                 <LayoutDashboard className="size-4" />
                 Back to dashboard

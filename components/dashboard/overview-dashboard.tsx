@@ -36,8 +36,8 @@ import { ListingStatusChip } from "@/components/listing/listing-safety";
 import { IconifyIcon } from "@/components/ui/iconify-icon";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
-import { DASHBOARD_LISTINGS } from "@/lib/data/dashboard";
 import { formatCount, initials } from "@/lib/format";
+import type {DashboardListing} from "@/lib/types";
 
 const STATS = [
   { label: "Total Views", value: "124.8K", delta: "12.4%", detail: "vs last 7 days", icon: Eye, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500" },
@@ -57,7 +57,17 @@ const GETTING_STARTED_ITEMS = [
   { id: "votes", title: "Get 10 votes on a listing", subtitle: "Reach your first community milestone", content: "Share your public listing and encourage genuine community members to support it with a vote.", action: "Check progress", icon: "solar:like-linear" },
 ] as const;
 
-export function OverviewDashboard({ username }: { username: string }) {
+export function OverviewDashboard({
+  username,
+  listings,
+  loading = false,
+  error = null,
+}: {
+  username: string;
+  listings: DashboardListing[];
+  loading?: boolean;
+  error?: string | null;
+}) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [page, setPage] = useState(1);
@@ -67,12 +77,12 @@ export function OverviewDashboard({ username }: { username: string }) {
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return DASHBOARD_LISTINGS.filter((row) => {
+    return listings.filter((row) => {
       const matchesSearch = !query || row.name.toLowerCase().includes(query) || row.category.toLowerCase().includes(query);
       const matchesType = typeFilter === "All" || row.type === typeFilter.toLowerCase();
       return matchesSearch && matchesType;
     }).sort((a, b) => LISTING_ORDER.indexOf(a.id) - LISTING_ORDER.indexOf(b.id));
-  }, [search, typeFilter]);
+  }, [listings, search, typeFilter]);
 
   const pageSize = 5;
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -139,6 +149,8 @@ export function OverviewDashboard({ username }: { username: string }) {
               </div>
             </Card.Header>
             <Card.Content>
+              {loading ? <p className="py-4 text-sm text-muted">Loading your listings…</p> : null}
+              {error ? <p className="py-4 text-sm text-danger">Listings could not be loaded. Refresh and try again.</p> : null}
               {visibleRows.length ? <><Table><Table.ScrollContainer><Table.Content aria-label="Overview listings" className="min-w-[820px]"><Table.Header><Table.Column isRowHeader>Listing</Table.Column><Table.Column>Type</Table.Column><Table.Column>Status</Table.Column><Table.Column>Views</Table.Column><Table.Column>Clicks</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="w-32 text-end">Actions</Table.Column></Table.Header><Table.Body>{visibleRows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><ListingAvatar name={row.name} hue={row.bannerHue} /><span className="font-medium">{row.name}</span></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={row.type === "server" ? "accent" : "default"}><Chip.Label>{row.type === "server" ? "Server" : "Bot"}</Chip.Label></Chip></Table.Cell><Table.Cell><ListingStatusChip status={row.safetyStatus} /></Table.Cell><Table.Cell>{formatCount(row.views)}</Table.Cell><Table.Cell>{formatCount(row.clicks)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><ActionButton label={`Preview ${row.name}`} icon={Eye} onPress={() => toast.info("Preview ready", { description: row.name })} /><ActionButton label={`Copy ${row.name} link`} icon={Copy} onPress={() => toast.success("Listing link copied")} /><ActionButton label={`Edit ${row.name}`} icon={Edit3} onPress={() => toast.success("Editor ready", { description: row.name })} /></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table><div className="mt-3 flex justify-center"><Pagination><Pagination.Content><Pagination.Item><Pagination.Previous isDisabled={page === 1} onPress={() => setPage(Math.max(1, page - 1))}><Pagination.PreviousIcon /></Pagination.Previous></Pagination.Item>{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <Pagination.Item key={number}><Pagination.Link isActive={page === number} onPress={() => setPage(number)}>{number}</Pagination.Link></Pagination.Item>)}<Pagination.Item><Pagination.Next isDisabled={page === totalPages} onPress={() => setPage(Math.min(totalPages, page + 1))}><Pagination.NextIcon /></Pagination.Next></Pagination.Item></Pagination.Content></Pagination></div></> : <div className="py-10 text-center"><p className="font-semibold">No listings found</p><p className="mt-1 text-sm text-muted">Try a different search or filter.</p></div>}
             </Card.Content>
           </Card>
@@ -146,6 +158,7 @@ export function OverviewDashboard({ username }: { username: string }) {
           <section className="space-y-3"><h2 className="text-base font-bold text-foreground">Quick Actions</h2><div className="grid items-stretch gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
             <QuickAction title="Create a Server Listing" description="Add your community and grow your members." label="Create Server" icon={Server} tone="bg-violet-500/8" href="/dashboard/new?type=server" />
             <VerificationQuickAction
+              listing={listings[0]}
               listingVisible={verificationListingVisible}
               onCloseListing={() => setVerificationListingVisible(false)}
               onShowListing={() => setVerificationListingVisible(true)}
@@ -232,8 +245,18 @@ function QuickAction({ title, description, label, icon: Icon, tone, href }: { ti
   return <Card variant="default" className={`h-full gap-3 p-5 ${tone}`}><span className="flex size-10 items-center justify-center rounded-xl bg-white/70 text-accent dark:bg-white/8"><Icon className="size-5" /></span><div className="flex-1"><p className="text-sm font-semibold text-foreground">{title}</p><p className="mt-1 text-xs leading-relaxed text-muted">{description}</p></div><LinkButton href={href} size="sm">{label}<Plus className="size-3.5" /></LinkButton></Card>;
 }
 
-function VerificationQuickAction({ listingVisible, onCloseListing, onShowListing }: { listingVisible: boolean; onCloseListing: () => void; onShowListing: () => void }) {
-  const listing = DASHBOARD_LISTINGS.find((item) => item.id === "nexus-hub") ?? DASHBOARD_LISTINGS[0];
+function VerificationQuickAction({
+  listing,
+  listingVisible,
+  onCloseListing,
+  onShowListing,
+}: {
+  listing?: DashboardListing;
+  listingVisible: boolean;
+  onCloseListing: () => void;
+  onShowListing: () => void;
+}) {
+  if (!listing) return null;
 
   return (
     <div className="nexus-card relative min-h-64 overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_82%_8%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_38%)] p-5 sm:p-7">

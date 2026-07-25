@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, Button, Card, Chip, toast } from "@heroui/react";
+import { Avatar, Button, Card, Chip } from "@heroui/react";
 import { Eye, Users } from "lucide-react";
 
 import { ListingActionGuard, ListingSafeBadge, ListingStatusChip } from "@/components/listing/listing-safety";
@@ -21,10 +21,16 @@ export function ServerCard({
     <Card className="server-listing-card nexus-card hover-lift group w-full min-w-0 overflow-hidden p-0">
       <div className="relative">
         <div className="server-listing-banner">
-          <GradientBanner hue={server.bannerHue} className="h-32 w-full md:h-[8.5rem]" />
+          {server.bannerUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={server.bannerUrl} alt="" className="h-32 w-full object-cover md:h-[8.5rem]" />
+          ) : (
+            <GradientBanner hue={server.bannerHue} className="h-32 w-full md:h-[8.5rem]" />
+          )}
         </div>
         <div className="absolute -bottom-7 left-4">
           <Avatar className="server-listing-icon size-14 border-2 border-background shadow-md">
+            {server.iconUrl ? <Avatar.Image src={server.iconUrl} alt="" className="object-cover" /> : null}
             <Avatar.Fallback className="server-listing-icon bg-accent/20 text-sm font-bold text-accent">
               {initials(server.name)}
             </Avatar.Fallback>
@@ -72,11 +78,7 @@ export function ServerCard({
         <ListingActionGuard
           status={server.safetyStatus}
           className="min-w-[7.5rem] px-4"
-          onPress={() =>
-            toast.success(`Opening invite for ${server.name}`, {
-              description: "Invite flow is mocked in this demo.",
-            })
-          }
+          onPress={() => window.open(server.inviteUrl || `/server/${server.id}`, "_blank", "noopener,noreferrer")}
         >Join Server</ListingActionGuard>
         {server.id === "preview" ? (
           <Button variant="secondary" isDisabled>

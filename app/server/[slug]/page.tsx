@@ -1,38 +1,20 @@
 import { notFound } from "next/navigation";
 
 import { ServerDetailClient } from "@/components/server/server-detail-client";
-import { getServerBySlug } from "@/lib/data/server-details";
+import {apiListingToServerDetail} from "@/lib/real-listings";
+import {getPublicListing} from "@/lib/server/public-listings";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  // Prebuild known server slugs from mock data ids
-  return [
-    { slug: "nexus-hub" },
-    { slug: "lofi-girl" },
-    { slug: "reactflux" },
-    { slug: "midjourney" },
-    { slug: "minecraft" },
-    { slug: "anime-soul" },
-    { slug: "study-together" },
-    { slug: "startup-lounge" },
-    { slug: "cozy-corner" },
-    { slug: "valorant-hub" },
-    { slug: "crypto-hub" },
-    { slug: "art-garden" },
-    { slug: "meme-factory" },
-  ];
-}
+export const dynamic = "force-dynamic";
 
 export default async function ServerDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const server = getServerBySlug(slug);
-
-  if (!server) {
-    notFound();
-  }
+  const listing = await getPublicListing("server", slug);
+  if (!listing) notFound();
+  const server = apiListingToServerDetail(listing);
 
   return <ServerDetailClient server={server} />;
 }

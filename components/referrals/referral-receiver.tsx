@@ -51,9 +51,10 @@ export function ReferralReceiver() {
     if (!returningFromLogin || !isReady || !referralSlug) return;
 
     if (isAuthenticated) {
-      saveReferralReward(referralSlug);
-      setStage("success");
-      setReturningFromLogin(false);
+      void claimReferralReward(referralSlug).then((accepted) => {
+        if (accepted) setStage("success");
+        setReturningFromLogin(false);
+      });
       return;
     }
 
@@ -65,8 +66,9 @@ export function ReferralReceiver() {
     if (!referralSlug) return;
 
     if (isAuthenticated) {
-      saveReferralReward(referralSlug);
-      setStage("success");
+      void claimReferralReward(referralSlug).then((accepted) => {
+        if (accepted) setStage("success");
+      });
       return;
     }
 
@@ -154,6 +156,17 @@ function saveReferralReward(slug: string) {
   localStorage.setItem(CLAIMED_REFERRAL_KEY, slug);
   localStorage.setItem(REFERRAL_REWARD_KEY, "10");
   localStorage.removeItem(PENDING_REFERRAL_KEY);
+}
+
+async function claimReferralReward(slug: string) {
+  const response = await fetch("/api/referrals/accept", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({code: slug}),
+  });
+  if (!response.ok && response.status !== 409) return false;
+  saveReferralReward(slug);
+  return true;
 }
 
 function cleanReferralQuery() {

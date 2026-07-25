@@ -6,16 +6,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/lib/auth/auth-context";
 
-const REWARD_SERVERS = [
-  { id: "nexus-hub", name: "Nexbiy Hub" },
-  { id: "lofi-girl", name: "Lofi Girl" },
-  { id: "reactflux", name: "ReactFlux" },
-];
-
-const MOCK_REFERRALS = [
-  { id: "maya", name: "Maya", status: "Signed up", completed: false, reward: 0 },
-  { id: "kai", name: "Kai", status: "Signed up", completed: true, reward: 10 },
-];
+type RewardListing = {id: string; name: string; type: "server" | "bot"; status: string};
+type RewardReferral = {
+  id: string;
+  status: "pending" | "qualified" | "rejected" | "reversed";
+  receiver?: {username?: string | null; display_name?: string | null; avatar_url?: string | null} | null;
+};
 
 function getDailyResetCountdown() {
   const now = new Date();
@@ -287,15 +283,20 @@ export function RewardsLanding() {
   const [showGifts, setShowGifts] = useState(true);
   const [giftsMounted, setGiftsMounted] = useState(true);
   const [activeTab, setActiveTab] = useState("referral");
-  const [selectedRewardServer, setSelectedRewardServer] = useState("nexus-hub");
-  const [availablePoints, setAvailablePoints] = useState(10);
+  const [selectedRewardServer, setSelectedRewardServer] = useState("");
+  const [availablePoints, setAvailablePoints] = useState(0);
+  const [dailyRemaining, setDailyRemaining] = useState(10);
+  const [rewardServers, setRewardServers] = useState<RewardListing[]>([]);
+  const [referrals, setReferrals] = useState<RewardReferral[]>([]);
+  const [referralCode, setReferralCode] = useState("");
   const [dailyResetCountdown, setDailyResetCountdown] = useState("24:00:00");
   const timersRef = useRef<number[]>([]);
   const giftUnmountTimerRef = useRef<number | null>(null);
-  const referralSlug = (user?.username ?? user?.displayName ?? "alex")
+  const fallbackReferralSlug = (user?.username ?? user?.displayName ?? "member")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "alex";
+    .replace(/^-|-$/g, "") || "member";
+  const referralSlug = referralCode || fallbackReferralSlug;
   const referralLink = `nexbiy.gg/ref/${referralSlug}`;
 
   useEffect(() => {
@@ -308,6 +309,32 @@ export function RewardsLanding() {
     const interval = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void fetch("/api/rewards", {cache: "no-store"})
+      .then(async (response) => {
+        if (!response.ok) throw new Error("rewards_unavailable");
+        return response.json();
+      })
+      .then((payload) => {
+        if (cancelled) return;
+        const listings = (payload.listings || []) as RewardListing[];
+        setAvailablePoints(Number(payload.balance?.available_points || 0));
+        setDailyRemaining(Number(payload.dailyRemaining || 0));
+        setRewardServers(listings);
+        setReferrals((payload.referrals || []) as RewardReferral[]);
+        setReferralCode(String(payload.referralCode?.code || ""));
+        setSelectedRewardServer((current) => current || listings[0]?.id || "");
+      })
+      .catch(() => {
+        if (!cancelled) toast.danger("Rewards could not be loaded");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   function acceptAgreement() {
     setAgreementOpen(false);
@@ -352,15 +379,25 @@ export function RewardsLanding() {
     toast.success("Referral link copied", { description: "Share it with friends to start earning Growth Points." });
   }
 
-  function claimGrowthPoints() {
-    if (availablePoints === 0) {
+  async function claimGrowthPoints() {
+    if (availablePoints === 0 || dailyRemaining === 0 || !selectedRewardServer) {
       toast.info("No Growth Points available", { description: "New qualified referrals will appear here." });
       return;
     }
-
-    const serverName = REWARD_SERVERS.find((server) => server.id === selectedRewardServer)?.name ?? "your server";
-    setAvailablePoints(0);
-    toast.success("Growth Points claimed", { description: `10 Growth Points were applied to ${serverName}.` });
+    const points = Math.min(10, availablePoints, dailyRemaining);
+    const response = await fetch("/api/rewards/allocate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({listingId: selectedRewardServer, points}),
+    });
+    if (!response.ok) {
+      toast.danger("Growth Points could not be applied");
+      return;
+    }
+    const serverName = rewardServers.find((server) => server.id === selectedRewardServer)?.name ?? "your listing";
+    setAvailablePoints((current) => Math.max(0, current - points));
+    setDailyRemaining((current) => Math.max(0, current - points));
+    toast.success("Growth Points claimed", {description: `${points} Growth Points were applied to ${serverName}.`});
   }
 
   return (
@@ -434,7 +471,7 @@ export function RewardsLanding() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                               <p className="text-xs font-medium text-muted">Referral clicks</p>
-                              <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">2</p>
+                              <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">{referrals.length}</p>
                               </div>
                               <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
                                 <MousePointerClick className="size-4.5" />
@@ -483,7 +520,7 @@ export function RewardsLanding() {
                                 </Select.Trigger>
                                 <Select.Popover>
                                   <ListBox>
-                                    {REWARD_SERVERS.map((server) => (
+                                    {rewardServers.map((server) => (
                                       <ListBox.Item key={server.id} id={server.id} textValue={server.name}>
                                         {server.name}
                                         <ListBox.ItemIndicator />
@@ -492,7 +529,7 @@ export function RewardsLanding() {
                                   </ListBox>
                                 </Select.Popover>
                               </Select>
-                              <Button size="sm" variant="primary" isDisabled={availablePoints === 0} onPress={claimGrowthPoints}>Claim</Button>
+                              <Button size="sm" variant="primary" isDisabled={availablePoints === 0 || dailyRemaining === 0 || !selectedRewardServer} onPress={claimGrowthPoints}>Claim</Button>
                             </div>
                           </Card.Content>
                         </Card>
@@ -514,27 +551,30 @@ export function RewardsLanding() {
                                   <Table.Column className="text-end">Reward</Table.Column>
                                 </Table.Header>
                                 <Table.Body>
-                                  {MOCK_REFERRALS.map((referral) => (
+                                  {referrals.map((referral) => {
+                                    const name = referral.receiver?.display_name || referral.receiver?.username || "Nexbiy member";
+                                    const completed = referral.status === "qualified";
+                                    return (
                                     <Table.Row key={referral.id} id={referral.id}>
                                       <Table.Cell>
                                         <div className="flex items-center gap-3">
                                           <span className="flex size-9 items-center justify-center rounded-full bg-accent/12 text-sm font-bold text-accent">
-                                            {referral.name.slice(0, 1)}
+                                            {name.slice(0, 1)}
                                           </span>
-                                          <span className="font-medium text-foreground">{referral.name}</span>
+                                          <span className="font-medium text-foreground">{name}</span>
                                         </div>
                                       </Table.Cell>
-                                      <Table.Cell>{referral.status}</Table.Cell>
+                                      <Table.Cell>{referral.status === "pending" ? "Signed up" : referral.status}</Table.Cell>
                                       <Table.Cell>
-                                        <Chip size="sm" color={referral.completed ? "success" : "warning"} variant="soft">
-                                          <Chip.Label>{referral.completed ? "Completed" : "Pending"}</Chip.Label>
+                                        <Chip size="sm" color={completed ? "success" : "warning"} variant="soft">
+                                          <Chip.Label>{completed ? "Completed" : "Pending"}</Chip.Label>
                                         </Chip>
                                       </Table.Cell>
                                       <Table.Cell className="text-end font-semibold tabular-nums">
-                                        {referral.reward > 0 ? `+${referral.reward}` : "0"}
+                                        {completed ? "+10" : "0"}
                                       </Table.Cell>
                                     </Table.Row>
-                                  ))}
+                                  )})}
                                 </Table.Body>
                               </Table.Content>
                             </Table.ScrollContainer>

@@ -1,15 +1,15 @@
 import { notFound } from "next/navigation";
 
 import { BotDetailView } from "@/components/bot/bot-detail-view";
-import { BOTS, getBotBySlug } from "@/lib/data/bots";
+import {apiListingToBot} from "@/lib/real-listings";
+import {getPublicListing} from "@/lib/server/public-listings";
 
-export function generateStaticParams() {
-  return BOTS.map((bot) => ({ slug: bot.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function BotDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const bot = getBotBySlug(slug);
-  if (!bot) notFound();
+  const listing = await getPublicListing("bot", slug);
+  if (!listing) notFound();
+  const bot = apiListingToBot(listing);
   return <BotDetailView bot={bot} />;
 }

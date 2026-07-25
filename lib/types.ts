@@ -14,6 +14,7 @@ export type ListingSafetyFields = {
 };
 
 export type ServerListing = ListingSafetyFields & {
+  databaseId?: string;
   id: string;
   name: string;
   description: string;
@@ -26,6 +27,9 @@ export type ServerListing = ListingSafetyFields & {
   activity: ActivityLevel;
   bannerHue: string;
   communityFeatures: string[];
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  inviteUrl?: string;
   featured?: boolean;
 };
 
@@ -64,6 +68,7 @@ export type ServerDetail = ServerListing & {
 };
 
 export type BotListing = ListingSafetyFields & {
+  databaseId?: string;
   id: string;
   slug: string;
   name: string;

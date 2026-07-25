@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Nexbiy agent instructions
 
-You are working on **Nexbiy**, a Discord server/bot discovery and creator-rewards demo.
+You are working on **Nexbiy**, a Discord server/bot discovery and creator-rewards beta.
 
 ## Read these first (in order)
 
@@ -20,7 +20,7 @@ You are working on **Nexbiy**, a Discord server/bot discovery and creator-reward
 
 - **HeroUI v3** components for UI; `lucide-react` for general UI icons; Iconify only for branded/platform icons; **no emoji UI icons**
 - Soft dark mode (`#2D2E33` / `#323339`), brand `#629BF8` / `#82B0F9`
-- Mock data by default. The only live test integrations currently in scope are Discord OAuth and Discord widget verification.
+- This branch is the full-stack beta. Use Supabase-backed data and server-authorized actions; mock data is allowed only as an explicit visual fallback.
 - Minimal scoped changes — do not rebuild the whole site
 - Server detail: **no** reviews, gallery, rules, FAQ, Community Highlights, or Contact Owner
 - The public engagement term is **Vote**, using the existing thumbs-up icon. Do not reintroduce Like or Save wording.
@@ -49,8 +49,8 @@ npx tsc --noEmit
 npm run build
 ```
 
-## Backup repository
+## Beta repository
 
-- SSH remote: `git@github.com:Youssef-Hkimi/nb001.git`
-- Local remote name: `nexbiy`
-- The current working branch is backed up to `nexbiy/main`.
+- SSH remote: `git@github.com:Youssef-Hkimi/nb001beta.git`
+- Local remote name: `beta`
+- Never push this branch to `nb001`; that repository is the frozen mock-demo backup.

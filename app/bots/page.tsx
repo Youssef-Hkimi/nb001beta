@@ -31,8 +31,7 @@ import {
   SORT_OPTIONS,
   TRENDING_TAGS,
 } from "@/lib/data/categories";
-import { BOTS } from "@/lib/data/bots";
-import { isPubliclyDiscoverable } from "@/lib/listing-safety";
+import { usePublicBotListings } from "@/lib/use-public-listings";
 
 const defaultFilters: FilterState = {
   categories: [],
@@ -52,6 +51,11 @@ export default function BotsPage() {
   const [visible, setVisible] = useState(24);
   const [loading, setLoading] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const {
+    listings: publicBots,
+    loading: listingsLoading,
+    error: listingsError,
+  } = usePublicBotListings();
 
   useEffect(() => {
     setLoading(true);
@@ -60,7 +64,7 @@ export default function BotsPage() {
   }, [search, category, sort, filters]);
 
   const filtered = useMemo(() => {
-    let list = BOTS.filter(isPubliclyDiscoverable);
+    let list = [...publicBots];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -97,7 +101,7 @@ export default function BotsPage() {
     }
 
     return list;
-  }, [search, category, sort, filters]);
+  }, [publicBots, search, category, sort, filters]);
 
   // Paginate through the currently visible slice of results
   const pageSize = 15;
@@ -230,12 +234,19 @@ export default function BotsPage() {
             </Button>
           </div>
 
-          {loading ? (
+          {loading || listingsLoading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <CardSkeleton key={i} />
               ))}
             </div>
+          ) : listingsError ? (
+            <EmptyState
+              title="Bots could not be loaded"
+              description="Please refresh and try again."
+              actionLabel="Refresh"
+              onAction={() => window.location.reload()}
+            />
           ) : pageItems.length === 0 ? (
             <EmptyState
               title="No bots match"

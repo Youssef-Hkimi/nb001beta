@@ -43,7 +43,7 @@ import {
   TrendingUp,
   Upload,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AnalyticsLineChart } from "@/components/dashboard/analytics-line-chart";
 import { BotFeatureSelect } from "@/components/forms/bot-feature-select";
@@ -52,7 +52,6 @@ import { TagMultiSelect } from "@/components/forms/tag-multi-select";
 import { LinkButton } from "@/components/ui/link-button";
 import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { BOT_CATEGORIES, BOT_LISTING_TAGS } from "@/lib/data/categories";
-import { BOT_DASHBOARD_LISTINGS } from "@/lib/data/dashboard-analytics";
 import { formatCount, initials } from "@/lib/format";
 import type { BotCommand, BotDashboardListing, ListingStatus } from "@/lib/types";
 
@@ -114,24 +113,38 @@ function draftFor(bot: BotDashboardListing): BotEditorDraft {
   };
 }
 
-export function BotOwnerDashboard() {
-  const [rows, setRows] = useState(BOT_DASHBOARD_LISTINGS);
-  const [selectedId, setSelectedId] = useState(rows[0].id);
+export function BotOwnerDashboard({
+  listings,
+  loading = false,
+  onRefresh,
+}: {
+  listings: BotDashboardListing[];
+  loading?: boolean;
+  onRefresh: () => Promise<void>;
+}) {
+  const [rows, setRows] = useState(listings);
+  const [selectedId, setSelectedId] = useState(listings[0]?.id ?? "");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editorPanel, setEditorPanel] = useState<BotEditorPanel | null>(null);
   const [editorDraft, setEditorDraft] = useState<BotEditorDraft | null>(null);
   const [savedDrafts, setSavedDrafts] = useState<Record<string, BotEditorDraft>>(() =>
-    Object.fromEntries(BOT_DASHBOARD_LISTINGS.map((item) => [item.id, draftFor(item)])),
+    Object.fromEntries(listings.map((item) => [item.id, draftFor(item)])),
   );
   const [deleteSelectorOpen, setDeleteSelectorOpen] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<Set<string>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const bot = useMemo(() => rows.find((item) => item.id === selectedId) ?? rows[0], [rows, selectedId]);
 
-  function refreshProjects() {
-    setRows(BOT_DASHBOARD_LISTINGS);
-    setSelectedId(BOT_DASHBOARD_LISTINGS[0]?.id ?? "");
-    setSavedDrafts(Object.fromEntries(BOT_DASHBOARD_LISTINGS.map((item) => [item.id, draftFor(item)])));
+  useEffect(() => {
+    setRows(listings);
+    setSavedDrafts((current) => ({
+      ...Object.fromEntries(listings.map((item) => [item.id, current[item.id] ?? draftFor(item)])),
+    }));
+    if (!listings.some((item) => item.id === selectedId)) setSelectedId(listings[0]?.id ?? "");
+  }, [listings, selectedId]);
+
+  async function refreshProjects() {
+    await onRefresh();
     setDeleteSelectorOpen(false);
     setSelectedForDelete(new Set());
     toast.success("Bot projects refreshed");
@@ -144,8 +157,32 @@ export function BotOwnerDashboard() {
     setEditorPanel(panel);
   }
 
-  function saveEditor() {
+  async function saveEditor() {
     if (!bot || !editorDraft) return;
+    const response = await fetch(`/api/listings/${bot.id}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        name: editorDraft.name.trim(),
+        shortDescription: editorDraft.description.trim(),
+        longDescription: editorDraft.fullDescription.trim(),
+        category: editorDraft.category,
+        tags: editorDraft.tags,
+        botPrefix: editorDraft.prefix.trim(),
+        botCommands: editorDraft.commands.map(({name, description}) => ({name, description})),
+        featureIds: editorDraft.botFeatures,
+        premium: editorDraft.premium,
+        inviteUrl: editorDraft.inviteUrl.trim(),
+        supportUrl: editorDraft.supportUrl.trim(),
+        websiteUrl: editorDraft.websiteUrl.trim(),
+        githubUrl: editorDraft.githubUrl.trim(),
+      }),
+    });
+    if (!response.ok) {
+      toast.danger("Bot settings could not be saved");
+      return;
+    }
+    await onRefresh();
     setSavedDrafts((current) => ({ ...current, [bot.id]: editorDraft }));
     setRows((current) => current.map((item) => item.id === bot.id ? {
       ...item,
@@ -175,7 +212,15 @@ export function BotOwnerDashboard() {
     });
   }
 
-  function deleteSelectedProjects() {
+  async function deleteSelectedProjects() {
+    const responses = await Promise.all(
+      [...selectedForDelete].map((id) => fetch(`/api/listings/${id}`, {method: "DELETE"})),
+    );
+    if (responses.some((response) => !response.ok)) {
+      toast.danger("One or more bot listings could not be deleted");
+      return;
+    }
+    await onRefresh();
     const next = rows.filter((item) => !selectedForDelete.has(item.id));
     const count = rows.length - next.length;
     setRows(next);
@@ -185,15 +230,26 @@ export function BotOwnerDashboard() {
     toast.success(`${count} bot ${count === 1 ? "project" : "projects"} deleted`);
   }
 
-  const toggleStatus = (row: BotDashboardListing) => {
-    const status: ListingStatus = row.status === "Paused" ? "Live" : "Paused";
+  const toggleStatus = async (row: BotDashboardListing) => {
+    const resume = row.status === "Paused";
+    const response = await fetch(`/api/listings/${row.id}/status`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({action: resume ? "resume" : "pause"}),
+    });
+    if (!response.ok) {
+      toast.danger("Listing status could not be updated");
+      return;
+    }
+    await onRefresh();
+    const status: ListingStatus = resume ? "Under Review" : "Paused";
     setRows((current) => current.map((item) => item.id === row.id ? {
       ...item,
       status,
       safetyStatus: item.safetyStatus === "PAUSED" ? (item.previousSafetyStatus ?? "SAFE") : "PAUSED",
       previousSafetyStatus: item.safetyStatus === "PAUSED" ? undefined : item.safetyStatus,
     } : item));
-    toast.success(status === "Live" ? "Bot listing resumed" : "Bot listing paused");
+    toast.success(resume ? "Bot listing resubmitted for review" : "Bot listing paused");
   };
   const requestSingleDelete = (row: BotDashboardListing) => {
     setSelectedForDelete(new Set([row.id]));
@@ -211,8 +267,10 @@ export function BotOwnerDashboard() {
         </div>
       </div>
 
+      {loading ? <p className="text-sm text-muted">Loading your bot listings…</p> : null}
+
       {!bot ? (
-        <Card className="nexus-card p-8 text-center"><Card.Title>No bot projects</Card.Title><Card.Description className="mt-2">Add a bot or refresh the mock projects to continue.</Card.Description></Card>
+        <Card className="nexus-card p-8 text-center"><Card.Title>No bot projects</Card.Title><Card.Description className="mt-2">Add a bot to start managing a real listing.</Card.Description></Card>
       ) : (
         <>
       <BotSummary bot={bot} rows={rows} selectedId={selectedId} onSelect={setSelectedId} onPreview={() => setPreviewOpen(true)} onEdit={() => openEditor("all")} />

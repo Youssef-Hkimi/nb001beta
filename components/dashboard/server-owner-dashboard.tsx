@@ -51,7 +51,6 @@ import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { EXPLORE_CATEGORIES, LANGUAGES, SERVER_LISTING_TAGS } from "@/lib/data/categories";
 import { DEFAULT_COMMUNITY_FEATURE_IDS } from "@/lib/data/community-features";
-import { SERVER_DASHBOARD_LISTINGS } from "@/lib/data/dashboard-analytics";
 import { formatCount, initials } from "@/lib/format";
 import { LISTING_STATUS_CONFIG } from "@/lib/listing-safety";
 import type { ListingStatus, ServerDashboardListing } from "@/lib/types";
@@ -134,8 +133,16 @@ function listingStatusColor(status: ListingStatus) {
   return "default" as const;
 }
 
-export function ServerOwnerDashboard() {
-  const [servers, setServers] = useState<EditableServerListing[]>(SERVER_DASHBOARD_LISTINGS);
+export function ServerOwnerDashboard({
+  listings,
+  loading = false,
+  onRefresh,
+}: {
+  listings: ServerDashboardListing[];
+  loading?: boolean;
+  onRefresh: () => Promise<void>;
+}) {
+  const [servers, setServers] = useState<EditableServerListing[]>(listings);
   const [activeTab, setActiveTab] = useState("overview");
   const [analyticsServerId, setAnalyticsServerId] = useState<string | null>(null);
   const [inviteServer, setInviteServer] = useState<ServerDashboardListing | null>(null);
@@ -160,17 +167,34 @@ export function ServerOwnerDashboard() {
     }
   }, []);
 
+  useEffect(() => {
+    setServers(listings);
+    if (analyticsServerId && !listings.some((listing) => listing.id === analyticsServerId)) {
+      setAnalyticsServerId(null);
+    }
+  }, [analyticsServerId, listings]);
+
   function copyLink(server: ServerDashboardListing) {
     void navigator.clipboard?.writeText(`${window.location.origin}${server.publicPath}`);
     toast.success("Listing link copied");
   }
 
-  function toggleListing(server: ServerDashboardListing) {
+  async function toggleListing(server: ServerDashboardListing) {
     const resume = server.status === "Paused";
+    const response = await fetch(`/api/listings/${server.id}/status`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({action: resume ? "resume" : "pause"}),
+    });
+    if (!response.ok) {
+      toast.danger("Listing status could not be updated");
+      return;
+    }
+    await onRefresh();
     setServers((current) => current.map((item) => item.id === server.id ? {
       ...item,
-      status: resume ? "Live" : "Paused",
-      safetyStatus: resume ? (item.previousSafetyStatus ?? "SAFE") : "PAUSED",
+      status: resume ? "Under Review" : "Paused",
+      safetyStatus: resume ? "PENDING_REVIEW" : "PAUSED",
       previousSafetyStatus: resume ? undefined : item.safetyStatus,
       updated: "Just now",
     } : item));
@@ -182,8 +206,18 @@ export function ServerOwnerDashboard() {
     setInviteUrl(`https://discord.gg/${server.id}`);
   }
 
-  function saveInviteLink() {
+  async function saveInviteLink() {
     if (!inviteServer) return;
+    const response = await fetch(`/api/listings/${inviteServer.id}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({inviteUrl: inviteUrl.trim()}),
+    });
+    if (!response.ok) {
+      toast.danger("Invite link could not be updated");
+      return;
+    }
+    await onRefresh();
     setServers((current) => current.map((server) => server.id === inviteServer.id ? {
       ...server,
       inviteActive: true,
@@ -221,41 +255,33 @@ export function ServerOwnerDashboard() {
     });
   }
 
-  function saveServerChanges() {
+  async function saveServerChanges() {
     if (!editServer) return;
     const name = editForm.name.trim();
     const shortDescription = editForm.shortDescription.trim();
     const category = editForm.category.trim();
     if (!name || !shortDescription || !editForm.fullDescription.trim() || !category || !editForm.inviteUrl.trim()) return;
 
-    setServers((current) => current.map((server) => server.id === editServer.id
-      ? {
-          ...server,
-          name,
-          description: shortDescription,
-          fullDescription: editForm.fullDescription.trim(),
-          category,
-          tags: editForm.tags,
-          language: editForm.language,
-          region: editForm.region,
-          inviteUrl: editForm.inviteUrl.trim(),
-          members: Number(editForm.members) || 0,
-          online: Number(editForm.online) || 0,
-          createdAt: editForm.createdAt,
-          activity: editForm.activity,
-          visibility: editForm.visibility,
-          featured: editForm.featured,
-          communityFeatures: editForm.communityFeatures,
-          iconPreview: editForm.iconPreview,
-          bannerPreview: editForm.bannerPreview,
-          analytics: {
-            ...server.analytics,
-            likes: Number(editForm.likes) || 0,
-            joinClicks: Number(editForm.joinClicks) || 0,
-          },
-          updated: "Just now",
-        }
-      : server));
+    const response = await fetch(`/api/listings/${editServer.id}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        name,
+        shortDescription,
+        longDescription: editForm.fullDescription.trim(),
+        category,
+        tags: editForm.tags,
+        language: editForm.language,
+        region: editForm.region,
+        inviteUrl: editForm.inviteUrl.trim(),
+        featureIds: editForm.communityFeatures,
+      }),
+    });
+    if (!response.ok) {
+      toast.danger("Server changes could not be saved");
+      return;
+    }
+    await onRefresh();
     setEditServer(null);
     setShowUpdateSuccess(true);
   }
@@ -274,8 +300,15 @@ export function ServerOwnerDashboard() {
     });
   }
 
-  function deleteSelectedServers() {
-    setServers((current) => current.filter((server) => !selectedForDelete.has(server.id)));
+  async function deleteSelectedServers() {
+    const responses = await Promise.all(
+      [...selectedForDelete].map((id) => fetch(`/api/listings/${id}`, {method: "DELETE"})),
+    );
+    if (responses.some((response) => !response.ok)) {
+      toast.danger("One or more server listings could not be deleted");
+      return;
+    }
+    await onRefresh();
     if (analyticsServerId && selectedForDelete.has(analyticsServerId)) setAnalyticsServerId(null);
     const count = selectedForDelete.size;
     setSelectedForDelete(new Set());
@@ -294,6 +327,8 @@ export function ServerOwnerDashboard() {
         </div>
         <LinkButton href="/dashboard/new?type=server"><Plus className="size-4" />Add Server</LinkButton>
       </header>
+
+      {loading ? <p className="text-sm text-muted">Loading your server listings…</p> : null}
 
       <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(String(key))} className="server-dashboard-tabs w-full" variant="primary">
         <Tabs.ListContainer className="w-full max-w-2xl">
@@ -363,7 +398,7 @@ export function ServerOwnerDashboard() {
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-segment p-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Editing {editServer?.name}</p>
-                  <p className="text-xs text-muted">Changes are saved to this mock dashboard session.</p>
+                  <p className="text-xs text-muted">Saved changes return to review before becoming public.</p>
                 </div>
                 {editServer && (
                   <LinkButton href={editServer.publicPath} target="_blank" size="sm" variant="secondary">

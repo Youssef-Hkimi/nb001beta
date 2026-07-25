@@ -295,3 +295,15 @@ Only listing cards/grid — not navbar, not filters redesign, not bots cards unl
 - Added a separate optional Safe reputation badge for established servers and bots.
 - Safe reputation is controlled explicitly from the mock admin listing command panel and edit form.
 - Public server/bot cards and detail pages show Safe only when that staff-controlled field is enabled.
+
+---
+
+## 2026-07-25 — Full-stack beta foundation
+
+- Created the isolated `codex/fullstack-beta` branch and `beta` remote for `nb001beta`; the frozen `nb001` mock backup was not changed.
+- Added Supabase/Postgres migrations for real profiles, Discord accounts, hashed sessions, guild imports, listings, drafts, storage metadata, votes, analytics, reports, moderation, notifications, referrals, Growth Points, placements, staff MFA, rate limits, and audit logs.
+- Added restrictive RLS and explicit no-browser policies; Supabase security advisor reports zero findings.
+- Replaced local authentication state with real Discord OAuth and database-backed sessions.
+- Added live listing create/read/update/delete/pause/review, media normalization/storage, public discovery, six-hour votes, event ingestion, reports, widget verification, rewards, referral attribution, moderation, and protected admin endpoints.
+- Added origin protection, database-backed request rate limiting, CSP/security headers, TOTP challenges, and dependency overrides; production build passes and the production dependency audit reports zero vulnerabilities.
+- Permanent release rule: do not deploy until the previously exposed Discord client secret is rotated and a Supabase server secret is supplied through environment variables.

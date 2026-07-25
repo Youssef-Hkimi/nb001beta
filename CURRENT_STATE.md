@@ -1,17 +1,14 @@
 # Nexbiy — Current State
 
-**Last updated:** 2026-07-23
+**Last updated:** 2026-07-25
 **Project path:** `/Users/yobbiy/Documents/NexusEdits`
-**Stack:** Next.js 16.2.10, React 19, TypeScript, Tailwind CSS 4, HeroUI 3, next-themes, lucide-react, Iconify
+**Stack:** Next.js 16.2.11, React 19, TypeScript, Tailwind CSS 4, HeroUI 3, Supabase/Postgres/Storage, Discord OAuth
 
 ## Product state
 
-Nexbiy is a high-fidelity Discord server/bot discovery demo. It remains mock-first, with two live local-test integrations:
+Nexbiy now has a real beta backend. Supabase stores users, sessions, managed Discord guilds, listings, media, votes, analytics, reports, moderation, notifications, referrals, Growth Points, featured placements, staff roles, MFA challenges, and immutable admin audit events. The public catalogs and creator-owned listing flows use live records. Some dashboard charts and the dense admin presentation still retain visual demo data while their server APIs are live.
 
-1. Discord OAuth2 (`identify` + `guilds`) for login and importing manageable guilds.
-2. Discord’s official server widget endpoint for publish-time online-member verification.
-
-Everything else—including listings persistence, analytics, votes, referrals, moderation, notifications, and admin actions—is interactive mock data.
+Security foundations include restrictive RLS, server-only secret access, origin checks, request rate limits, atomic six-hour votes, a database-enforced 10-point daily Growth Point limit, referral risk signals, protected staff actions, TOTP challenges, security headers, validated image processing, and append-only audit records.
 
 ## Routes
 
@@ -59,7 +56,7 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 - The thumbs-up icon remains the vote icon.
 - A listing may be voted for again after a six-hour cooldown.
 - The vote result modal explains the next available vote window.
-- Counts and cooldown behavior are mock/local for now.
+- Counts and six-hour cooldowns are enforced atomically in Postgres.
 
 ## Listing creation and editing
 
@@ -84,7 +81,7 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 - OAuth scopes: `identify guilds`.
 - Local redirect: `http://localhost:3010/api/auth/callback/discord`.
 - Imported guilds include the Discord server icon.
-- Sessions use local test storage/cookies and are not production-grade.
+- Sessions are opaque, hashed, revocable, database-backed, seven-day cookies.
 - OAuth secrets belong only in `.env.local`; never commit them.
 
 ## Discord widget verification
@@ -150,9 +147,9 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 - Mock policy: one referral per user; qualified referrer and receiver each earn 10 Growth Points.
 - The receiver confirmation directs the user to Dashboard → Rewards.
 
-## Admin dashboard (mock)
+## Admin dashboard
 
-`/admin` is intentionally dense and staff-oriented:
+`/admin` is staff-gated and intentionally dense. Live RBAC/MFA/audit APIs now back moderation actions; portions of its presentation data remain demo placeholders pending final UI wiring.
 
 - Overview metrics, time ranges, traffic status, export simulation, moderation urgency queue, and quick controls.
 - Listings: inspect/edit/status/verification/Safe reputation badge/featured placement/pause/suspend/delete.
@@ -178,6 +175,8 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 
 ## Verification status
 
-- Latest accumulated product changes were typechecked before the rebrand backup.
-- Re-run `npx tsc --noEmit` after implementation changes.
-- Use `npm run build` before deployment; production deployment is not configured yet.
+- `npx tsc --noEmit`: passing.
+- `npm run build`: passing.
+- `npm audit --omit=dev`: 0 vulnerabilities after safe dependency overrides.
+- Supabase security advisor: 0 findings.
+- Vercel production deployment is intentionally blocked until the owner rotates the exposed Discord secret and provides the Supabase server secret.

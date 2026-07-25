@@ -12,8 +12,7 @@ import { FAQSection } from "@/components/explore/faq-section";
 import { FeatureOverviewSection } from "@/components/explore/feature-overview-section";
 import { HeroSection } from "@/components/explore/hero-section";
 import { NexusFooter } from "@/components/layout/nexus-footer";
-import { SERVERS } from "@/lib/data/servers";
-import { isPubliclyDiscoverable } from "@/lib/listing-safety";
+import { usePublicServerListings } from "@/lib/use-public-listings";
 
 const INITIAL_VISIBLE = 6;
 const LOAD_MORE_COUNT = 4;
@@ -23,9 +22,13 @@ export default function ExplorePage() {
   const [category, setCategory] = useState("");
   const [visible, setVisible] = useState(INITIAL_VISIBLE);
   const router = useRouter();
+  const {
+    listings: publicServers,
+    loading: listingsLoading,
+    error: listingsError,
+  } = usePublicServerListings();
 
   const filteredServers = useMemo(() => {
-    const publicServers = SERVERS.filter(isPubliclyDiscoverable);
     const list = !category
       ? publicServers
       : publicServers.filter(
@@ -37,7 +40,7 @@ export default function ExplorePage() {
 
     // Featured first so explore still leads with hand-picked communities
     return [...list].sort((a, b) => Number(b.featured) - Number(a.featured));
-  }, [category]);
+  }, [category, publicServers]);
 
   const servers = filteredServers.slice(0, visible);
   const remaining = Math.max(0, filteredServers.length - visible);
@@ -75,11 +78,25 @@ export default function ExplorePage() {
               </p>
             </div>
 
-            <div className="server-listing-grid">
-              {servers.map((server) => (
-                <ServerCard key={server.id} server={server} />
-              ))}
-            </div>
+            {listingsLoading ? (
+              <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-muted">
+                Loading live listings…
+              </p>
+            ) : listingsError ? (
+              <p className="rounded-2xl border border-danger/30 bg-danger/5 p-6 text-sm text-danger">
+                Live listings could not be loaded. Please refresh and try again.
+              </p>
+            ) : servers.length ? (
+              <div className="server-listing-grid">
+                {servers.map((server) => (
+                  <ServerCard key={server.id} server={server} />
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-muted">
+                No approved server listings are live yet.
+              </p>
+            )}
 
             {filteredServers.length > INITIAL_VISIBLE ? (
               <div className="mt-8 flex flex-col items-center gap-2.5">

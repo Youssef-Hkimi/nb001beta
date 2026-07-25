@@ -101,14 +101,18 @@ export function UserSettings() {
     setProfile((current) => ({...current, notifications: {...current.notifications, [key]: value}}));
   };
 
-  const saveProfile = () => {
-    updateUser({
-      bio: profile.bio.trim(),
-      inboxNotifications: profile.inboxNotifications,
-      notificationPreferences: profile.notifications,
-      socials: {x: profile.x.trim(), github: profile.github.trim(), roblox: profile.roblox.trim()},
-    });
-    toast.success("Settings updated", {description: "Your profile preferences have been saved."});
+  const saveProfile = async () => {
+    try {
+      await updateUser({
+        bio: profile.bio.trim(),
+        inboxNotifications: profile.inboxNotifications,
+        notificationPreferences: profile.notifications,
+        socials: {x: profile.x.trim(), github: profile.github.trim(), roblox: profile.roblox.trim()},
+      });
+      toast.success("Settings updated", {description: "Your profile preferences have been saved."});
+    } catch {
+      toast.danger("Could not save settings", {description: "Please try again."});
+    }
   };
 
   return (
@@ -116,7 +120,7 @@ export function UserSettings() {
       className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
-        saveProfile();
+        void saveProfile();
       }}
     >
       <Card className="nexus-card overflow-hidden">

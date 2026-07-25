@@ -37,13 +37,14 @@ function safeNextPath(value: unknown) {
 
 export function createDiscordOAuthState(nextPath: string) {
   const {clientSecret} = getDiscordOAuthConfig();
+  const nonce = randomBytes(20).toString("hex");
   const payload = Buffer.from(JSON.stringify({
-    nonce: randomBytes(20).toString("hex"),
+    nonce,
     nextPath: safeNextPath(nextPath),
     createdAt: Date.now(),
   })).toString("base64url");
   const signature = createHmac("sha256", clientSecret).update(payload).digest("base64url");
-  return `${payload}.${signature}`;
+  return {state: `${payload}.${signature}`, nonce};
 }
 
 export function verifyDiscordOAuthState(value: string | null) {
@@ -56,13 +57,18 @@ export function verifyDiscordOAuthState(value: string | null) {
   if (received.length !== expected.length || !timingSafeEqual(received, expected)) return null;
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      nonce?: unknown;
       nextPath?: unknown;
       createdAt?: unknown;
     };
-    if (typeof parsed.createdAt !== "number" || Date.now() - parsed.createdAt > 10 * 60 * 1000) {
+    if (
+      typeof parsed.nonce !== "string"
+      || typeof parsed.createdAt !== "number"
+      || Date.now() - parsed.createdAt > 10 * 60 * 1000
+    ) {
       return null;
     }
-    return {nextPath: safeNextPath(parsed.nextPath)};
+    return {nextPath: safeNextPath(parsed.nextPath), nonce: parsed.nonce};
   } catch {
     return null;
   }

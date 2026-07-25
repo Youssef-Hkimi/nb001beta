@@ -13,6 +13,8 @@ import {
 import { Flag } from "lucide-react";
 import { useState } from "react";
 
+import {useAuth} from "@/lib/auth/auth-context";
+
 const REPORT_CATEGORIES = [
   "Scam or fraud",
   "Dangerous permissions",
@@ -23,28 +25,53 @@ const REPORT_CATEGORIES = [
 ];
 
 export function ReportListingDialog({
+  listingId,
   listingName,
   isOpen,
   onOpenChange,
 }: {
+  listingId?: string;
   listingName: string;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const {requireAuth} = useAuth();
   const [category, setCategory] = useState("");
   const [context, setContext] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   function submit() {
     if (!category) return toast.danger("Choose a report category");
     if (category === "Other" && context.trim().length < 8) {
       return toast.danger("Add a little more context");
     }
-    toast.success("Report submitted", {
-      description: "Nexbiy moderators will review this listing.",
+    requireAuth(async () => {
+      if (!listingId) {
+        toast.info("Reports are disabled for preview listings");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const description = context.trim() || `${category} reported for ${listingName}.`;
+        const response = await fetch("/api/reports", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({listingId, category, description}),
+        });
+        const result = await response.json().catch(() => null) as {error?: string} | null;
+        if (!response.ok) throw new Error(result?.error || "report_failed");
+        toast.success("Report submitted", {
+          description: "Nexbiy moderators will review this listing.",
+        });
+        setCategory("");
+        setContext("");
+        onOpenChange(false);
+      } catch {
+        toast.danger("Report could not be submitted", {description: "Please try again."});
+      } finally {
+        setSubmitting(false);
+      }
     });
-    setCategory("");
-    setContext("");
-    onOpenChange(false);
   }
 
   return (
@@ -74,7 +101,7 @@ export function ReportListingDialog({
           </Modal.Body>
           <Modal.Footer>
             <Button variant="tertiary" onPress={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="danger" onPress={submit}>Submit report</Button>
+            <Button isDisabled={submitting} variant="danger" onPress={submit}>{submitting ? "Submitting…" : "Submit report"}</Button>
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>

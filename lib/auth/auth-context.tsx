@@ -22,7 +22,7 @@ type AuthContextValue = {
   requireAuth: (onSuccess?: () => void) => boolean;
   login: (nextPath?: string) => void;
   logout: () => void;
-  updateUser: (updates: Partial<AuthUser>) => void;
+  updateUser: (updates: Partial<AuthUser>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -49,22 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: AuthUser;
           guilds: DiscordServer[];
         };
-        let saved: AuthUser | null = null;
-        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (raw) saved = JSON.parse(raw) as AuthUser;
-        const sameUser = saved?.discordId === data.user.discordId ? saved : null;
-        const nextUser: AuthUser = {
-          ...data.user,
-          displayName: sameUser?.displayName ?? data.user.displayName,
-          bio: sameUser?.bio,
-          inboxNotifications: sameUser?.inboxNotifications ?? data.user.inboxNotifications,
-          notificationPreferences:
-            sameUser?.notificationPreferences ?? data.user.notificationPreferences,
-          socials: sameUser?.socials,
-        };
-        setUser(nextUser);
+        setUser(data.user);
         setDiscordServers(data.guilds);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
+        localStorage.removeItem(AUTH_STORAGE_KEY);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setUser(null);
@@ -97,18 +84,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const updateUser = useCallback((updates: Partial<AuthUser>) => {
-    setUser((current) => {
-      if (!current) return current;
-      const next = { ...current, ...updates };
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore unavailable storage
-      }
-      return next;
+  const updateUser = useCallback(async (updates: Partial<AuthUser>) => {
+    const current = user;
+    if (!current) throw new Error("authentication_required");
+    const next = {...current, ...updates};
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        bio: next.bio || "",
+        inboxNotifications: next.inboxNotifications ?? true,
+        notificationPreferences: {
+          listingUpdates: next.notificationPreferences?.listingUpdates ?? true,
+          likeMilestones: next.notificationPreferences?.likeMilestones ?? true,
+          announcements: next.notificationPreferences?.announcements ?? true,
+        },
+        socials: {
+          x: next.socials?.x || "",
+          github: next.socials?.github || "",
+          roblox: next.socials?.roblox || "",
+        },
+      }),
     });
-  }, []);
+    if (!response.ok) throw new Error("profile_update_failed");
+    setUser(next);
+  }, [user]);
 
   const requireAuth = useCallback(
     (onSuccess?: () => void) => {
