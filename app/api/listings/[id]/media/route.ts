@@ -3,6 +3,7 @@ import sharp from "sharp";
 
 import {apiErrorResponse, ApiError, requireSession} from "@/lib/server/auth";
 import {enforceRateLimit} from "@/lib/server/security";
+import {bufferToStorageBlob} from "@/lib/server/storage-upload";
 import {getSupabaseAdmin} from "@/lib/server/supabase-admin";
 
 export const runtime = "nodejs";
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
 
     const {error: uploadError} = await db.storage
       .from(config.bucket)
-      .upload(objectPath, output, {
+      .upload(objectPath, bufferToStorageBlob(output, "image/webp"), {
         cacheControl: "31536000",
         contentType: "image/webp",
         upsert: true,
@@ -87,8 +88,7 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
       .select("*")
       .single();
     if (mediaError) throw mediaError;
-    const {data: publicUrl} = db.storage.from(config.bucket).getPublicUrl(objectPath);
-    return Response.json({media, url: publicUrl.publicUrl}, {status: 201});
+    return Response.json({media, url: `/api/media/${media.id}`}, {status: 201});
   } catch (error) {
     return apiErrorResponse(error);
   }

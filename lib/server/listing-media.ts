@@ -2,6 +2,7 @@ import "server-only";
 
 import sharp from "sharp";
 
+import {bufferToStorageBlob} from "@/lib/server/storage-upload";
 import {getSupabaseAdmin} from "@/lib/server/supabase-admin";
 
 export async function importDiscordGuildIcon(input: {
@@ -30,25 +31,36 @@ export async function importDiscordGuildIcon(input: {
   const objectPath = `${input.userId}/${input.listingId}/icon-0.webp`;
   const {error: uploadError} = await db.storage
     .from("listing-icons")
-    .upload(objectPath, output, {
+    .upload(objectPath, bufferToStorageBlob(output, "image/webp"), {
       cacheControl: "31536000",
       contentType: "image/webp",
       upsert: true,
     });
   if (uploadError) throw uploadError;
-  const {error: mediaError} = await db.from("listing_media").insert({
-    listing_id: input.listingId,
-    kind: "icon",
-    bucket: "listing-icons",
-    object_path: objectPath,
-    mime_type: "image/webp",
-    byte_size: output.byteLength,
-    width: 512,
-    height: 512,
-    position: 0,
-  });
+  const {error: deleteError} = await db
+    .from("listing_media")
+    .delete()
+    .eq("listing_id", input.listingId)
+    .eq("kind", "icon");
+  if (deleteError) throw deleteError;
+
+  const {data: media, error: mediaError} = await db
+    .from("listing_media")
+    .insert({
+      listing_id: input.listingId,
+      kind: "icon",
+      bucket: "listing-icons",
+      object_path: objectPath,
+      mime_type: "image/webp",
+      byte_size: output.byteLength,
+      width: 512,
+      height: 512,
+      position: 0,
+    })
+    .select("id")
+    .single();
   if (mediaError) throw mediaError;
-  return db.storage.from("listing-icons").getPublicUrl(objectPath).data.publicUrl;
+  return `/api/media/${media.id}`;
 }
 
 export function addPublicMediaUrls<

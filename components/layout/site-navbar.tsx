@@ -3,16 +3,18 @@
 import { Avatar, Button, Drawer, Dropdown, toast } from "@heroui/react";
 import {
   Bell,
+  Bot,
+  ChevronRight,
+  Compass,
   Gift,
   LayoutDashboard,
   LogOut,
   Megaphone,
   Menu,
   PlusCircle,
-  Search,
+  Server,
   ShieldCheck,
   ThumbsUp,
-  UserRound,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -256,12 +258,42 @@ export function SiteNavbar() {
       <Drawer>
         <Drawer.Backdrop isOpen={mobileOpen} onOpenChange={setMobileOpen}>
           <Drawer.Content placement="right">
-            <Drawer.Dialog className="w-[min(100vw,20rem)]">
+            <Drawer.Dialog className="w-[min(100vw,22rem)] border-l border-border bg-background">
               <Drawer.CloseTrigger />
-              <Drawer.Header>
-                <Drawer.Heading>Menu</Drawer.Heading>
+              <Drawer.Header className="border-b border-border/70 pb-4">
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/nexus-logo.jpg"
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="size-10 rounded-xl object-cover shadow-sm"
+                  />
+                  <div>
+                    <Drawer.Heading>Nexbiy</Drawer.Heading>
+                    <p className="text-xs text-muted">Discover and manage listings</p>
+                  </div>
+                </div>
               </Drawer.Header>
-              <Drawer.Body className="flex flex-col gap-1">
+              <Drawer.Body className="flex flex-col gap-1 px-4 py-5">
+                {isAuthenticated && user ? (
+                  <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-default/40 p-3">
+                    <Avatar className="size-11 shrink-0">
+                      {user.avatarUrl ? <Avatar.Image alt="" src={user.avatarUrl} /> : null}
+                      <Avatar.Fallback className="bg-accent/15 text-sm font-bold text-accent">
+                        {initials(accountName ?? user.username)}
+                      </Avatar.Fallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{accountName}</p>
+                      <p className="truncate text-xs text-muted">@{user.username}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="mb-1 px-2 text-[0.7rem] font-semibold tracking-[0.14em] text-muted uppercase">
+                  Navigation
+                </p>
                 {visibleNavItems.map((item) => {
                   const active = item.match(pathname);
                   return (
@@ -273,28 +305,31 @@ export function SiteNavbar() {
                         if (item.href === "/dashboard") goDashboard();
                         else router.push(item.href);
                       }}
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors duration-200 ${
+                      className={`group flex items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium transition-colors duration-200 ${
                         active
                           ? "bg-accent/15 text-accent"
                           : "text-foreground hover:bg-default"
                       }`}
                     >
-                      {item.label === "Dashboard" ? <LayoutDashboard className="size-4" /> : null}
-                      {item.label === "Explore" ? <Search className="size-4" /> : null}
-                      {item.label === "Rewards" ? <Gift className="size-4" /> : null}
-                      {item.label}
+                      <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${
+                        active ? "bg-accent/15" : "bg-default/70"
+                      }`}>
+                        {item.label === "Dashboard" ? <LayoutDashboard className="size-4" /> : null}
+                        {item.label === "Explore" ? <Compass className="size-4" /> : null}
+                        {item.label === "Servers" ? <Server className="size-4" /> : null}
+                        {item.label === "Bots" ? <Bot className="size-4" /> : null}
+                        {item.label === "Rewards" ? <Gift className="size-4" /> : null}
+                      </span>
+                      <span className="flex-1">{item.label}</span>
+                      <ChevronRight className="size-4 text-muted transition-transform group-hover:translate-x-0.5" />
                     </button>
                   );
                 })}
 
                 {isAuthenticated && user ? (
-                  <>
-                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
-                      <UserRound className="size-4 text-accent" />
-                      <span className="text-sm font-medium">{accountName}</span>
-                    </div>
+                  <div className="mt-auto space-y-2 border-t border-border/70 pt-4">
                     <Button
-                      className="mt-2 w-full"
+                      className="w-full justify-start"
                       variant="secondary"
                       onPress={() => {
                         setMobileOpen(false);
@@ -305,7 +340,7 @@ export function SiteNavbar() {
                       Create listing
                     </Button>
                     <Button
-                      className="w-full"
+                      className="w-full justify-start"
                       variant="secondary"
                       onPress={() => {
                         setMobileOpen(false);
@@ -316,7 +351,7 @@ export function SiteNavbar() {
                       Admin panel
                     </Button>
                     <Button
-                      className="w-full"
+                      className="w-full justify-start"
                       variant="danger"
                       onPress={() => {
                         setMobileOpen(false);
@@ -328,10 +363,10 @@ export function SiteNavbar() {
                       <LogOut className="size-4" />
                       Log out
                     </Button>
-                  </>
+                  </div>
                 ) : (
                   <Button
-                    className="mt-3 w-full"
+                    className="mt-auto w-full"
                     onPress={() => {
                       setMobileOpen(false);
                       router.push("/login");

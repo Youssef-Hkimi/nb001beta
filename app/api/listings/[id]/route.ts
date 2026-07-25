@@ -74,16 +74,39 @@ export async function DELETE(request: NextRequest, context: {params: Promise<{id
   try {
     const session = await requireSession(request);
     const {id} = await context.params;
-    const {data, error} = await getSupabaseAdmin()
-      .from("listings")
-      .update({status: "deleted", deleted_at: new Date().toISOString()})
-      .eq("id", id)
-      .eq("owner_id", session.userId)
-      .neq("status", "deleted")
-      .select("id")
-      .maybeSingle();
+    const db = getSupabaseAdmin();
+    const {data, error} = await db.rpc("hard_delete_owned_listing", {
+      p_listing_id: id,
+      p_owner_id: session.userId,
+    });
     if (error) throw error;
-    if (!data) throw new ApiError(404, "listing_not_found");
+    const result = data as {
+      deleted?: boolean;
+      media?: Array<{bucket?: string; objectPath?: string}>;
+    } | null;
+    if (!result?.deleted) throw new ApiError(404, "listing_not_found");
+
+    const mediaByBucket = new Map<string, string[]>();
+    for (const media of result.media || []) {
+      if (!media.bucket || !media.objectPath) continue;
+      mediaByBucket.set(media.bucket, [
+        ...(mediaByBucket.get(media.bucket) || []),
+        media.objectPath,
+      ]);
+    }
+    const cleanupResults = await Promise.allSettled(
+      [...mediaByBucket].map(([bucket, paths]) => db.storage.from(bucket).remove(paths)),
+    );
+    cleanupResults.forEach((cleanup, index) => {
+      if (cleanup.status === "rejected") {
+        console.error("listing_media_cleanup_failed", {
+          listingId: id,
+          bucket: [...mediaByBucket.keys()][index],
+          error: cleanup.reason,
+        });
+      }
+    });
+
     return Response.json({ok: true});
   } catch (error) {
     return apiErrorResponse(error);
