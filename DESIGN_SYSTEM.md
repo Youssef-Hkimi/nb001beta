@@ -214,7 +214,9 @@ Do not add FAQ, Community Highlights, Contact Owner, reviews, gallery, or rules 
 
 - Listing owners cannot choose a verified badge. Nexbiy awards it after eligibility review.
 - Use the shared stroke verification icon. Tooltip content is exactly **“Verified”** and remains inline-safe inside text.
-- Status chips include Live, Pending Review, Draft, Paused, Suspended, Safe, and Coming Soon where appropriate.
+- Passing listing review produces a **Live** status, not a Safe badge.
+- **Safe** is a separate staff-awarded reputation badge for established listings with a strong record. It is never granted automatically by review or verification.
+- Status chips include Live, Pending Review, Draft, Paused, Suspended, and Coming Soon where appropriate.
 - The widget guide modal uses the Cloudinary video and the path **Server Settings → Engagement → Widget**.
 - Widget-disabled reminders are compact and persistent until verification succeeds.
 

@@ -7,9 +7,9 @@ export const LISTING_STATUS_CONFIG = {
     description: "This listing is live, but Nexbiy has not completed its safety review yet.",
   },
   SAFE: {
-    label: "Safe",
+    label: "Live",
     color: "success",
-    description: "Nexbiy reviewed this listing and it currently meets our platform requirements.",
+    description: "Nexbiy completed its review and this listing is live.",
   },
   PAUSED: {
     label: "Paused",

@@ -3,7 +3,7 @@
 import { Avatar, Button, Card, Chip, toast } from "@heroui/react";
 import { Eye, Users } from "lucide-react";
 
-import { ListingActionGuard, ListingStatusChip } from "@/components/listing/listing-safety";
+import { ListingActionGuard, ListingSafeBadge, ListingStatusChip } from "@/components/listing/listing-safety";
 import { GradientBanner } from "@/components/ui/gradient-banner";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
@@ -37,6 +37,7 @@ export function ServerCard({
           <Card.Title className="min-w-0 max-w-full truncate text-base">{server.name}</Card.Title>
           {server.verified ? <VerifiedBadgeIcon className="size-4 text-accent" /> : null}
           <ListingStatusChip status={server.safetyStatus} />
+          {server.safeBadge ? <ListingSafeBadge /> : null}
         </div>
         <Card.Description className="line-clamp-2 text-sm leading-relaxed">
           {server.description}

@@ -22,6 +22,7 @@ These are shipped and should only change when the user reports a specific regres
 | My Bots developer controls and full edit/delete flow | creator dashboard |
 | Dashboard/Public Rewards and referral receiver mock | rewards/referral components/routes |
 | Dense mock admin control center | `/admin` |
+| Live review status separated from staff-awarded Safe reputation badge | listing status UI, public cards/details, `/admin` |
 | Top-center toasts, stable close-only publish modal | providers and listing flow |
 | HeroUI compound-component fixes | Switch/Checkbox/Dropdown/Tabs patterns |
 

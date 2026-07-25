@@ -286,3 +286,12 @@ Only listing cards/grid — not navbar, not filters redesign, not bots cards unl
 - Removed the bulk “Show all remaining” action so the Explore page cannot suddenly render the full catalog.
 - Kept the full server catalog link for users who want unrestricted browsing.
 - This checkpoint is the preserved mock-first state before Nexbiy begins its full-stack production migration.
+
+---
+
+## 2026-07-25 — Safe reputation badge separation
+
+- Passing listing review now displays **Live** and does not automatically imply a Safe badge.
+- Added a separate optional Safe reputation badge for established servers and bots.
+- Safe reputation is controlled explicitly from the mock admin listing command panel and edit form.
+- Public server/bot cards and detail pages show Safe only when that staff-controlled field is enabled.

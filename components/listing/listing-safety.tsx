@@ -58,6 +58,26 @@ export function ListingStatusChip({
   );
 }
 
+export function ListingSafeBadge() {
+  return (
+    <Tooltip delay={0}>
+      <Tooltip.Trigger
+        aria-label="Safe reputation badge"
+        className="inline-flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-success"
+      >
+        <Chip size="sm" variant="soft" color="success">
+          <ShieldCheck className="size-3.5" aria-hidden />
+          <Chip.Label>Safe</Chip.Label>
+        </Chip>
+      </Tooltip.Trigger>
+      <Tooltip.Content showArrow>
+        <Tooltip.Arrow />
+        <p className="text-xs">Recognized by Nexbiy for a strong reputation.</p>
+      </Tooltip.Content>
+    </Tooltip>
+  );
+}
+
 export function ListingStatusAlert({ status, type }: { status: ListingSafetyStatus; type: ListingType }) {
   if (status === "SAFE") return null;
   const config = LISTING_STATUS_CONFIG[status];

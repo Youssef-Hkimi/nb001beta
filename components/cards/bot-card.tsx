@@ -5,7 +5,7 @@ import { Bot, Eye, Server, ThumbsUp, TrendingUp } from "lucide-react";
 
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
-import { ListingActionGuard, ListingStatusChip } from "@/components/listing/listing-safety";
+import { ListingActionGuard, ListingSafeBadge, ListingStatusChip } from "@/components/listing/listing-safety";
 import { getBotBannerUrl } from "@/lib/bot-visuals";
 import { getBotFeatureOptions } from "@/lib/data/bot-features";
 import { formatCount, initials } from "@/lib/format";
@@ -29,6 +29,7 @@ type BotCardModel = Pick<
   | "rank"
   | "premium"
   | "safetyStatus"
+  | "safeBadge"
 > & { bannerColor?: string };
 
 export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPreview?: boolean }) {
@@ -90,6 +91,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
             <Chip.Label>BOT</Chip.Label>
           </Chip>
           <ListingStatusChip status={bot.safetyStatus} />
+          {bot.safeBadge ? <ListingSafeBadge /> : null}
         </div>
         <Card.Description className="line-clamp-2 text-sm leading-relaxed">
           {bot.shortDescription}

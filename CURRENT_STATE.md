@@ -51,6 +51,7 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 - Server public pages exclude reviews, gallery, rules, FAQ, Community Highlights, and Contact Owner.
 - Bot public pages may show bot-specific commands/features/gallery.
 - Verified listings use the shared stroke badge with a **Verified** tooltip.
+- Approved listings display **Live**. The separate **Safe** reputation badge appears only when staff explicitly awards it in the admin dashboard.
 
 ## Votes
 
@@ -154,7 +155,7 @@ Everything else—including listings persistence, analytics, votes, referrals, m
 `/admin` is intentionally dense and staff-oriented:
 
 - Overview metrics, time ranges, traffic status, export simulation, moderation urgency queue, and quick controls.
-- Listings: inspect/edit/status/verification/featured placement/pause/suspend/delete.
+- Listings: inspect/edit/status/verification/Safe reputation badge/featured placement/pause/suspend/delete.
 - Featured placement uses search, not a fixed select.
 - Manual vote adjustment is capped at +10 and shown as 2FA-protected.
 - Users: identity, role, status, listings, activity, history, Hammer action menu, freeze/notify/suspend/delete simulations.

@@ -19,9 +19,9 @@ type FeatureBlockProps = {
 
 const MIDDLE_FEATURES: FeatureBlockProps[] = [
   {
-    title: "Verified Safe Communities",
+    title: "Reviewed Communities",
     description:
-      "We verify communities that follow Discord’s Terms of Service, stay safe for users, and have no serious misconduct reports.",
+      "Nexbiy reviews public listings for platform requirements, while reputation badges are earned separately over time.",
     icon: ShieldCheck,
     accent: "trust",
   },

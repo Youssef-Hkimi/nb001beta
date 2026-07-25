@@ -14,7 +14,7 @@ import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-
 import { ReportListingDialog } from "@/components/listing/report-listing-dialog";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
-import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
+import { ListingActionGuard, ListingSafeBadge, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
 import { getBotBannerUrl } from "@/lib/bot-visuals";
 import { getBotFeatureOptions } from "@/lib/data/bot-features";
 import { getSimilarBots } from "@/lib/data/bots";
@@ -53,6 +53,7 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
                   <Chip size="sm" color="accent" variant="soft"><BotIcon className="size-3.5" /><Chip.Label>{bot.botBadge}</Chip.Label></Chip>
                   {bot.verified ? <Chip size="sm" color="accent" variant="soft"><VerifiedBadgeIcon className="size-3.5 text-accent" /><Chip.Label>Verified</Chip.Label></Chip> : null}
                   <ListingStatusChip status={bot.safetyStatus} />
+                  {bot.safeBadge ? <ListingSafeBadge /> : null}
                 </div>
                 <p className="max-w-2xl text-sm leading-relaxed text-muted md:text-base">{bot.shortDescription}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">

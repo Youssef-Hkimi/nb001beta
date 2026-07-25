@@ -94,6 +94,7 @@ type AdminListing = {
   ownerId: string;
   status: ListingStatus;
   verified: boolean;
+  safeBadge: boolean;
   featured: boolean;
   placement: number | null;
   reach: number;
@@ -310,6 +311,7 @@ const INITIAL_LISTINGS: AdminListing[] = [
     ownerId: `U-${String(10420 + index)}`,
     status: mapStatus(listing.safetyStatus),
     verified: listing.verified,
+    safeBadge: Boolean(listing.safeBadge),
     featured: Boolean(listing.featured),
     placement: listing.featured ? index + 1 : null,
     reach: listing.members,
@@ -330,6 +332,7 @@ const INITIAL_LISTINGS: AdminListing[] = [
     ownerId: `U-${String(20840 + index)}`,
     status: mapStatus(listing.safetyStatus),
     verified: listing.verified,
+    safeBadge: Boolean(listing.safeBadge),
     featured: Boolean(listing.rank && listing.rank <= 3),
     placement: listing.rank && listing.rank <= 3 ? listing.rank : null,
     reach: listing.servers,
@@ -447,6 +450,10 @@ export function AdminDashboard() {
                 onToggleVerified={(listing) => {
                   setListings((current) => current.map((item) => item.key === listing.key ? { ...item, verified: !item.verified } : item));
                   record(listing.verified ? "Removed verification" : "Granted verification", listing.name, "Warning");
+                }}
+                onToggleSafeBadge={(listing) => {
+                  setListings((current) => current.map((item) => item.key === listing.key ? { ...item, safeBadge: !item.safeBadge } : item));
+                  record(listing.safeBadge ? "Removed Safe reputation badge" : "Awarded Safe reputation badge", listing.name, "Warning");
                 }}
                 onToggleFeatured={(listing) => {
                   setListings((current) => current.map((item) => item.key === listing.key ? { ...item, featured: !item.featured, placement: item.featured ? null : 1 } : item));
@@ -707,12 +714,13 @@ function OverviewSection({ counts, moderation, onNavigate }: {
   );
 }
 
-function ListingsSection({ listings, onEdit, onDelete, onStatus, onToggleVerified, onToggleFeatured }: {
+function ListingsSection({ listings, onEdit, onDelete, onStatus, onToggleVerified, onToggleSafeBadge, onToggleFeatured }: {
   listings: AdminListing[];
   onEdit: (listing: AdminListing) => void;
   onDelete: (listing: AdminListing) => void;
   onStatus: (listing: AdminListing, status: ListingStatus) => void;
   onToggleVerified: (listing: AdminListing) => void;
+  onToggleSafeBadge: (listing: AdminListing) => void;
   onToggleFeatured: (listing: AdminListing) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -748,7 +756,13 @@ function ListingsSection({ listings, onEdit, onDelete, onStatus, onToggleVerifie
                       <Table.Cell>
                         <button type="button" className="flex items-center gap-3 text-left" onClick={() => setSelected(listing)}>
                           <span className={`flex size-9 items-center justify-center rounded-xl ${listing.type === "bot" ? "bg-violet-500/10 text-violet-400" : "bg-accent/10 text-accent"}`}>{listing.type === "bot" ? <Bot className="size-4" /> : <Server className="size-4" />}</span>
-                          <span><span className="block font-semibold">{listing.name}</span><span className="block text-xs text-muted">{listing.category} · {listing.type}</span></span>
+                          <span>
+                            <span className="flex items-center gap-1.5 font-semibold">
+                              {listing.name}
+                              {listing.safeBadge ? <ShieldCheck className="size-3.5 text-success" aria-label="Safe reputation badge" /> : null}
+                            </span>
+                            <span className="block text-xs text-muted">{listing.category} · {listing.type}</span>
+                          </span>
                         </button>
                       </Table.Cell>
                       <Table.Cell><p className="text-sm">{listing.owner}</p><p className="text-xs text-muted">{listing.ownerId}</p></Table.Cell>
@@ -781,7 +795,7 @@ function ListingsSection({ listings, onEdit, onDelete, onStatus, onToggleVerifie
               <>
                 <div className="flex flex-col gap-4 rounded-2xl border border-border bg-default/30 p-4 sm:flex-row sm:items-center">
                   <span className="flex size-12 items-center justify-center rounded-xl bg-accent/10 text-accent">{selected.type === "bot" ? <Bot className="size-5" /> : <Server className="size-5" />}</span>
-                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-bold">{selected.name}</h3><StatusChip status={selected.status} /></div><p className="text-sm text-muted">{selected.owner} · {selected.ownerId}</p></div>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-bold">{selected.name}</h3><StatusChip status={selected.status} />{selected.safeBadge ? <Chip size="sm" color="success" variant="soft"><ShieldCheck className="size-3.5" /><Chip.Label>Safe reputation</Chip.Label></Chip> : null}</div><p className="text-sm text-muted">{selected.owner} · {selected.ownerId}</p></div>
                   <LinkButton href={listingUrl(selected)} target="_blank" variant="secondary"><Eye className="size-4" />View page</LinkButton>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -793,6 +807,17 @@ function ListingsSection({ listings, onEdit, onDelete, onStatus, onToggleVerifie
                 <div className="rounded-2xl border border-border p-4"><p className="text-sm font-semibold">Quick actions</p><div className="mt-3 flex flex-wrap gap-2">
                   <Button size="sm" variant="secondary" onPress={() => onEdit(selected)}><Pencil className="size-4" />Edit metadata</Button>
                   <Button size="sm" variant="secondary" onPress={() => onToggleVerified(selected)}><BadgeCheck className="size-4" />{selected.verified ? "Remove verification" : "Nexbiy verify"}</Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onPress={() => {
+                      onToggleSafeBadge(selected);
+                      setSelected({ ...selected, safeBadge: !selected.safeBadge });
+                    }}
+                  >
+                    <ShieldCheck className="size-4" />
+                    {selected.safeBadge ? "Remove Safe badge" : "Award Safe badge"}
+                  </Button>
                   <Button size="sm" variant="secondary" onPress={() => onToggleFeatured(selected)}><Star className="size-4" />{selected.featured ? "Remove featured" : "Feature listing"}</Button>
                   <Button size="sm" variant="secondary" onPress={() => onStatus(selected, "Pending review")}>Pending review</Button>
                   <Button size="sm" variant="secondary" onPress={() => onStatus(selected, "Live")}>Set live</Button>
@@ -1238,7 +1263,11 @@ function ListingEditModal({ listing, onClose, onSave }: { listing: AdminListing 
             <div className="grid gap-4 sm:grid-cols-2"><TextField value={active.name} onChange={(value) => update("name", value)}><Label>Listing name</Label><Input /></TextField><TextField value={active.category} onChange={(value) => update("category", value)}><Label>Category</Label><Input /></TextField></div>
             <TextField value={active.description} onChange={(value) => update("description", value)}><Label>Description</Label><TextArea rows={4} /></TextField>
             <Select selectedKey={active.status} onSelectionChange={(key) => update("status", String(key) as ListingStatus)}><Label>Platform status</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{(["Live", "Pending review", "Paused", "Suspended", "Rejected"] as ListingStatus[]).map((status) => <ListBox.Item key={status} id={status}>{status}</ListBox.Item>)}</ListBox></Select.Popover></Select>
-            <div className="grid gap-3 sm:grid-cols-2"><Checkbox isSelected={active.verified} onChange={(value) => update("verified", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Nexbiy verified</p><p className="text-xs text-muted">Display the badge.</p></div></Checkbox.Content></Checkbox><Checkbox isSelected={active.featured} onChange={(value) => update("featured", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Featured placement</p><p className="text-xs text-muted">Promote across discovery.</p></div></Checkbox.Content></Checkbox></div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Checkbox isSelected={active.verified} onChange={(value) => update("verified", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Nexbiy verified</p><p className="text-xs text-muted">Display the verification badge.</p></div></Checkbox.Content></Checkbox>
+              <Checkbox isSelected={active.safeBadge} onChange={(value) => update("safeBadge", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Safe reputation</p><p className="text-xs text-muted">Staff-awarded reputation badge.</p></div></Checkbox.Content></Checkbox>
+              <Checkbox isSelected={active.featured} onChange={(value) => update("featured", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Featured placement</p><p className="text-xs text-muted">Promote across discovery.</p></div></Checkbox.Content></Checkbox>
+            </div>
           </>
         ) : null}</Modal.Body>
         <Modal.Footer><Button variant="tertiary" onPress={onClose}>Cancel</Button><Button variant="primary" onPress={() => active && onSave(active)}><Check className="size-4" />Save changes</Button></Modal.Footer>

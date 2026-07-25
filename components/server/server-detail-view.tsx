@@ -27,7 +27,7 @@ import { ListingVoteDialog, useListingVote } from "@/components/listing/listing-
 import { ReportListingDialog } from "@/components/listing/report-listing-dialog";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
-import { ListingActionGuard, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
+import { ListingActionGuard, ListingSafeBadge, ListingStatusChip, TrustSafetyCard } from "@/components/listing/listing-safety";
 import { getCommunityFeatureOptions } from "@/lib/data/community-features";
 import { getSimilarServers } from "@/lib/data/server-details";
 import { formatCount, initials } from "@/lib/format";
@@ -103,6 +103,7 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
                     <Chip.Label>{server.category}</Chip.Label>
                   </Chip>
                   <ListingStatusChip status={server.safetyStatus} />
+                  {server.safeBadge ? <ListingSafeBadge /> : null}
                 </div>
                 <p className="max-w-2xl text-sm leading-relaxed text-muted md:text-base">
                   {server.shortDescription}

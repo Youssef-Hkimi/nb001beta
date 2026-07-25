@@ -4,6 +4,8 @@ export type ListingSafetyStatus = "PENDING_REVIEW" | "SAFE" | "PAUSED" | "SUSPEN
 
 export type ListingSafetyFields = {
   safetyStatus: ListingSafetyStatus;
+  /** Reputation badge awarded manually by Nexbiy staff; never implied by review status. */
+  safeBadge?: boolean;
   reviewedAt?: string;
   pausedAt?: string;
   suspendedAt?: string;

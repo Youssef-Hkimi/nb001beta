@@ -23,6 +23,8 @@ type BotSeed = {
   githubUrl?: string;
 };
 
+const SAFE_BADGE_BOT_IDS = new Set(["dank-memer", "mee6", "midjourney-bot"]);
+
 function createBot(seed: BotSeed): BotListing {
   const clientId = `1000000000000000${String(seed.rank).padStart(2, "0")}`;
   const safetyStatus = seed.safetyStatus ?? (seed.status === "Live · Pending Review" ? "PENDING_REVIEW" : "SAFE");
@@ -41,6 +43,7 @@ function createBot(seed: BotSeed): BotListing {
     verified: seed.verified,
     status,
     safetyStatus,
+    safeBadge: SAFE_BADGE_BOT_IDS.has(seed.id),
     reviewedAt: safetyStatus === "SAFE" ? "2026-07-01" : undefined,
     pausedAt: safetyStatus === "PAUSED" ? "2026-07-10" : undefined,
     suspendedAt: safetyStatus === "SUSPENDED" ? "2026-07-11" : undefined,

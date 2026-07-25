@@ -197,11 +197,14 @@ const SERVER_STATUS: Partial<Record<string, ListingSafetyStatus>> = {
   "crypto-hub": "SUSPENDED",
 };
 
+const SAFE_BADGE_SERVER_IDS = new Set(["nexus-hub", "lofi-girl", "midjourney"]);
+
 export const SERVERS: ServerListing[] = SERVER_SEEDS.map((server) => {
   const safetyStatus = SERVER_STATUS[server.id] ?? "SAFE";
   return {
     ...server,
     safetyStatus,
+    safeBadge: SAFE_BADGE_SERVER_IDS.has(server.id),
     reviewedAt: safetyStatus === "SAFE" ? "2026-07-01" : undefined,
     pausedAt: safetyStatus === "PAUSED" ? "2026-07-10" : undefined,
     suspendedAt: safetyStatus === "SUSPENDED" ? "2026-07-11" : undefined,
