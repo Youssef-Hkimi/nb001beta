@@ -16,11 +16,15 @@ import {
   toast,
 } from "@heroui/react";
 import {
+  Bell,
   ChartNoAxesCombined,
   ChevronDown,
+  CircleCheckBig,
+  CirclePlus,
   Copy,
   Edit3,
   Eye,
+  ImagePlus,
   Layers3,
   MousePointer2,
   PanelRightClose,
@@ -30,31 +34,22 @@ import {
   ThumbsUp,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ListingStatusChip } from "@/components/listing/listing-safety";
-import { IconifyIcon } from "@/components/ui/iconify-icon";
 import { LinkButton } from "@/components/ui/link-button";
 import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { formatCount, initials } from "@/lib/format";
 import type {DashboardListing} from "@/lib/types";
+import { useDashboardOverview } from "@/lib/use-dashboard-overview";
 
-const STATS = [
-  { label: "Total Views", value: "124.8K", delta: "12.4%", detail: "vs last 7 days", icon: Eye, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500" },
-  { label: "Invite Clicks", value: "18.2K", delta: "9.1%", detail: "vs last 7 days", icon: MousePointer2, tone: "border-violet-500/15 bg-violet-500/10 text-violet-500" },
-  { label: "Votes", value: "42.1K", delta: "6.7%", detail: "vs last 7 days", icon: ThumbsUp, tone: "border-accent/15 bg-accent/10 text-accent" },
-  { label: "Total Listings", value: "8", delta: "", detail: "6 Live · 2 Drafts", icon: Layers3, tone: "border-slate-500/15 bg-slate-500/10 text-slate-500" },
-  { label: "Conversion Rate", value: "14.6%", delta: "2.3%", detail: "vs last 7 days", icon: ChartNoAxesCombined, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500" },
-] as const;
-
-const BAR_VALUES = [44, 50, 47, 35, 43, 58, 53, 36, 43, 61, 54, 46, 30, 39, 66, 53, 48, 39, 36, 33, 60, 40, 53, 38, 29, 27, 36, 53, 62, 53, 45];
 const LISTING_ORDER = ["nexus-hub", "lofi-girl", "reactflux", "helper-ai", "shield-mod", "minecraft", "ticket-tool", "economy-pro"];
 
 const GETTING_STARTED_ITEMS = [
-  { id: "notifications", title: "Set up notifications", subtitle: "Receive important listing and account updates", content: "Choose the updates you want Nexbiy to send about reviews, listing status, milestones, and account activity.", action: "Enable notifications", icon: "solar:bell-linear" },
-  { id: "listing", title: "Add a listing", subtitle: "Publish your first Discord server or bot", content: "Create a complete Nexbiy listing so people can discover your community or add your bot to their servers.", action: "Complete listing step", icon: "solar:add-circle-linear" },
-  { id: "media", title: "Upload a banner and icon", subtitle: "Give your listing a recognizable identity", content: "Add a sharp banner and a clear icon to help your listing stand out across Nexbiy discovery pages.", action: "Complete media step", icon: "solar:gallery-add-linear" },
-  { id: "votes", title: "Get 10 votes on a listing", subtitle: "Reach your first community milestone", content: "Share your public listing and encourage genuine community members to support it with a vote.", action: "Check progress", icon: "solar:like-linear" },
+  { id: "notifications", title: "Set up notifications", subtitle: "Receive important listing and account updates", content: "Choose the updates you want Nexbiy to send about reviews, listing status, milestones, and account activity.", action: "Open settings", icon: Bell, href: "#settings" },
+  { id: "listing", title: "Add a listing", subtitle: "Publish your first Discord server or bot", content: "Create a complete Nexbiy listing so people can discover your community or add your bot to their servers.", action: "Create listing", icon: CirclePlus, href: "/dashboard/new" },
+  { id: "media", title: "Upload a banner and icon", subtitle: "Give your listing a recognizable identity", content: "Add a sharp banner and a clear icon to help your listing stand out across Nexbiy discovery pages.", action: "Manage listings", icon: ImagePlus, href: "#servers" },
+  { id: "votes", title: "Get 10 votes on a listing", subtitle: "Reach your first community milestone", content: "Share your public listing and encourage genuine community members to support it with a vote.", action: "View listings", icon: ThumbsUp, href: "#servers" },
 ] as const;
 
 export function OverviewDashboard({
@@ -74,6 +69,18 @@ export function OverviewDashboard({
   const [chartRange, setChartRange] = useState("30d");
   const [tipsOpen, setTipsOpen] = useState(true);
   const [verificationListingVisible, setVerificationListingVisible] = useState(true);
+  const overviewDays = Number(chartRange.replace("d", ""));
+  const {data: overview, loading: overviewLoading, error: overviewError} = useDashboardOverview(overviewDays);
+  const totals = overview?.totals;
+  const period = overview?.period;
+  const chartMax = Math.max(1, ...(overview?.series.map((point) => point.views) || [0]));
+  const stats = [
+    {label: "Total Views", value: formatCount(totals?.views || 0), delta: period?.deltas.views, detail: `vs previous ${overviewDays} days`, icon: Eye, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500"},
+    {label: "Invite Clicks", value: formatCount(totals?.inviteClicks || 0), delta: period?.deltas.clicks, detail: `vs previous ${overviewDays} days`, icon: MousePointer2, tone: "border-violet-500/15 bg-violet-500/10 text-violet-500"},
+    {label: "Votes", value: formatCount(totals?.votes || 0), delta: undefined, detail: "all-time listing votes", icon: ThumbsUp, tone: "border-accent/15 bg-accent/10 text-accent"},
+    {label: "Total Listings", value: String(totals?.listings || listings.length), delta: undefined, detail: `${totals?.live || 0} Live · ${totals?.drafts || 0} Drafts`, icon: Layers3, tone: "border-slate-500/15 bg-slate-500/10 text-slate-500"},
+    {label: "Conversion Rate", value: `${totals?.conversionRate || 0}%`, delta: undefined, detail: "invite clicks from listing views", icon: ChartNoAxesCombined, tone: "border-blue-500/15 bg-blue-500/10 text-blue-500"},
+  ];
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -95,7 +102,7 @@ export function OverviewDashboard({
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back, {username}</h1>
           <p className="mt-1 text-sm text-muted">Here&apos;s what&apos;s happening with your Nexbiy listings today.</p>
         </div>
-        <Select className="w-full sm:w-36" selectedKey="7d" aria-label="Overview date range">
+        <Select className="w-full sm:w-36" selectedKey={chartRange} onSelectionChange={(key) => setChartRange(String(key))} aria-label="Overview date range">
           <Label className="sr-only">Overview date range</Label>
           <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
           <Select.Popover><ListBox><ListBox.Item id="7d" textValue="7 days">7 days<ListBox.ItemIndicator /></ListBox.Item><ListBox.Item id="30d" textValue="30 days">30 days<ListBox.ItemIndicator /></ListBox.Item><ListBox.Item id="90d" textValue="90 days">90 days<ListBox.ItemIndicator /></ListBox.Item></ListBox></Select.Popover>
@@ -105,7 +112,7 @@ export function OverviewDashboard({
       <div className={`grid items-start gap-5 transition-[grid-template-columns] duration-500 ease-out ${tipsOpen ? "xl:grid-cols-[minmax(0,1fr)_280px]" : "xl:grid-cols-1"}`}>
         <main className="min-w-0 space-y-5">
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5" aria-label="Overview metrics">
-            {STATS.map((stat) => {
+            {stats.map((stat) => {
               const Icon = stat.icon;
               return (
                 <Card key={stat.label} variant="default" className="gap-3 p-5">
@@ -113,7 +120,7 @@ export function OverviewDashboard({
                     <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${stat.tone}`}><Icon className="size-5 stroke-[1.8]" /></span>
                     <div className="min-w-0"><p className="text-xs font-medium text-muted">{stat.label}</p><p className="mt-0.5 text-xl font-bold tracking-tight text-foreground">{stat.value}</p></div>
                   </div>
-                  <p className="text-[11px] text-muted">{stat.delta ? <span className="mr-1 font-semibold text-emerald-500">↑ {stat.delta}</span> : null}{stat.detail}</p>
+                  <p className="text-[11px] text-muted">{typeof stat.delta === "number" ? <span className={`mr-1 font-semibold ${stat.delta < 0 ? "text-danger" : "text-emerald-500"}`}>{stat.delta < 0 ? "↓" : "↑"} {Math.abs(stat.delta)}%</span> : null}{stat.detail}</p>
                 </Card>
               );
             })}
@@ -122,7 +129,11 @@ export function OverviewDashboard({
           <Card variant="default" className="gap-4 p-5">
             <Card.Header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div><Card.Title>Performance Overview</Card.Title><div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-                {[{ label: "Total Views", value: "124.8K", delta: "12.4%" }, { label: "Daily Clicks", value: "2.6K", delta: "9.1%" }, { label: "Total Listing Interactions", value: "8.9K", delta: "8.3%" }].map((item) => <div key={item.label}><p className="text-[11px] text-muted"><span className="mr-1 inline-block size-2 rounded-full bg-accent" />{item.label}</p><p className="mt-1 text-lg font-bold text-foreground">{item.value} <span className="text-[11px] font-semibold text-emerald-500">↑ {item.delta}</span></p></div>)}
+                {[
+                  {label: "Views", value: period?.views || 0, delta: period?.deltas.views || 0},
+                  {label: "Invite Clicks", value: period?.clicks || 0, delta: period?.deltas.clicks || 0},
+                  {label: "Listing Interactions", value: period?.interactions || 0, delta: period?.deltas.interactions || 0},
+                ].map((item) => <div key={item.label}><p className="text-[11px] text-muted"><span className="mr-1 inline-block size-2 rounded-full bg-accent" />{item.label}</p><p className="mt-1 text-lg font-bold text-foreground">{formatCount(item.value)} <span className={`text-[11px] font-semibold ${item.delta < 0 ? "text-danger" : "text-emerald-500"}`}>{item.delta < 0 ? "↓" : "↑"} {Math.abs(item.delta)}%</span></p></div>)}
               </div></div>
               <Select className="w-full sm:w-36" selectedKey={chartRange} onSelectionChange={(key) => setChartRange(String(key))} aria-label="Performance chart range"><Label className="sr-only">Chart date range</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox><ListBox.Item id="7d" textValue="Last 7 days">Last 7 days<ListBox.ItemIndicator /></ListBox.Item><ListBox.Item id="30d" textValue="Last 30 days">Last 30 days<ListBox.ItemIndicator /></ListBox.Item><ListBox.Item id="90d" textValue="Last 90 days">Last 90 days<ListBox.ItemIndicator /></ListBox.Item></ListBox></Select.Popover></Select>
             </Card.Header>
@@ -130,13 +141,17 @@ export function OverviewDashboard({
               <div className="overflow-x-auto pb-1">
                 <div className="relative h-48 min-w-[700px] border-b border-border pl-10">
                   {[0, 1, 2, 3, 4].map((line) => <span key={line} className="absolute right-0 left-10 border-t border-dashed border-border/80" style={{ top: `${line * 25}%` }} />)}
-                  <div className="absolute inset-0 left-0 flex flex-col justify-between pb-4 text-[10px] text-muted"><span>8K</span><span>6K</span><span>4K</span><span>2K</span><span>0</span></div>
+                  <div className="absolute inset-0 left-0 flex flex-col justify-between pb-4 text-[10px] text-muted"><span>{formatCount(chartMax)}</span><span>{formatCount(Math.round(chartMax * 0.75))}</span><span>{formatCount(Math.round(chartMax * 0.5))}</span><span>{formatCount(Math.round(chartMax * 0.25))}</span><span>0</span></div>
                   <div className="absolute inset-x-10 top-2 bottom-5 flex items-end gap-1.5">
-                    {BAR_VALUES.map((value, index) => <Tooltip key={index}><Tooltip.Trigger className="flex h-full flex-1 items-end outline-none"><span className="w-full rounded-t-md bg-accent transition-opacity hover:opacity-80" style={{ height: `${value}%` }} /></Tooltip.Trigger><Tooltip.Content>Day {index + 1}: {(value * 102).toLocaleString()} views</Tooltip.Content></Tooltip>)}
+                    {(overview?.series || []).map((point) => <Tooltip key={point.date}><Tooltip.Trigger className="flex h-full flex-1 items-end outline-none"><span className="w-full rounded-t-md bg-accent transition-opacity hover:opacity-80" style={{ height: `${Math.max(point.views ? 4 : 0, (point.views / chartMax) * 100)}%` }} /></Tooltip.Trigger><Tooltip.Content>{new Date(`${point.date}T00:00:00Z`).toLocaleDateString()}: {point.views.toLocaleString()} views</Tooltip.Content></Tooltip>)}
                   </div>
-                  <div className="absolute right-10 bottom-0 left-10 flex justify-between text-[10px] text-muted"><span>Apr 16</span><span>Apr 22</span><span>Apr 28</span><span>May 4</span><span>May 10</span><span>May 16</span></div>
+                  <div className="absolute right-10 bottom-0 left-10 flex justify-between text-[10px] text-muted">
+                    {(overview?.series.length ? [overview.series[0], overview.series[Math.floor(overview.series.length / 2)], overview.series.at(-1)] : []).map((point) => <span key={point?.date}>{point ? new Date(`${point.date}T00:00:00Z`).toLocaleDateString(undefined, {month: "short", day: "numeric"}) : ""}</span>)}
+                  </div>
+                  {!overviewLoading && !overview?.series.some((point) => point.views) ? <p className="absolute inset-0 flex items-center justify-center text-sm text-muted">No listing views recorded in this period yet.</p> : null}
                 </div>
               </div>
+              {overviewError ? <p className="mt-3 text-sm text-danger">Live analytics could not be loaded. Refresh and try again.</p> : null}
             </Card.Content>
           </Card>
 
@@ -151,7 +166,13 @@ export function OverviewDashboard({
             <Card.Content>
               {loading ? <p className="py-4 text-sm text-muted">Loading your listings…</p> : null}
               {error ? <p className="py-4 text-sm text-danger">Listings could not be loaded. Refresh and try again.</p> : null}
-              {visibleRows.length ? <><Table><Table.ScrollContainer><Table.Content aria-label="Overview listings" className="min-w-[820px]"><Table.Header><Table.Column isRowHeader>Listing</Table.Column><Table.Column>Type</Table.Column><Table.Column>Status</Table.Column><Table.Column>Views</Table.Column><Table.Column>Clicks</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="w-32 text-end">Actions</Table.Column></Table.Header><Table.Body>{visibleRows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><ListingAvatar name={row.name} hue={row.bannerHue} /><span className="font-medium">{row.name}</span></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={row.type === "server" ? "accent" : "default"}><Chip.Label>{row.type === "server" ? "Server" : "Bot"}</Chip.Label></Chip></Table.Cell><Table.Cell><ListingStatusChip status={row.safetyStatus} /></Table.Cell><Table.Cell>{formatCount(row.views)}</Table.Cell><Table.Cell>{formatCount(row.clicks)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><ActionButton label={`Preview ${row.name}`} icon={Eye} onPress={() => toast.info("Preview ready", { description: row.name })} /><ActionButton label={`Copy ${row.name} link`} icon={Copy} onPress={() => toast.success("Listing link copied")} /><ActionButton label={`Edit ${row.name}`} icon={Edit3} onPress={() => toast.success("Editor ready", { description: row.name })} /></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table><div className="mt-3 flex justify-center"><Pagination><Pagination.Content><Pagination.Item><Pagination.Previous isDisabled={page === 1} onPress={() => setPage(Math.max(1, page - 1))}><Pagination.PreviousIcon /></Pagination.Previous></Pagination.Item>{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <Pagination.Item key={number}><Pagination.Link isActive={page === number} onPress={() => setPage(number)}>{number}</Pagination.Link></Pagination.Item>)}<Pagination.Item><Pagination.Next isDisabled={page === totalPages} onPress={() => setPage(Math.min(totalPages, page + 1))}><Pagination.NextIcon /></Pagination.Next></Pagination.Item></Pagination.Content></Pagination></div></> : <div className="py-10 text-center"><p className="font-semibold">No listings found</p><p className="mt-1 text-sm text-muted">Try a different search or filter.</p></div>}
+              {visibleRows.length ? <><Table><Table.ScrollContainer><Table.Content aria-label="Overview listings" className="min-w-[820px]"><Table.Header><Table.Column isRowHeader>Listing</Table.Column><Table.Column>Type</Table.Column><Table.Column>Status</Table.Column><Table.Column>Views</Table.Column><Table.Column>Clicks</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="w-32 text-end">Actions</Table.Column></Table.Header><Table.Body>{visibleRows.map((row) => {
+                const publicFallback = `/${row.type === "server" ? "server" : "bots"}/${row.slug || row.id}`;
+                const listingPath = row.status === "Live"
+                  ? row.publicPath || publicFallback
+                  : row.ownerPreviewPath || publicFallback;
+                return <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><ListingAvatar name={row.name} hue={row.bannerHue} iconUrl={row.iconUrl} /><span className="font-medium">{row.name}</span></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={row.type === "server" ? "accent" : "default"}><Chip.Label>{row.type === "server" ? "Server" : "Bot"}</Chip.Label></Chip></Table.Cell><Table.Cell><ListingStatusChip status={row.safetyStatus} /></Table.Cell><Table.Cell>{formatCount(row.views)}</Table.Cell><Table.Cell>{formatCount(row.clicks)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><ActionButton label={`Preview ${row.name}`} icon={Eye} onPress={() => window.open(listingPath, "_blank", "noopener,noreferrer")} /><ActionButton label={`Copy ${row.name} link`} icon={Copy} onPress={() => { void navigator.clipboard?.writeText(new URL(listingPath, window.location.origin).toString()); toast.success("Listing link copied"); }} /><ActionButton label={`Manage ${row.name}`} icon={Edit3} onPress={() => { window.location.hash = row.type === "server" ? "servers" : "bots"; }} /></div></Table.Cell></Table.Row>;
+              })}</Table.Body></Table.Content></Table.ScrollContainer></Table><div className="mt-3 flex justify-center"><Pagination><Pagination.Content><Pagination.Item><Pagination.Previous isDisabled={page === 1} onPress={() => setPage(Math.max(1, page - 1))}><Pagination.PreviousIcon /></Pagination.Previous></Pagination.Item>{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <Pagination.Item key={number}><Pagination.Link isActive={page === number} onPress={() => setPage(number)}>{number}</Pagination.Link></Pagination.Item>)}<Pagination.Item><Pagination.Next isDisabled={page === totalPages} onPress={() => setPage(Math.min(totalPages, page + 1))}><Pagination.NextIcon /></Pagination.Next></Pagination.Item></Pagination.Content></Pagination></div></> : <div className="py-10 text-center"><p className="font-semibold">No listings found</p><p className="mt-1 text-sm text-muted">Try a different search or filter.</p></div>}
             </Card.Content>
           </Card>
 
@@ -167,7 +188,10 @@ export function OverviewDashboard({
         </main>
 
         <aside className={`transition-[transform,opacity] duration-500 ease-out ${tipsOpen ? "xl:sticky xl:top-24" : "pointer-events-none fixed top-24 right-0 z-30 w-[280px] translate-x-[110%] opacity-0"}`} aria-hidden={!tipsOpen}>
-          <GettingStartedAccordion onClose={() => setTipsOpen(false)} />
+          <GettingStartedAccordion
+            onClose={() => setTipsOpen(false)}
+            completion={overview?.onboarding}
+          />
         </aside>
       </div>
 
@@ -180,61 +204,53 @@ export function OverviewDashboard({
   );
 }
 
-function GettingStartedAccordion({ onClose }: { onClose: () => void }) {
-  const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [celebrating, setCelebrating] = useState<string | null>(null);
-  const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function completeItem(id: string, title: string) {
-    if (completed.has(id)) return;
-    setCompleted((current) => new Set(current).add(id));
-    setCelebrating(id);
-    if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
-    celebrationTimer.current = setTimeout(() => setCelebrating(null), 1200);
-    toast.success("Step completed", { description: title });
-  }
-
+function GettingStartedAccordion({
+  onClose,
+  completion,
+}: {
+  onClose: () => void;
+  completion?: Record<"notifications" | "listing" | "media" | "votes", boolean>;
+}) {
+  const completedCount = GETTING_STARTED_ITEMS.filter((item) => completion?.[item.id]).length;
   return (
     <Card variant="default" className="gap-4 p-4">
       <Card.Header className="flex items-center justify-between gap-3 px-1">
         <div><Card.Title>Tips &amp; Getting Started</Card.Title><Card.Description className="mt-1">Complete the basics for your Nexbiy workspace.</Card.Description></div>
-        <div className="flex shrink-0 items-center gap-1"><Chip size="sm" variant="soft" color={completed.size === GETTING_STARTED_ITEMS.length ? "success" : "accent"}><Chip.Label>{completed.size}/{GETTING_STARTED_ITEMS.length}</Chip.Label></Chip><Button isIconOnly size="sm" variant="ghost" aria-label="Close Tips & Getting Started" onPress={onClose}><PanelRightClose className="size-4" /></Button></div>
+        <div className="flex shrink-0 items-center gap-1"><Chip size="sm" variant="soft" color={completedCount === GETTING_STARTED_ITEMS.length ? "success" : "accent"}><Chip.Label>{completedCount}/{GETTING_STARTED_ITEMS.length}</Chip.Label></Chip><Button isIconOnly size="sm" variant="ghost" aria-label="Close Tips & Getting Started" onPress={onClose}><PanelRightClose className="size-4" /></Button></div>
       </Card.Header>
       <Card.Content>
         <Accordion className="w-full overflow-hidden rounded-2xl border border-border bg-surface/40" variant="surface" hideSeparator defaultExpandedKeys={["notifications"]}>
           {GETTING_STARTED_ITEMS.map((item) => {
-            const isComplete = completed.has(item.id);
+            const isComplete = Boolean(completion?.[item.id]);
+            const Icon = item.icon;
             return (
               <Accordion.Item key={item.id} id={item.id} className={`group/item relative border-b border-border last:border-b-0 ${isComplete ? "bg-emerald-500/5" : ""}`}>
-                {celebrating === item.id ? <span className="tips-celebration pointer-events-none absolute top-2 right-10 z-20 text-accent"><IconifyIcon icon="solar:confetti-minimalistic-linear" className="size-8" /></span> : null}
                 <Accordion.Heading>
                   <Accordion.Trigger className="group flex w-full items-center gap-3 px-3 py-4 text-left transition-colors hover:bg-default/50">
-                    <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-[transform,background-color,color] duration-300 group-hover/item:-rotate-6 group-hover/item:scale-110 ${isComplete ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" : "border-accent/20 bg-accent/8 text-accent"}`}><IconifyIcon icon={item.icon} className="size-7" /></span>
+                    <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-[transform,background-color,color] duration-300 group-hover/item:-rotate-6 group-hover/item:scale-110 ${isComplete ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" : "border-accent/20 bg-accent/8 text-accent"}`}><Icon className="size-6 stroke-[1.7]" /></span>
                     <span className="min-w-0 flex-1"><span className="block text-sm font-semibold leading-5 text-foreground">{item.title}</span><span className="mt-0.5 block text-xs font-normal leading-5 text-muted">{item.subtitle}</span></span>
-                    {isComplete ? <IconifyIcon icon="solar:check-circle-linear" className="size-5 text-emerald-500" label="Completed" /> : null}
+                    {isComplete ? <CircleCheckBig className="size-5 text-emerald-500" aria-label="Completed" /> : null}
                     <Accordion.Indicator className="text-muted/70"><ChevronDown className="size-4" /></Accordion.Indicator>
                   </Accordion.Trigger>
                 </Accordion.Heading>
                 <Accordion.Panel>
                   <Accordion.Body className="px-4 pb-4 text-xs leading-relaxed text-muted">
                     <p>{item.content}</p>
-                    <Button size="sm" variant={isComplete ? "secondary" : "primary"} isDisabled={isComplete} className="mt-3" onPress={() => completeItem(item.id, item.title)}>
-                      {isComplete ? <><IconifyIcon icon="solar:check-circle-linear" className="size-4" />Completed</> : item.action}
-                    </Button>
+                    {isComplete ? <p className="mt-3 inline-flex items-center gap-1.5 font-semibold text-emerald-500"><CircleCheckBig className="size-4" />Completed</p> : <LinkButton href={item.href} size="sm" className="mt-3">{item.action}</LinkButton>}
                   </Accordion.Body>
                 </Accordion.Panel>
               </Accordion.Item>
             );
           })}
         </Accordion>
-        {completed.size === GETTING_STARTED_ITEMS.length ? <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400"><IconifyIcon icon="solar:confetti-minimalistic-linear" className="size-5" /><p className="text-xs font-semibold">Getting started complete. Your workspace is ready.</p></div> : null}
+        {completedCount === GETTING_STARTED_ITEMS.length ? <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400"><CircleCheckBig className="size-5" /><p className="text-xs font-semibold">Getting started complete. Your workspace is ready.</p></div> : null}
       </Card.Content>
     </Card>
   );
 }
 
-function ListingAvatar({ name, hue }: { name: string; hue: string }) {
-  return <Avatar className="size-8 rounded-lg"><Avatar.Fallback className="rounded-lg text-xs font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${hue} 72% 56%),hsl(${Number(hue) + 30} 70% 42%))` }}>{initials(name)}</Avatar.Fallback></Avatar>;
+function ListingAvatar({ name, hue, iconUrl }: { name: string; hue: string; iconUrl?: string | null }) {
+  return <Avatar className="size-8 rounded-lg">{iconUrl ? <Avatar.Image src={iconUrl} alt="" className="rounded-lg object-cover" /> : null}<Avatar.Fallback className="rounded-lg text-xs font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${hue} 72% 56%),hsl(${Number(hue) + 30} 70% 42%))` }}>{initials(name)}</Avatar.Fallback></Avatar>;
 }
 
 function ActionButton({ label, icon: Icon, onPress }: { label: string; icon: typeof Eye; onPress: () => void }) {

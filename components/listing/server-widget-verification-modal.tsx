@@ -34,7 +34,7 @@ export function ServerWidgetVerificationModal({
   onClose,
 }: Props) {
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
-  const publicUrl = publicPath;
+  const previewUrl = publicPath;
   const isSubmitted = state === "success" || state === "success_unverified";
 
   return (
@@ -125,8 +125,8 @@ export function ServerWidgetVerificationModal({
                   <ListingStatusChip status="PENDING_REVIEW" />
                 </div>
                 <div className="rounded-xl border border-border bg-default/25 p-3">
-                  <TextField isReadOnly value={publicUrl}>
-                    <Label>Reserved public link</Label>
+                  <TextField isReadOnly value={previewUrl}>
+                    <Label>Owner preview</Label>
                     <Input />
                   </TextField>
                 </div>
@@ -139,12 +139,15 @@ export function ServerWidgetVerificationModal({
                 variant="secondary"
                 onPress={() => {
                   void navigator.clipboard?.writeText(new URL(publicPath, window.location.origin).toString());
-                  toast.success("Public link copied");
+                  toast.success("Preview link copied");
                 }}
               >
                 <Copy className="size-4" />
-                Copy link
+                Copy preview link
               </Button>
+              <LinkButton href={publicPath} target="_blank">
+                View owner preview
+              </LinkButton>
               <LinkButton href="/dashboard">
                 <LayoutDashboard className="size-4" />
                 Back to dashboard

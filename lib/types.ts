@@ -175,15 +175,21 @@ export type DiscordServer = {
 
 export type DashboardListing = ListingSafetyFields & {
   id: string;
+  slug?: string;
   name: string;
   type: ListingType;
   status: ListingStatus;
   views: number;
   clicks: number;
+  votes?: number;
   updated: string;
   category: string;
   description: string;
   bannerHue: string;
+  iconUrl?: string | null;
+  publicPath?: string;
+  ownerPreviewPath?: string;
+  mediaComplete?: boolean;
 };
 
 export type AnalyticsRange = "7d" | "30d" | "90d";

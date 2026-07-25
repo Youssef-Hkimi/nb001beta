@@ -16,12 +16,12 @@ const userActionSchema = z.discriminatedUnion("action", [
     actionUrl: z.string().url().max(500).optional(),
   }),
   z.object({
-    action: z.enum(["suspend", "freeze_listings"]),
+    action: z.enum(["suspend", "freeze_listings", "unfreeze_listings", "flag"]),
     reason: z.string().trim().min(3).max(2000),
     durationHours: z.number().int().min(1).max(24 * 365).optional(),
   }),
   z.object({
-    action: z.enum(["restore", "delete_user"]),
+    action: z.enum(["restore", "ban", "delete_user"]),
     reason: z.string().trim().min(3).max(2000),
   }),
 ]);
@@ -56,6 +56,20 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
       await db.from("listings").update({status: "deleted", deleted_at: new Date().toISOString()}).eq("owner_id", id);
       const {error} = await db.from("profiles").update({status: "deleted"}).eq("id", id);
       if (error) throw error;
+    } else if (input.action === "ban") {
+      if (!["admin", "super_admin"].includes(session.role)) throw new ApiError(403, "admin_required");
+      await requireAdminChallenge(request, session, "ban_user");
+      const {error: profileError} = await db
+        .from("profiles")
+        .update({status: "suspended", suspended_until: null})
+        .eq("id", id);
+      if (profileError) throw profileError;
+      const {error: listingError} = await db
+        .from("listings")
+        .update({status: "suspended", moderation_reason: input.reason})
+        .eq("owner_id", id)
+        .neq("status", "deleted");
+      if (listingError) throw listingError;
     } else if (input.action === "suspend") {
       const until = input.durationHours
         ? new Date(Date.now() + input.durationHours * 60 * 60 * 1000).toISOString()
@@ -69,6 +83,33 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
         .eq("owner_id", id)
         .neq("status", "deleted");
       if (error) throw error;
+    } else if (input.action === "unfreeze_listings") {
+      const {error} = await db
+        .from("listings")
+        .update({status: "pending_review", moderation_reason: input.reason})
+        .eq("owner_id", id)
+        .eq("status", "suspended");
+      if (error) throw error;
+    } else if (input.action === "flag") {
+      const {data: moderationCase, error} = await db
+        .from("moderation_cases")
+        .insert({
+          user_id: id,
+          severity: "high",
+          status: "escalated",
+          assigned_to: session.userId,
+          summary: input.reason,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await db.from("moderation_actions").insert({
+        case_id: moderationCase.id,
+        actor_id: session.userId,
+        target_user_id: id,
+        action: "flag",
+        reason: input.reason,
+      });
     } else {
       const {error} = await db.from("profiles").update({status: "active", suspended_until: null}).eq("id", id);
       if (error) throw error;

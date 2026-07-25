@@ -196,6 +196,7 @@ export function apiListingToBot(listing: ApiListing): BotListing {
   const developerName = listing.profiles?.display_name || listing.profiles?.username || "Nexbiy developer";
   return {
     id: listing.slug,
+    databaseId: listing.id,
     slug: listing.slug,
     name: listing.name,
     verified: listing.verified_badge,
@@ -245,17 +246,25 @@ export function apiListingToBot(listing: ApiListing): BotListing {
 }
 
 export function apiListingToDashboard(listing: ApiListing): DashboardListing {
+  const iconUrl = media(listing, "icon")[0]?.url || null;
+  const bannerUrl = media(listing, "banner")[0]?.url || null;
   return {
     id: listing.id,
+    slug: listing.slug,
     name: listing.name,
     type: listing.type,
     status: dashboardStatus(listing.status),
     views: Number(listing.views_count),
     clicks: Number(listing.clicks_count),
+    votes: Number(listing.votes_count),
     updated: updatedLabel(listing.created_at),
     category: listing.category,
     description: listing.short_description,
     bannerHue: "220",
+    iconUrl,
+    publicPath: listing.type === "server" ? `/server/${listing.slug}` : `/bots/${listing.slug}`,
+    ownerPreviewPath: `/dashboard/preview/${listing.id}`,
+    mediaComplete: Boolean(iconUrl && bannerUrl),
     safetyStatus: safetyStatus(listing.status),
     safeBadge: listing.safe_badge,
   };

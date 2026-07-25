@@ -32,6 +32,13 @@ export async function GET(request: NextRequest, context: {params: Promise<{id: s
       .limit(10_000);
     if (error) throw error;
     const byDay = new Map<string, {date: string; views: number; inviteClicks: number; linkCopies: number; votes: number}>();
+    for (let offset = days - 1; offset >= 0; offset -= 1) {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() - offset);
+      const key = date.toISOString().slice(0, 10);
+      byDay.set(key, {date: key, views: 0, inviteClicks: 0, linkCopies: 0, votes: 0});
+    }
     for (const event of events || []) {
       const date = event.occurred_at.slice(0, 10);
       const point = byDay.get(date) || {date, views: 0, inviteClicks: 0, linkCopies: 0, votes: 0};
@@ -48,7 +55,7 @@ export async function GET(request: NextRequest, context: {params: Promise<{id: s
         votes: listing.votes_count,
         linkCopies: (events || []).filter((event) => event.event_type === "link_copy").length,
       },
-      series: [...byDay.values()],
+      series: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
       days,
     }, {headers: {"Cache-Control": "no-store"}});
   } catch (error) {

@@ -53,7 +53,8 @@ import { EXPLORE_CATEGORIES, LANGUAGES, SERVER_LISTING_TAGS } from "@/lib/data/c
 import { DEFAULT_COMMUNITY_FEATURE_IDS } from "@/lib/data/community-features";
 import { formatCount, initials } from "@/lib/format";
 import { LISTING_STATUS_CONFIG } from "@/lib/listing-safety";
-import type { ListingStatus, ServerDashboardListing } from "@/lib/types";
+import type { AnalyticsRange, ListingStatus, ServerDashboardListing } from "@/lib/types";
+import { useListingAnalytics } from "@/lib/use-listing-analytics";
 
 const REGIONS = ["Global", "North America", "Europe", "Asia", "South America", "Oceania"] as const;
 const ACTIVITY_LEVELS = ["Very Active", "Active", "Calm"] as const;
@@ -133,6 +134,12 @@ function listingStatusColor(status: ListingStatus) {
   return "default" as const;
 }
 
+function ownerListingPath(listing: ServerDashboardListing) {
+  return listing.status === "Live"
+    ? listing.publicPath
+    : listing.ownerPreviewPath ?? listing.publicPath;
+}
+
 export function ServerOwnerDashboard({
   listings,
   loading = false,
@@ -175,7 +182,7 @@ export function ServerOwnerDashboard({
   }, [analyticsServerId, listings]);
 
   function copyLink(server: ServerDashboardListing) {
-    void navigator.clipboard?.writeText(`${window.location.origin}${server.publicPath}`);
+    void navigator.clipboard?.writeText(`${window.location.origin}${ownerListingPath(server)}`);
     toast.success("Listing link copied");
   }
 
@@ -401,8 +408,8 @@ export function ServerOwnerDashboard({
                   <p className="text-xs text-muted">Saved changes return to review before becoming public.</p>
                 </div>
                 {editServer && (
-                  <LinkButton href={editServer.publicPath} target="_blank" size="sm" variant="secondary">
-                    <Eye className="size-4" />Live Preview<ExternalLink className="size-3.5" />
+                  <LinkButton href={ownerListingPath(editServer)} target="_blank" size="sm" variant="secondary">
+                    <Eye className="size-4" />Owner Preview<ExternalLink className="size-3.5" />
                   </LinkButton>
                 )}
               </div>
@@ -643,7 +650,7 @@ function OverviewTab({ servers, onCopy, onDelete, onDismissUpdate, onEdit, onInv
               <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
                 <Button size="sm" variant="secondary" onPress={() => onEdit(server)}><Pencil className="size-4" />Edit</Button>
                 <Button size="sm" variant="secondary" onPress={() => onInvite(server)}><Link2 className="size-4" />Update Invite</Button>
-                <LinkButton href={server.publicPath} size="sm" variant="ghost"><ExternalLink className="size-4" />Public Page</LinkButton>
+                <LinkButton href={ownerListingPath(server)} size="sm" variant="ghost"><ExternalLink className="size-4" />{server.status === "Live" ? "Public Page" : "Owner Preview"}</LinkButton>
                 <Dropdown>
                   <Dropdown.Trigger
                     aria-label={`More actions for ${server.name}`}
@@ -671,6 +678,30 @@ function AnalyticsTab({ servers, selectedId, selectedServer, onSelect }: {
   selectedServer: ServerDashboardListing | null;
   onSelect: (id: string) => void;
 }) {
+  const [range, setRange] = useState<AnalyticsRange>("30d");
+  const days = range === "7d" ? 7 : range === "90d" ? 90 : 30;
+  const {data, loading, error} = useListingAnalytics(selectedServer?.id, days);
+  const totals = data?.totals;
+  const liveHistory = selectedServer ? {
+    ...selectedServer.analytics.history,
+    [range]: (data?.series ?? []).map((point) => ({
+      date: new Date(`${point.date}T00:00:00Z`).toLocaleDateString("en", {month: "short", day: "numeric", timeZone: "UTC"}),
+      listingViews: point.views,
+      joinClicks: point.inviteClicks,
+      confirmedJoins: 0,
+    })),
+  } : null;
+  const liveValues = selectedServer ? {
+    ...selectedServer.analytics,
+    listingViews: totals?.views ?? selectedServer.analytics.listingViews,
+    joinClicks: totals?.inviteClicks ?? selectedServer.analytics.joinClicks,
+    likes: totals?.votes ?? selectedServer.analytics.likes,
+    linkCopies: totals?.linkCopies ?? selectedServer.analytics.linkCopies,
+    conversionRate: (totals?.views ?? selectedServer.analytics.listingViews)
+      ? ((totals?.inviteClicks ?? selectedServer.analytics.joinClicks) / (totals?.views ?? selectedServer.analytics.listingViews)) * 100
+      : 0,
+  } : null;
+
   return (
     <section className="space-y-5" aria-labelledby="server-analytics-heading">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -693,7 +724,7 @@ function AnalyticsTab({ servers, selectedId, selectedServer, onSelect }: {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {ANALYTICS_METRICS.map((metric) => {
               const Icon = metric.icon;
-              const value = selectedServer.analytics[metric.key];
+              const value = liveValues?.[metric.key] ?? 0;
               const comingSoon = "comingSoon" in metric && metric.comingSoon;
               const display = comingSoon ? "—" : metric.key === "conversionRate" ? `${value.toFixed(1)}%` : formatCount(value);
               return <Card key={metric.key} variant="default" className="gap-3 p-5"><span className="flex size-9 items-center justify-center rounded-xl bg-accent/10 text-accent"><Icon className="size-4" /></span><div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-medium text-muted">{metric.label}</p>{comingSoon ? <Chip size="sm" variant="soft"><Chip.Label>Coming Soon</Chip.Label></Chip> : null}</div><p className="mt-1 text-2xl font-bold text-foreground">{display}</p></div></Card>;
@@ -702,13 +733,17 @@ function AnalyticsTab({ servers, selectedId, selectedServer, onSelect }: {
           <AnalyticsLineChart
             title={`${selectedServer.name} performance`}
             description="Listing views and join clicks over time. Members-left tracking is coming soon."
-            history={selectedServer.analytics.history}
+            history={liveHistory ?? selectedServer.analytics.history}
+            range={range}
+            onRangeChange={setRange}
             series={[
               { key: "listingViews", label: "Listing Views", color: "#629BF8" },
               { key: "joinClicks", label: "Join Clicks", color: "#9B8AFB" },
               { key: "confirmedJoins", label: "Members Left", color: "#34D399", comingSoon: true },
             ]}
           />
+          {loading ? <p className="text-sm text-muted">Loading live analytics…</p> : null}
+          {error ? <Alert status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{error}</Alert.Title></Alert.Content></Alert> : null}
         </div>
       )}
     </section>
@@ -743,7 +778,7 @@ function StatusTab({ servers, onInvite }: { servers: ServerDashboardListing[]; o
         <Card variant="secondary" className="items-center p-10 text-center"><span className="flex size-12 items-center justify-center rounded-2xl bg-accent/10 text-accent"><ShieldCheck className="size-6" /></span><h3 className="font-semibold text-foreground">Select a server to run a status check</h3><p className="max-w-md text-sm text-muted">Nexbiy will show its current visibility, review state, verification readiness, and invite health.</p></Card>
       ) : (
         <div className="space-y-5">
-          <Card variant="default" className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><ServerAvatar server={selected} className="size-12" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-foreground">{selected.name}</h3><ListingStatusChip status={selected.safetyStatus} livePrefix /></div><p className="mt-1 text-sm text-muted">{LISTING_STATUS_CONFIG[selected.safetyStatus].description}</p></div></div><LinkButton href={selected.publicPath} target="_blank" size="sm" variant="secondary"><ExternalLink className="size-4" />View public page</LinkButton></div></Card>
+          <Card variant="default" className="p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><ServerAvatar server={selected} className="size-12" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-foreground">{selected.name}</h3><ListingStatusChip status={selected.safetyStatus} livePrefix /></div><p className="mt-1 text-sm text-muted">{LISTING_STATUS_CONFIG[selected.safetyStatus].description}</p></div></div><LinkButton href={ownerListingPath(selected)} target="_blank" size="sm" variant="secondary"><ExternalLink className="size-4" />{selected.status === "Live" ? "View public page" : "Open owner preview"}</LinkButton></div></Card>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatusCheck title="Listing" value={selected.status === "Live · Pending Review" ? "Live" : selected.status} detail="Public listing visibility" icon={Eye} tone={selected.status.startsWith("Live") ? "success" : "warning"} />

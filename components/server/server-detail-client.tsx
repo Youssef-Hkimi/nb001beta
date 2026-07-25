@@ -36,7 +36,13 @@ function ServerDetailSkeleton() {
   );
 }
 
-export function ServerDetailClient({ server }: { server: ServerDetail }) {
+export function ServerDetailClient({
+  server,
+  previewMode = false,
+}: {
+  server: ServerDetail;
+  previewMode?: boolean;
+}) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -48,5 +54,5 @@ export function ServerDetailClient({ server }: { server: ServerDetail }) {
     return <ServerDetailSkeleton />;
   }
 
-  return <ServerDetailView server={server} />;
+  return <ServerDetailView server={server} previewMode={previewMode} />;
 }

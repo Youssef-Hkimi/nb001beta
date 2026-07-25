@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/discord-session";
 import {getSupabaseAdmin} from "@/lib/server/supabase-admin";
 import {secureEqual} from "@/lib/server/security";
+import {isBootstrapSuperAdmin} from "@/lib/server/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,6 +88,27 @@ export async function GET(request: NextRequest) {
       p_avatar_hash: discordUser.avatar || null,
     });
     if (identityError || typeof userId !== "string") throw identityError || new Error("identity_failed");
+
+    if (isBootstrapSuperAdmin(discordUser.id)) {
+      const {error: roleError} = await db
+        .from("profiles")
+        .update({role: "super_admin"})
+        .eq("id", userId);
+      if (roleError) throw roleError;
+
+      const {error: staffError} = await db
+        .from("staff_members")
+        .upsert(
+          {
+            user_id: userId,
+            role: "super_admin",
+            permissions: ["*"],
+            mfa_required: true,
+          },
+          {onConflict: "user_id"},
+        );
+      if (staffError) throw staffError;
+    }
 
     const guildRows = discordGuilds
       .filter((guild) => guilds.some((managed) => managed.id === guild.id))

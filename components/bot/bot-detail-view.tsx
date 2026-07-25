@@ -23,7 +23,13 @@ import { getListingActionBlockReason } from "@/lib/listing-safety";
 import {trackListingEvent} from "@/lib/listing-events";
 import type { BotListing } from "@/lib/types";
 
-export function BotDetailView({ bot }: { bot: BotListing }) {
+export function BotDetailView({
+  bot,
+  previewMode = false,
+}: {
+  bot: BotListing;
+  previewMode?: boolean;
+}) {
   const vote = useListingVote({ listingKey: `bot:${bot.slug}`, listingId: bot.databaseId, initialVotes: bot.votes });
   const [galleryImage, setGalleryImage] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -31,8 +37,8 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
   const similar = useMemo(() => getSimilarBots(bot), [bot]);
   const banner = bot.banner || getBotBannerUrl(bot.slug, bot.bannerHue);
   useEffect(() => {
-    trackListingEvent(bot.databaseId, "view");
-  }, [bot.databaseId]);
+    if (!previewMode) trackListingEvent(bot.databaseId, "view");
+  }, [bot.databaseId, previewMode]);
   const openExternal = (url: string, event?: "invite_click" | "link_copy") => {
     if (event) trackListingEvent(bot.databaseId, event);
     window.open(url, "_blank", "noopener,noreferrer");
@@ -46,6 +52,11 @@ export function BotDetailView({ bot }: { bot: BotListing }) {
   return (
     <div className="theme-surface min-h-screen pb-16">
       <section className="relative">
+        {previewMode ? (
+          <div className="absolute inset-x-0 top-4 z-20 mx-auto w-fit rounded-full border border-accent/25 bg-background/90 px-4 py-2 text-xs font-semibold text-accent shadow-sm backdrop-blur">
+            Owner preview · This listing is not public yet
+          </div>
+        ) : null}
         <div className="bot-hero-banner hero-image-wrapper" role="img" aria-label={`${bot.name} banner`} style={{ backgroundImage: `url("${banner}")` }} />
         <div className="bot-hero-profile">
           <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 pb-8 md:flex-row md:items-end md:justify-between md:px-6 lg:px-8">

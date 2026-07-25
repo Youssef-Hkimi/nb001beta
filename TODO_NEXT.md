@@ -28,19 +28,19 @@ These are shipped and should only change when the user reports a specific regres
 
 ## Next product work
 
-### 1. Beta deployment secrets (blocking)
+### 1. Beta environment and first admin
 
 - Rotate the Discord client secret exposed during development.
 - Add `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SESSION_HASH_SECRET`, `ADMIN_MFA_ENCRYPTION_KEY`, and the rotated Discord values to local/Vercel environments.
 - Add the final Vercel callback URL in the Discord Developer Portal.
-- Promote the first authenticated owner to `super_admin` through a reviewed one-time SQL operation.
+- Set `SUPER_ADMIN_DISCORD_IDS` to the owner's Discord user ID, redeploy, then sign out and back in once to bootstrap the reviewed super-admin record.
+- Complete the in-app authenticator setup before using protected actions.
 
-### 2. Final live UI wiring
+### 2. Remaining live UI wiring
 
-- Replace remaining demo overview chart values with live analytics.
-- Replace remaining mock admin presentation rows with the existing live admin endpoints.
 - Finish real bot gallery uploads and richer creator edit media management.
 - Add notification inbox reads/mark-read and global announcement publishing UI.
+- Replace the lower-priority rewards-risk, moderator-roster, support-ticket, and health presentation placeholders with dedicated live endpoints.
 
 ### 3. Launch operations
 

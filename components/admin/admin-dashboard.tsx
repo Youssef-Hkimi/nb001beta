@@ -29,6 +29,7 @@ import {
   CircleX,
   CircleDollarSign,
   Clock3,
+  Copy,
   Download,
   Eye,
   FileWarning,
@@ -37,6 +38,7 @@ import {
   HeartPulse,
   Inbox,
   LayoutDashboard,
+  KeyRound,
   LockKeyhole,
   Megaphone,
   MessageSquareWarning,
@@ -58,7 +60,7 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { LinkButton } from "@/components/ui/link-button";
 import { BOTS } from "@/lib/data/bots";
@@ -103,6 +105,7 @@ type AdminListing = {
   updated: string;
   reports: number;
   votes: Record<"1h" | "6h" | "24h", number>;
+  iconUrl?: string | null;
 };
 type AdminUser = {
   id: string;
@@ -183,9 +186,19 @@ type ProtectedAction = {
   title: string;
   description: string;
   confirmation: string;
-  run: () => void;
+  scope: string;
+  run: (challenge: string) => Promise<void> | void;
 };
 type AuditEntry = { id: string; action: string; target: string; actor: string; time: string; severity: "Info" | "Warning" | "Critical" };
+type RangeMetrics = { visits: number; actions: number; reports: number; signups: number; points: number[] };
+type AdminOverviewPayload = {
+  listings: AdminListing[];
+  users: AdminUser[];
+  reports: AdminReport[];
+  moderation: ModerationRequest[];
+  audit: AuditEntry[];
+  rangeMetrics: Record<TimeRange, RangeMetrics>;
+};
 
 const RANGE_OPTIONS: Array<{ id: TimeRange; label: string }> = [
   { id: "1h", label: "1 hour" },
@@ -195,13 +208,9 @@ const RANGE_OPTIONS: Array<{ id: TimeRange; label: string }> = [
   { id: "30d", label: "30 days" },
 ];
 
-const RANGE_METRICS: Record<TimeRange, { visits: number; actions: number; reports: number; signups: number; points: number[] }> = {
-  "1h": { visits: 2840, actions: 618, reports: 3, signups: 41, points: [18, 24, 20, 32, 29, 44, 48, 42, 56, 61, 58, 72] },
-  "6h": { visits: 14800, actions: 3640, reports: 9, signups: 187, points: [22, 28, 36, 31, 45, 52, 48, 60, 66, 63, 74, 81] },
-  "24h": { visits: 52400, actions: 12900, reports: 18, signups: 724, points: [31, 38, 35, 49, 54, 50, 64, 70, 67, 78, 83, 91] },
-  "7d": { visits: 284000, actions: 68200, reports: 76, signups: 4120, points: [36, 44, 52, 47, 60, 66, 63, 71, 78, 82, 88, 95] },
-  "30d": { visits: 1240000, actions: 318000, reports: 284, signups: 18300, points: [42, 48, 45, 58, 62, 69, 65, 76, 81, 87, 91, 98] },
-};
+const EMPTY_RANGE_METRICS = Object.fromEntries(
+  RANGE_OPTIONS.map(({id}) => [id, {visits: 0, actions: 0, reports: 0, signups: 0, points: Array(12).fill(0)}]),
+) as Record<TimeRange, RangeMetrics>;
 
 const NAV_GROUPS: Array<{ label: string; items: Array<{ id: AdminSection; label: string; icon: LucideIcon }> }> = [
   {
@@ -351,24 +360,73 @@ function priorityColor(priority: Urgency) {
 }
 
 function listingUrl(listing: AdminListing) {
-  return listing.type === "server" ? `/servers/${listing.slug}` : `/bots/${listing.slug}`;
+  return listing.type === "server" ? `/server/${listing.slug}` : `/bots/${listing.slug}`;
 }
 
 export function AdminDashboard() {
   const [section, setSection] = useState<AdminSection>("main");
-  const [listings, setListings] = useState(INITIAL_LISTINGS);
-  const [users, setUsers] = useState(INITIAL_USERS);
-  const [reports, setReports] = useState(INITIAL_REPORTS);
-  const [verification, setVerification] = useState(INITIAL_VERIFICATIONS);
+  const [listings, setListings] = useState<AdminListing[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [reports, setReports] = useState<AdminReport[]>([]);
+  const [moderation, setModeration] = useState<ModerationRequest[]>([]);
+  const [verification, setVerification] = useState<VerificationRequest[]>([]);
   const [rewards, setRewards] = useState(INITIAL_REWARDS);
   const [moderators, setModerators] = useState(INITIAL_MODERATORS);
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
   const [audit, setAudit] = useState(INITIAL_AUDIT);
+  const [rangeMetrics, setRangeMetrics] = useState(EMPTY_RANGE_METRICS);
   const [editingListing, setEditingListing] = useState<AdminListing | null>(null);
   const [inspectingUser, setInspectingUser] = useState<AdminUser | null>(null);
   const [moderatingUser, setModeratingUser] = useState<AdminUser | null>(null);
   const [inspectingReport, setInspectingReport] = useState<AdminReport | null>(null);
   const [protectedAction, setProtectedAction] = useState<ProtectedAction | null>(null);
+  const [isLoadingOperations, setIsLoadingOperations] = useState(true);
+  const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+
+  async function refreshOperations() {
+    setIsLoadingOperations(true);
+    try {
+      const response = await fetch("/api/admin/overview", {cache: "no-store"});
+      const payload = await response.json() as AdminOverviewPayload & {error?: string};
+      if (!response.ok) throw new Error(payload.error || "admin_overview_failed");
+      setListings(payload.listings);
+      setUsers(payload.users);
+      setReports(payload.reports);
+      setModeration(payload.moderation);
+      setAudit(payload.audit);
+      setRangeMetrics(payload.rangeMetrics || EMPTY_RANGE_METRICS);
+      setVerification(payload.listings
+        .filter((listing) => listing.status === "Pending review")
+        .map((listing) => ({
+          id: `review:${listing.key}`,
+          listingKey: listing.key,
+          name: listing.name,
+          type: listing.type === "server" ? "Server" : "Bot",
+          eligibility: listing.type === "server"
+            ? "Discord ownership and widget information available"
+            : "Bot identity and listing details ready for staff review",
+          submitted: listing.updated,
+        })));
+    } catch (error) {
+      toast.danger("Could not load live operations", {
+        description: error instanceof Error ? error.message : "Try refreshing the page.",
+      });
+    } finally {
+      setIsLoadingOperations(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshOperations();
+    void fetch("/api/admin/mfa/status", {cache: "no-store"})
+      .then(async (response) => {
+        const payload = await response.json() as {enrolled?: boolean};
+        if (!response.ok) throw new Error("mfa_status_failed");
+        setMfaEnrolled(Boolean(payload.enrolled));
+      })
+      .catch(() => setMfaEnrolled(false));
+  }, []);
 
   const counts = useMemo(() => ({
     live: listings.filter((item) => item.status === "Live").length,
@@ -382,17 +440,153 @@ export function AdminDashboard() {
     setAudit((current) => [{ id: crypto.randomUUID(), action, target, actor: "Denna", time: "Now", severity }, ...current]);
   }
 
-  function saveListing(next: AdminListing) {
-    setListings((current) => current.map((item) => item.key === next.key ? next : item));
+  async function saveListing(next: AdminListing) {
+    const response = await fetch(`/api/admin/listings/${next.key}/action`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        action: "edit_listing",
+        name: next.name,
+        shortDescription: next.description,
+        category: next.category,
+        reason: "Listing metadata updated from the admin dashboard",
+      }),
+    });
+    const result = await response.json() as {error?: string};
+    if (!response.ok) {
+      toast.danger("Listing update failed", {description: result.error || "Please try again."});
+      return;
+    }
     setEditingListing(null);
-    record("Edited listing", next.name);
+    await refreshOperations();
     toast.success("Listing updated", { description: next.name });
   }
 
-  function updateListingStatus(listing: AdminListing, status: ListingStatus) {
-    setListings((current) => current.map((item) => item.key === listing.key ? { ...item, status } : item));
-    record(`Changed listing status to ${status}`, listing.name, status === "Suspended" || status === "Rejected" ? "Critical" : "Warning");
+  async function updateListingStatus(listing: AdminListing, status: ListingStatus, challenge?: string) {
+    const statusValue: Record<ListingStatus, string> = {
+      Live: "live",
+      "Pending review": "pending_review",
+      Paused: "paused",
+      Suspended: "suspended",
+      Rejected: "rejected",
+    };
+    const response = await fetch(`/api/admin/listings/${listing.key}/action`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(challenge ? {"X-Admin-MFA-Challenge": challenge} : {}),
+      },
+      body: JSON.stringify({
+        action: "set_status",
+        status: statusValue[status],
+        reason: `Status changed to ${status} from the admin dashboard`,
+      }),
+    });
+    const result = await response.json() as {error?: string};
+    if (!response.ok) {
+      toast.danger("Status update failed", {description: result.error || "Please try again."});
+      return;
+    }
+    await refreshOperations();
     toast.success("Listing status updated", { description: `${listing.name} is now ${status.toLowerCase()}.` });
+  }
+
+  async function runListingAction(
+    listing: AdminListing,
+    body: Record<string, unknown>,
+    challenge?: string,
+  ) {
+    const response = await fetch(`/api/admin/listings/${listing.key}/action`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(challenge ? {"X-Admin-MFA-Challenge": challenge} : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json() as {error?: string};
+    if (!response.ok) throw new Error(result.error || "admin_listing_action_failed");
+    await refreshOperations();
+  }
+
+  async function runUserAction(
+    user: AdminUser,
+    body: Record<string, unknown>,
+    challenge?: string,
+  ) {
+    const response = await fetch(`/api/admin/users/${user.id}/action`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(challenge ? {"X-Admin-MFA-Challenge": challenge} : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json() as {error?: string};
+    if (!response.ok) throw new Error(result.error || "admin_user_action_failed");
+    await refreshOperations();
+  }
+
+  async function runReportAction(
+    report: AdminReport,
+    input: {
+      status: "triaged" | "investigating" | "resolved" | "dismissed";
+      severity?: "low" | "medium" | "high" | "urgent";
+      notes: string;
+      notifyReporter?: boolean;
+    },
+  ) {
+    const response = await fetch(`/api/admin/reports/${report.id}/action`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(input),
+    });
+    const result = await response.json() as {error?: string};
+    if (!response.ok) throw new Error(result.error || "admin_report_action_failed");
+    await refreshOperations();
+  }
+
+  function requestListingToggle(
+    listing: AdminListing,
+    action: "verified_badge" | "safe_badge" | "featured",
+    enabled: boolean,
+  ) {
+    const label = action === "verified_badge"
+      ? "Nexbiy verification"
+      : action === "safe_badge"
+        ? "Safe reputation badge"
+        : "featured placement";
+    setProtectedAction({
+      title: `${enabled ? "Enable" : "Remove"} ${label}`,
+      description: `${label} for ${listing.name} will be changed and recorded in the audit log.`,
+      confirmation: listing.name,
+      scope: `set_${action}`,
+      run: async (challenge) => {
+        await runListingAction(listing, {
+          action,
+          enabled,
+          reason: `${label} ${enabled ? "enabled" : "removed"} from the admin dashboard`,
+        }, challenge);
+        toast.success("Listing updated", {description: `${listing.name}: ${label}`});
+      },
+    });
+  }
+
+  function requestVoteAdjustment(listing: AdminListing) {
+    setProtectedAction({
+      title: "Add 10 administrative votes",
+      description: `Add 10 audited votes to ${listing.name}. This restricted adjustment is recorded.`,
+      confirmation: listing.name,
+      scope: "adjust_votes",
+      run: async (challenge) => {
+        await runListingAction(listing, {
+          action: "adjust_votes",
+          amount: 10,
+          reason: "Approved featured-listing adjustment from the admin dashboard",
+        }, challenge);
+        toast.success("10 votes added", {description: listing.name});
+      },
+    });
   }
 
   function requestListingDelete(listing: AdminListing) {
@@ -400,9 +594,13 @@ export function AdminDashboard() {
       title: "Delete listing permanently",
       description: `${listing.name} will be removed from Nexbiy. This action requires an administrator 2FA code.`,
       confirmation: listing.name,
-      run: () => {
-        setListings((current) => current.filter((item) => item.key !== listing.key));
-        record("Deleted listing", listing.name, "Critical");
+      scope: "delete_listing",
+      run: async (challenge) => {
+        await runListingAction(listing, {
+          action: "set_status",
+          status: "deleted",
+          reason: "Listing permanently deleted from the admin dashboard",
+        }, challenge);
         toast.success("Listing deleted", { description: listing.name });
       },
     });
@@ -428,37 +626,47 @@ export function AdminDashboard() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight">Nexbiy control center</h1>
-                  <Chip size="sm" color="warning" variant="soft"><Chip.Label>Mock operations</Chip.Label></Chip>
+                  <Chip size="sm" color="success" variant="soft"><Chip.Label>Live operations</Chip.Label></Chip>
                 </div>
                 <p className="mt-0.5 text-sm text-muted">CEO access · destructive actions require 2FA</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" isDisabled={isLoadingOperations} onPress={() => void refreshOperations()}>
+                <RefreshCw className={`size-4 ${isLoadingOperations ? "animate-spin" : ""}`} />Refresh
+              </Button>
               <LinkButton href="/explore" variant="secondary"><Eye className="size-4" />Public site</LinkButton>
               <Button variant="primary" onPress={() => setSection("announcements")}><Megaphone className="size-4" />Broadcast</Button>
             </div>
           </header>
 
           <main>
-            {section === "main" ? <OverviewSection counts={counts} moderation={INITIAL_MODERATION} onNavigate={setSection} /> : null}
+            {mfaEnrolled === false ? (
+              <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-warning/30 bg-warning/8 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
+                    <KeyRound className="size-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">Finish staff security setup</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">Connect an authenticator before using protected admin actions.</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="primary" onPress={() => setShowMfaSetup(true)}>
+                  Set up 2FA
+                </Button>
+              </div>
+            ) : null}
+            {section === "main" ? <OverviewSection counts={counts} moderation={moderation} rangeMetrics={rangeMetrics} onNavigate={setSection} /> : null}
             {section === "listings" ? (
               <ListingsSection
                 listings={listings}
                 onEdit={setEditingListing}
                 onDelete={requestListingDelete}
                 onStatus={updateListingStatus}
-                onToggleVerified={(listing) => {
-                  setListings((current) => current.map((item) => item.key === listing.key ? { ...item, verified: !item.verified } : item));
-                  record(listing.verified ? "Removed verification" : "Granted verification", listing.name, "Warning");
-                }}
-                onToggleSafeBadge={(listing) => {
-                  setListings((current) => current.map((item) => item.key === listing.key ? { ...item, safeBadge: !item.safeBadge } : item));
-                  record(listing.safeBadge ? "Removed Safe reputation badge" : "Awarded Safe reputation badge", listing.name, "Warning");
-                }}
-                onToggleFeatured={(listing) => {
-                  setListings((current) => current.map((item) => item.key === listing.key ? { ...item, featured: !item.featured, placement: item.featured ? null : 1 } : item));
-                  record(listing.featured ? "Removed featured placement" : "Added featured placement", listing.name);
-                }}
+                onToggleVerified={(listing) => requestListingToggle(listing, "verified_badge", !listing.verified)}
+                onToggleSafeBadge={(listing) => requestListingToggle(listing, "safe_badge", !listing.safeBadge)}
+                onToggleFeatured={(listing) => requestListingToggle(listing, "featured", !listing.featured)}
               />
             ) : null}
             {section === "users" ? (
@@ -472,16 +680,7 @@ export function AdminDashboard() {
               <ReportsSection
                 reports={reports}
                 onInspect={setInspectingReport}
-                onChange={(report, updates) => {
-                  setReports((current) => current.map((item) => item.id === report.id ? { ...item, ...updates } : item));
-                  setInspectingReport((current) => current?.id === report.id ? { ...current, ...updates } : current);
-                }}
-                onDismiss={(report) => {
-                  setReports((current) => current.filter((item) => item.id !== report.id));
-                  setInspectingReport(null);
-                  record("Dismissed report", report.target);
-                  toast.success("Report dismissed");
-                }}
+                onAction={runReportAction}
               />
             ) : null}
             {section === "review" ? (
@@ -494,7 +693,7 @@ export function AdminDashboard() {
             ) : null}
             {section === "verification" ? <VerificationSection requests={verification} setRequests={setVerification} setListings={setListings} record={record} /> : null}
             {section === "rewards" ? <RewardsSection accounts={rewards} setAccounts={setRewards} record={record} /> : null}
-            {section === "featured" ? <FeaturedSection listings={listings} setListings={setListings} record={record} onProtected={setProtectedAction} /> : null}
+            {section === "featured" ? <FeaturedSection listings={listings} onToggleFeatured={(listing, enabled) => requestListingToggle(listing, "featured", enabled)} onAddVotes={requestVoteAdjustment} /> : null}
             {section === "moderators" ? <ModeratorsSection moderators={moderators} setModerators={setModerators} record={record} /> : null}
             {section === "support" ? <SupportSection tickets={tickets} setTickets={setTickets} record={record} /> : null}
             {section === "health" ? <HealthSection /> : null}
@@ -512,33 +711,56 @@ export function AdminDashboard() {
       <UserHammerModal
         user={moderatingUser}
         onClose={() => setModeratingUser(null)}
-        onUpdate={(user, updates, action, severity = "Warning") => {
-          const next = { ...user, ...updates };
-          setUsers((current) => current.map((item) => item.id === user.id ? next : item));
-          setModeratingUser(next);
-          setInspectingUser((current) => current?.id === user.id ? next : current);
-          record(action, user.name, severity);
+        onAction={async (user, body, challenge) => {
+          try {
+            await runUserAction(user, body, challenge);
+            setModeratingUser(null);
+            toast.success("User action completed", {description: user.name});
+          } catch (error) {
+            toast.danger("User action failed", {
+              description: error instanceof Error ? error.message : "Please try again.",
+            });
+            throw error;
+          }
         }}
         onProtected={setProtectedAction}
-        onDelete={(user) => {
-          setUsers((current) => current.filter((item) => item.id !== user.id));
-          setModeratingUser(null);
-          setInspectingUser(null);
-          record("Deleted user data", user.name, "Critical");
-          toast.success("User data deleted", { description: user.name });
-        }}
       />
       <ReportInspectModal
         report={inspectingReport}
         onClose={() => setInspectingReport(null)}
         onPriority={(report, priority) => {
-          setReports((current) => current.map((item) => item.id === report.id ? { ...item, priority, status: "Flagged" } : item));
-          setInspectingReport((current) => current ? { ...current, priority, status: "Flagged" } : current);
-          record(`Flagged report as ${priority}`, report.target, priority === "Urgent" ? "Critical" : "Warning");
+          void runReportAction(report, {
+            status: "triaged",
+            severity: priority.toLowerCase() as "low" | "medium" | "high" | "urgent",
+            notes: `Report triaged as ${priority.toLowerCase()} urgency.`,
+          }).then(() => setInspectingReport(null)).catch((error) => {
+            toast.danger("Report update failed", {description: error instanceof Error ? error.message : "Please try again."});
+          });
         }}
-        onNotify={(report) => toast.success("Reporter notified", { description: `Update sent to ${report.reporter}.` })}
+        onNotify={(report) => {
+          void runReportAction(report, {
+            status: "investigating",
+            severity: report.priority.toLowerCase() as "low" | "medium" | "high" | "urgent",
+            notes: "Nexbiy staff are actively reviewing your report.",
+            notifyReporter: true,
+          }).then(() => {
+            setInspectingReport(null);
+            toast.success("Reporter notified", {description: report.reporter});
+          }).catch((error) => {
+            toast.danger("Notification failed", {description: error instanceof Error ? error.message : "Please try again."});
+          });
+        }}
       />
       <ProtectedActionModal action={protectedAction} onClose={() => setProtectedAction(null)} />
+      <MfaSetupModal
+        isOpen={showMfaSetup}
+        onClose={() => setShowMfaSetup(false)}
+        onComplete={() => {
+          setMfaEnrolled(true);
+          setShowMfaSetup(false);
+          toast.success("Two-factor authentication enabled");
+        }}
+      />
     </div>
   );
 }
@@ -612,13 +834,14 @@ function TimeRangeControl({ value, onChange }: { value: TimeRange; onChange: (va
   );
 }
 
-function OverviewSection({ counts, moderation, onNavigate }: {
+function OverviewSection({ counts, moderation, rangeMetrics, onNavigate }: {
   counts: { live: number; users: number; reports: number; verification: number };
   moderation: ModerationRequest[];
+  rangeMetrics: Record<TimeRange, RangeMetrics>;
   onNavigate: (section: AdminSection) => void;
 }) {
   const [range, setRange] = useState<TimeRange>("24h");
-  const metrics = RANGE_METRICS[range];
+  const metrics = rangeMetrics[range];
   const stats = [
     { label: "Live listings", value: counts.live, detail: "Servers and bots discoverable", icon: Server, color: "bg-accent/10 text-accent" },
     { label: "Platform users", value: counts.users, detail: `${metrics.signups} joined in this period`, icon: Users, color: "bg-violet-500/10 text-violet-400" },
@@ -876,11 +1099,18 @@ function UsersSection({ users, onInspect, onModerate }: {
   );
 }
 
-function ReportsSection({ reports, onInspect, onChange, onDismiss }: {
+function ReportsSection({ reports, onInspect, onAction }: {
   reports: AdminReport[];
   onInspect: (report: AdminReport) => void;
-  onChange: (report: AdminReport, updates: Partial<AdminReport>) => void;
-  onDismiss: (report: AdminReport) => void;
+  onAction: (
+    report: AdminReport,
+    input: {
+      status: "triaged" | "investigating" | "resolved" | "dismissed";
+      severity?: "low" | "medium" | "high" | "urgent";
+      notes: string;
+      notifyReporter?: boolean;
+    },
+  ) => Promise<void>;
 }) {
   const [range, setRange] = useState<TimeRange>("24h");
   const maxHours = range === "1h" ? 1 : range === "6h" ? 6 : range === "24h" ? 24 : range === "7d" ? 168 : 720;
@@ -897,7 +1127,7 @@ function ReportsSection({ reports, onInspect, onChange, onDismiss }: {
               <Table.Cell>{report.category}</Table.Cell><Table.Cell>{report.reporter}</Table.Cell><Table.Cell className="font-mono text-xs">{report.ownerId}</Table.Cell><Table.Cell>{report.age}</Table.Cell>
               <Table.Cell><Chip size="sm" color={priorityColor(report.priority)} variant="soft"><Chip.Label>{report.priority}</Chip.Label></Chip></Table.Cell>
               <Table.Cell>{report.status}</Table.Cell>
-              <Table.Cell><div className="flex min-w-[15rem] justify-end gap-1"><Button size="sm" variant="ghost" onPress={() => onInspect(report)}>Review</Button><Button isIconOnly size="sm" variant="ghost" aria-label="Notify reporter" onPress={() => toast.success("Reporter notified", { description: report.reporter })}><BellRing className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label="Pass to moderator" onPress={() => onChange(report, { status: "Passed" })}><UserCog className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label="Dismiss report" onPress={() => onDismiss(report)}><X className="size-4" /></Button></div></Table.Cell>
+              <Table.Cell><div className="flex min-w-[15rem] justify-end gap-1"><Button size="sm" variant="ghost" onPress={() => onInspect(report)}>Review</Button><Button isIconOnly size="sm" variant="ghost" aria-label="Notify reporter" onPress={() => void onAction(report, {status: "investigating", severity: report.priority.toLowerCase() as "low" | "medium" | "high" | "urgent", notes: "Nexbiy staff are actively reviewing your report.", notifyReporter: true}).then(() => toast.success("Reporter notified", {description: report.reporter})).catch((error) => toast.danger("Report update failed", {description: error instanceof Error ? error.message : "Please try again."}))}><BellRing className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label="Pass to moderator" onPress={() => void onAction(report, {status: "investigating", severity: report.priority.toLowerCase() as "low" | "medium" | "high" | "urgent", notes: "Passed to the moderation investigation queue."}).catch((error) => toast.danger("Report update failed", {description: error instanceof Error ? error.message : "Please try again."}))}><UserCog className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label="Dismiss report" onPress={() => void onAction(report, {status: "dismissed", severity: report.priority.toLowerCase() as "low" | "medium" | "high" | "urgent", notes: "Report dismissed after staff review."}).then(() => toast.success("Report dismissed")).catch((error) => toast.danger("Report dismissal failed", {description: error instanceof Error ? error.message : "Administrator access is required."}))}><X className="size-4" /></Button></div></Table.Cell>
             </Table.Row>
           ))}</Table.Body>
         </Table.Content></Table.ScrollContainer></Table>
@@ -909,7 +1139,7 @@ function ReportsSection({ reports, onInspect, onChange, onDismiss }: {
 function PendingReviewSection({ listings, onEdit, onStatus, onProtected }: {
   listings: AdminListing[];
   onEdit: (listing: AdminListing) => void;
-  onStatus: (listing: AdminListing, status: ListingStatus) => void;
+  onStatus: (listing: AdminListing, status: ListingStatus, challenge?: string) => void;
   onProtected: (action: ProtectedAction) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -930,8 +1160,9 @@ function PendingReviewSection({ listings, onEdit, onStatus, onProtected }: {
       title: "Reject listing submission",
       description: `Reject ${listing.name} and prevent it from becoming publicly discoverable. This decision is recorded and requires 2FA.`,
       confirmation: listing.name,
-      run: () => {
-        onStatus(listing, "Rejected");
+      scope: "reject_listing",
+      run: (challenge) => {
+        onStatus(listing, "Rejected", challenge);
         setSelected(null);
         toast.success("Submission rejected", { description: listing.name });
       },
@@ -1063,11 +1294,10 @@ function RewardsSection({ accounts, setAccounts, record }: {
   );
 }
 
-function FeaturedSection({ listings, setListings, record, onProtected }: {
+function FeaturedSection({ listings, onToggleFeatured, onAddVotes }: {
   listings: AdminListing[];
-  setListings: React.Dispatch<React.SetStateAction<AdminListing[]>>;
-  record: (action: string, target: string, severity?: AuditEntry["severity"]) => void;
-  onProtected: (action: ProtectedAction) => void;
+  onToggleFeatured: (listing: AdminListing, enabled: boolean) => void;
+  onAddVotes: (listing: AdminListing) => void;
 }) {
   const [type, setType] = useState<"server" | "bot">("server");
   const [query, setQuery] = useState("");
@@ -1077,26 +1307,8 @@ function FeaturedSection({ listings, setListings, record, onProtected }: {
   function feature(key: string) {
     const target = listings.find((item) => item.key === key);
     if (!target) return;
-    const placement = promoted.length + 1;
-    setListings((current) => current.map((item) => item.key === key ? { ...item, featured: true, placement } : item));
-    record(type === "server" ? "Added featured server" : "Added recommended bot", target.name);
+    onToggleFeatured(target, true);
     setQuery("");
-  }
-  function remove(listing: AdminListing) {
-    setListings((current) => current.map((item) => item.key === listing.key ? { ...item, featured: false, placement: null } : item));
-    record("Removed discovery placement", listing.name);
-  }
-  function addVotes(listing: AdminListing) {
-    onProtected({
-      title: "Add 10 administrative votes",
-      description: `Add 10 audited mock votes to ${listing.name}. The adjustment is recorded and requires administrator 2FA.`,
-      confirmation: listing.name,
-      run: () => {
-        setListings((current) => current.map((item) => item.key === listing.key ? { ...item, votes: { ...item.votes, "24h": item.votes["24h"] + 10 } } : item));
-        record("Admin added 10 promotional votes", listing.name, "Critical");
-        toast.success("10 mock votes added", { description: listing.name });
-      },
-    });
   }
   return (
     <div>
@@ -1123,7 +1335,7 @@ function FeaturedSection({ listings, setListings, record, onProtected }: {
           <Card key={listing.key} className="nexus-card-elevated"><Card.Content className="p-5">
             <div className="flex items-start justify-between gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-warning/10 text-warning"><Star className="size-5" /></span><Chip size="sm" color="warning" variant="soft"><Chip.Label>Position {index + 1}</Chip.Label></Chip></div>
             <h3 className="mt-4 font-bold">{listing.name}</h3><p className="mt-1 text-sm text-muted">{formatCount(listing.reach)} reach · {listing.votes["24h"]} votes today</p>
-            <div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="secondary" onPress={() => addVotes(listing)}><LockKeyhole className="size-4" />+10 votes</Button><Button size="sm" variant="tertiary" onPress={() => remove(listing)}>Remove</Button></div>
+            <div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant="secondary" onPress={() => onAddVotes(listing)}><LockKeyhole className="size-4" />+10 votes</Button><Button size="sm" variant="tertiary" onPress={() => onToggleFeatured(listing, false)}>Remove</Button></div>
           </Card.Content></Card>
         ))}
       </div>
@@ -1262,12 +1474,9 @@ function ListingEditModal({ listing, onClose, onSave }: { listing: AdminListing 
             <div className="rounded-xl border border-border bg-default/30 p-4"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold">{active.name}</h3><Chip size="sm" variant="soft"><Chip.Label className="capitalize">{active.type}</Chip.Label></Chip><StatusChip status={active.status} /></div><p className="mt-1 text-xs text-muted">Owner: {active.owner} · {active.ownerId}</p></div>
             <div className="grid gap-4 sm:grid-cols-2"><TextField value={active.name} onChange={(value) => update("name", value)}><Label>Listing name</Label><Input /></TextField><TextField value={active.category} onChange={(value) => update("category", value)}><Label>Category</Label><Input /></TextField></div>
             <TextField value={active.description} onChange={(value) => update("description", value)}><Label>Description</Label><TextArea rows={4} /></TextField>
-            <Select selectedKey={active.status} onSelectionChange={(key) => update("status", String(key) as ListingStatus)}><Label>Platform status</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{(["Live", "Pending review", "Paused", "Suspended", "Rejected"] as ListingStatus[]).map((status) => <ListBox.Item key={status} id={status}>{status}</ListBox.Item>)}</ListBox></Select.Popover></Select>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Checkbox isSelected={active.verified} onChange={(value) => update("verified", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Nexbiy verified</p><p className="text-xs text-muted">Display the verification badge.</p></div></Checkbox.Content></Checkbox>
-              <Checkbox isSelected={active.safeBadge} onChange={(value) => update("safeBadge", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Safe reputation</p><p className="text-xs text-muted">Staff-awarded reputation badge.</p></div></Checkbox.Content></Checkbox>
-              <Checkbox isSelected={active.featured} onChange={(value) => update("featured", value)}><Checkbox.Content className="rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><div><p className="text-sm font-semibold">Featured placement</p><p className="text-xs text-muted">Promote across discovery.</p></div></Checkbox.Content></Checkbox>
-            </div>
+            <p className="rounded-xl border border-border bg-default/25 p-3 text-xs leading-5 text-muted">
+              Status, verification, reputation, and featured placement are controlled through the audited quick actions on the listings table.
+            </p>
           </>
         ) : null}</Modal.Body>
         <Modal.Footer><Button variant="tertiary" onPress={onClose}>Cancel</Button><Button variant="primary" onPress={() => active && onSave(active)}><Check className="size-4" />Save changes</Button></Modal.Footer>
@@ -1276,29 +1485,36 @@ function ListingEditModal({ listing, onClose, onSave }: { listing: AdminListing 
   );
 }
 
-function UserHammerModal({ user, onClose, onUpdate, onProtected, onDelete }: {
+function UserHammerModal({ user, onClose, onAction, onProtected }: {
   user: AdminUser | null;
   onClose: () => void;
-  onUpdate: (user: AdminUser, updates: Partial<AdminUser>, action: string, severity?: AuditEntry["severity"]) => void;
+  onAction: (user: AdminUser, body: Record<string, unknown>, challenge?: string) => Promise<void>;
   onProtected: (action: ProtectedAction) => void;
-  onDelete: (user: AdminUser) => void;
 }) {
   const [duration, setDuration] = useState("24 hours");
   const [notice, setNotice] = useState("");
   const [notification, setNotification] = useState("");
   const [internalNote, setInternalNote] = useState("");
 
-  function sendNotification() {
+  async function sendNotification() {
     if (!user || notification.trim().length < 3) return toast.warning("Write the notification first");
-    onUpdate(user, {}, `Sent custom notification: ${notification.trim()}`);
-    toast.success("Custom notification sent", { description: notification.trim() });
+    await onAction(user, {
+      action: "notify",
+      title: "Message from Nexbiy staff",
+      message: notification.trim(),
+      actionUrl: "/dashboard",
+    });
     setNotification("");
   }
 
-  function applyNotice() {
+  async function applyNotice() {
     if (!user || notice.trim().length < 3) return toast.warning("Write the account notice first");
-    onUpdate(user, { notice: notice.trim(), status: user.status === "Active" ? "Restricted" : user.status }, "Applied custom account notice");
-    toast.success("Account notice applied", { description: user.name });
+    await onAction(user, {
+      action: "notify",
+      title: "Account notice",
+      message: notice.trim(),
+      actionUrl: "/dashboard",
+    });
     setNotice("");
   }
 
@@ -1318,9 +1534,9 @@ function UserHammerModal({ user, onClose, onUpdate, onProtected, onDelete }: {
                 <h4 className="font-semibold">Temporary enforcement</h4><p className="mt-1 text-xs text-muted">Reversible moderator actions for active investigations.</p>
                 <Select className="mt-4" selectedKey={duration} onSelectionChange={(key) => setDuration(String(key))}><Label>Suspension duration</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{["1 hour", "6 hours", "24 hours", "3 days", "7 days", "30 days"].map((item) => <ListBox.Item key={item} id={item}>{item}</ListBox.Item>)}</ListBox></Select.Popover></Select>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary" onPress={() => onUpdate(user, { listingsFrozen: !user.listingsFrozen }, user.listingsFrozen ? "Unfroze user listings" : "Froze user listings")}><Pause className="size-4" />{user.listingsFrozen ? "Unfreeze listings" : "Freeze listings"}</Button>
-                  <Button size="sm" variant="secondary" onPress={() => onUpdate(user, { status: "Restricted" }, "Restricted account access")}><ShieldAlert className="size-4" />Restrict account</Button>
-                  <Button size="sm" variant="danger" onPress={() => onUpdate(user, { status: "Suspended", suspendedBefore: true, notice: `Account suspended for ${duration}.` }, `Suspended account for ${duration}`)}><Gavel className="size-4" />Suspend {duration}</Button>
+                  <Button size="sm" variant="secondary" onPress={() => void onAction(user, {action: user.listingsFrozen ? "unfreeze_listings" : "freeze_listings", reason: user.listingsFrozen ? "Listings returned to review after staff restoration" : "Listings frozen during staff investigation"})}><Pause className="size-4" />{user.listingsFrozen ? "Unfreeze listings" : "Freeze listings"}</Button>
+                  <Button size="sm" variant="secondary" onPress={() => void onAction(user, {action: "notify", title: "Account review notice", message: "Your Nexbiy account is currently under staff review.", actionUrl: "/dashboard"})}><ShieldAlert className="size-4" />Send review notice</Button>
+                  <Button size="sm" variant="danger" onPress={() => void onAction(user, {action: "suspend", durationHours: duration === "1 hour" ? 1 : duration === "6 hours" ? 6 : duration === "24 hours" ? 24 : duration === "3 days" ? 72 : duration === "7 days" ? 168 : 720, reason: `Account suspended for ${duration} from the admin dashboard`})}><Gavel className="size-4" />Suspend {duration}</Button>
                 </div>
               </div>
 
@@ -1328,30 +1544,30 @@ function UserHammerModal({ user, onClose, onUpdate, onProtected, onDelete }: {
                 <h4 className="font-semibold">Case management</h4><p className="mt-1 text-xs text-muted">Build the moderation record and escalate concerning behavior.</p>
                 <TextField className="mt-4" value={internalNote} onChange={setInternalNote}><Label>Private moderator note</Label><TextArea rows={3} placeholder="Evidence, observed behavior, or next review step" /></TextField>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary" onPress={() => { onUpdate(user, { flags: user.flags + 1 }, internalNote.trim() ? `Added user flag: ${internalNote.trim()}` : "Added user flag"); setInternalNote(""); }}><Flag className="size-4" />Add flag</Button>
-                  <Button size="sm" variant="secondary" onPress={() => { onUpdate(user, { flags: user.flags + 1, status: "Restricted", notice: "Your account was escalated for administrator review." }, internalNote.trim() ? `Escalated to admins: ${internalNote.trim()}` : "Escalated account to admins", "Critical"); setInternalNote(""); }}><UserCog className="size-4" />Escalate to admin</Button>
-                  <Button size="sm" variant="secondary" onPress={() => onUpdate(user, { status: "Active", listingsFrozen: false, flags: 0, notice: "None" }, "Reset account restrictions")}><RefreshCw className="size-4" />Reset restrictions</Button>
+                  <Button size="sm" variant="secondary" onPress={() => { void onAction(user, {action: "flag", reason: internalNote.trim() || "User flagged for staff review"}); setInternalNote(""); }}><Flag className="size-4" />Add flag</Button>
+                  <Button size="sm" variant="secondary" onPress={() => { void onAction(user, {action: "flag", reason: internalNote.trim() || "Account escalated for administrator review"}); setInternalNote(""); }}><UserCog className="size-4" />Escalate to admin</Button>
+                  <Button size="sm" variant="secondary" onPress={() => void onAction(user, {action: "restore", reason: "Account restrictions restored after staff review"})}><RefreshCw className="size-4" />Restore account</Button>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-border p-4">
                 <h4 className="font-semibold">Account notice</h4><p className="mt-1 text-xs text-muted">Persistent text displayed inside the user’s Nexbiy account.</p>
                 <TextField className="mt-4" value={notice} onChange={setNotice}><Label>Notice content</Label><TextArea rows={3} placeholder="Explain the issue, expected action, and appeal path." /></TextField>
-                <Button className="mt-3" size="sm" variant="secondary" onPress={applyNotice}><BellRing className="size-4" />Apply account notice</Button>
+                <Button className="mt-3" size="sm" variant="secondary" onPress={() => void applyNotice()}><BellRing className="size-4" />Apply account notice</Button>
               </div>
 
               <div className="rounded-2xl border border-border p-4">
                 <h4 className="font-semibold">Send notification</h4><p className="mt-1 text-xs text-muted">Choose the exact message delivered to the user’s Nexbiy inbox.</p>
                 <TextField className="mt-4" value={notification} onChange={setNotification}><Label>Notification content</Label><TextArea rows={3} placeholder="Write the custom moderation message…" /></TextField>
-                <Button className="mt-3" size="sm" variant="primary" onPress={sendNotification}><BellRing className="size-4" />Send notification</Button>
+                <Button className="mt-3" size="sm" variant="primary" onPress={() => void sendNotification()}><BellRing className="size-4" />Send notification</Button>
               </div>
             </div>
 
             <div className="rounded-2xl border border-danger/25 bg-danger/5 p-4">
               <div><h4 className="font-semibold text-danger">Administrator-only actions</h4><p className="mt-1 text-xs text-muted">Permanent actions require confirmation text and the administrator’s 2FA code.</p></div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" variant="danger" onPress={() => onProtected({ title: "Permanently ban user", description: `${user.name}'s account and listings will be locked permanently.`, confirmation: user.name, run: () => onUpdate(user, { status: "Banned", listingsFrozen: true, suspendedBefore: true }, "Permanently banned account", "Critical") })}><Ban className="size-4" />Permanent ban</Button>
-                <Button size="sm" variant="danger" onPress={() => onProtected({ title: "Delete user data", description: `Delete ${user.name}'s mock profile and remove it from user management.`, confirmation: user.name, run: () => onDelete(user) })}><Trash2 className="size-4" />Delete user data</Button>
+                <Button size="sm" variant="danger" onPress={() => onProtected({ title: "Indefinitely suspend user", description: `${user.name}'s account and listings will be locked until an administrator restores them.`, confirmation: user.name, scope: "ban_user", run: (challenge) => onAction(user, {action: "ban", reason: "Indefinite administrator suspension"}, challenge) })}><Ban className="size-4" />Indefinite suspension</Button>
+                <Button size="sm" variant="danger" onPress={() => onProtected({ title: "Delete user data", description: `Delete ${user.name}'s profile and remove their listings from Nexbiy.`, confirmation: user.name, scope: "delete_user", run: (challenge) => onAction(user, {action: "delete_user", reason: "User data deleted by a super administrator"}, challenge) })}><Trash2 className="size-4" />Delete user data</Button>
               </div>
             </div>
           </>
@@ -1398,7 +1614,7 @@ function ReportInspectModal({ report, onClose, onPriority, onNotify }: {
             <div><p className="text-sm font-semibold">Reason</p><p className="mt-1 text-sm text-muted">{report.reason}</p></div>
             <div><p className="text-sm font-semibold">Reporter context</p><p className="mt-1 rounded-xl border border-border p-3 text-sm leading-6 text-muted">{report.context}</p></div>
             <div className="grid gap-3 sm:grid-cols-3"><InfoCell label="Owner ID" value={report.ownerId} /><InfoCell label="Listing status" value="Live" /><InfoCell label="Report age" value={report.age} /></div>
-            <LinkButton href={report.targetType === "server" ? `/servers/${report.targetSlug}` : `/bots/${report.targetSlug}`} target="_blank" variant="secondary"><Eye className="size-4" />Open reported listing</LinkButton>
+            <LinkButton href={report.targetType === "server" ? `/server/${report.targetSlug}` : `/bots/${report.targetSlug}`} target="_blank" variant="secondary"><Eye className="size-4" />Open reported listing</LinkButton>
             <div><p className="mb-2 text-sm font-semibold">Set urgency</p><div className="flex flex-wrap gap-2">{(["Low", "Medium", "High", "Urgent"] as Urgency[]).map((priority) => <Button key={priority} size="sm" variant={report.priority === priority ? "primary" : "secondary"} onPress={() => onPriority(report, priority)}>{priority}</Button>)}</div></div>
           </>
         ) : null}</Modal.Body>
@@ -1411,10 +1627,36 @@ function ReportInspectModal({ report, onClose, onPriority, onNotify }: {
 function ProtectedActionModal({ action, onClose }: { action: ProtectedAction | null; onClose: () => void }) {
   const [code, setCode] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  function confirm() {
-    if (!action || code !== "246810" || confirmation !== action.confirmation) return toast.danger("2FA confirmation failed", { description: "Check the code and confirmation text." });
-    action.run();
-    setCode(""); setConfirmation(""); onClose();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  async function confirm() {
+    if (!action || confirmation !== action.confirmation || !/^\d{6}$/.test(code)) {
+      return toast.danger("2FA confirmation failed", {description: "Check the authenticator code and confirmation text."});
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/admin/mfa/verify", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code, scope: action.scope}),
+      });
+      const result = await response.json() as {challenge?: string; error?: string};
+      if (!response.ok || !result.challenge) {
+        const description = result.error === "mfa_enrollment_required"
+          ? "Enroll an authenticator from the staff security setup before using protected actions."
+          : "The authenticator code is invalid or expired.";
+        throw new Error(description);
+      }
+      await action.run(result.challenge);
+      setCode("");
+      setConfirmation("");
+      onClose();
+    } catch (error) {
+      toast.danger("Protected action failed", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
   return (
     <Modal.Backdrop isOpen={Boolean(action)} isDismissable={false}>
@@ -1423,10 +1665,116 @@ function ProtectedActionModal({ action, onClose }: { action: ProtectedAction | n
           <div className="flex gap-3 rounded-xl border border-danger/25 bg-danger/5 p-4"><ShieldAlert className="mt-0.5 size-5 shrink-0 text-danger" /><div><p className="text-sm font-semibold">Protected administrator action</p><p className="mt-1 text-sm leading-6 text-muted">{action?.description}</p></div></div>
           <TextField value={confirmation} onChange={setConfirmation}><Label>Type “{action?.confirmation}” to confirm</Label><Input /></TextField>
           <TextField value={code} onChange={setCode}><Label>Administrator 2FA code</Label><Input type="password" inputMode="numeric" placeholder="6-digit code" /></TextField>
-          <p className="text-xs text-muted">Mock demo code: 246810. Production will use a real authenticator challenge and server-side permission check.</p>
+          <p className="text-xs text-muted">Enter the current code from the authenticator connected to your Nexbiy staff account.</p>
         </Modal.Body>
-        <Modal.Footer><Button variant="tertiary" onPress={onClose}>Cancel</Button><Button variant="danger" onPress={confirm}><LockKeyhole className="size-4" />Confirm protected action</Button></Modal.Footer>
+        <Modal.Footer><Button variant="tertiary" isDisabled={isSubmitting} onPress={onClose}>Cancel</Button><Button variant="danger" isPending={isSubmitting} onPress={() => void confirm()}><LockKeyhole className="size-4" />Confirm protected action</Button></Modal.Footer>
       </Modal.Dialog></Modal.Container>
+    </Modal.Backdrop>
+  );
+}
+
+function MfaSetupModal({
+  isOpen,
+  onClose,
+  onComplete,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const [secret, setSecret] = useState("");
+  const [code, setCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || secret) return;
+    setIsLoading(true);
+    void fetch("/api/admin/mfa/enroll", {method: "POST"})
+      .then(async (response) => {
+        const payload = await response.json() as {secret?: string; error?: string};
+        if (!response.ok || !payload.secret) throw new Error(payload.error || "mfa_enrollment_failed");
+        setSecret(payload.secret);
+      })
+      .catch((error) => {
+        toast.danger("Could not start 2FA setup", {
+          description: error instanceof Error ? error.message : "Please try again.",
+        });
+        onClose();
+      })
+      .finally(() => setIsLoading(false));
+  }, [isOpen, onClose, secret]);
+
+  async function verify() {
+    if (!/^\d{6}$/.test(code)) {
+      toast.danger("Enter the 6-digit code from your authenticator");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/mfa/verify", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code, scope: "mfa_enrollment"}),
+      });
+      const payload = await response.json() as {error?: string};
+      if (!response.ok) throw new Error(payload.error || "invalid_mfa_code");
+      setCode("");
+      onComplete();
+    } catch (error) {
+      toast.danger("Authenticator code was not accepted", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Modal.Backdrop isOpen={isOpen} isDismissable={false}>
+      <Modal.Container size="md">
+        <Modal.Dialog>
+          <Modal.CloseTrigger onPress={onClose} />
+          <Modal.Header>
+            <Modal.Heading>Set up administrator 2FA</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="space-y-4">
+            <div className="rounded-2xl border border-border bg-default/30 p-4">
+              <p className="text-sm font-semibold">1. Add Nexbiy to your authenticator</p>
+              <p className="mt-1 text-xs leading-5 text-muted">Choose manual setup in your authenticator app and enter this private key.</p>
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-background p-3">
+                <code className="min-w-0 flex-1 break-all text-sm font-semibold tracking-wide">
+                  {isLoading && !secret ? "Creating secure key…" : secret}
+                </code>
+                <Button
+                  isIconOnly
+                  aria-label="Copy authenticator key"
+                  size="sm"
+                  variant="tertiary"
+                  isDisabled={!secret}
+                  onPress={() => {
+                    void navigator.clipboard.writeText(secret);
+                    toast.success("Authenticator key copied");
+                  }}
+                >
+                  <Copy className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <TextField value={code} onChange={setCode}>
+              <Label>2. Enter the current 6-digit code</Label>
+              <Input inputMode="numeric" autoComplete="one-time-code" placeholder="000000" />
+            </TextField>
+            <p className="text-xs leading-5 text-muted">Keep this key private. Protected moderation and deletion actions will require a fresh authenticator code.</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" isDisabled={isLoading} onPress={onClose}>Close</Button>
+            <Button variant="primary" isPending={isLoading} onPress={() => void verify()}>
+              <ShieldCheck className="size-4" />
+              Enable 2FA
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
     </Modal.Backdrop>
   );
 }

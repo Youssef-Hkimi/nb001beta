@@ -36,7 +36,13 @@ import { getListingActionBlockReason } from "@/lib/listing-safety";
 import {trackListingEvent} from "@/lib/listing-events";
 import type { ServerDetail } from "@/lib/types";
 
-export function ServerDetailView({ server }: { server: ServerDetail }) {
+export function ServerDetailView({
+  server,
+  previewMode = false,
+}: {
+  server: ServerDetail;
+  previewMode?: boolean;
+}) {
   const similar = useMemo(
     () => server.databaseId ? [] : getSimilarServers(server),
     [server],
@@ -53,8 +59,8 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
   const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
-    trackListingEvent(server.databaseId, "view");
-  }, [server.databaseId]);
+    if (!previewMode) trackListingEvent(server.databaseId, "view");
+  }, [previewMode, server.databaseId]);
 
   const copyInvite = () => {
     trackListingEvent(server.databaseId, "link_copy");
@@ -76,6 +82,11 @@ export function ServerDetailView({ server }: { server: ServerDetail }) {
     <div className="theme-surface min-h-screen pb-16">
       {/* Hero — cinematic banner + profile header */}
       <section className="relative">
+        {previewMode ? (
+          <div className="absolute inset-x-0 top-4 z-20 mx-auto w-fit rounded-full border border-accent/25 bg-background/90 px-4 py-2 text-xs font-semibold text-accent shadow-sm backdrop-blur">
+            Owner preview · This listing is not public yet
+          </div>
+        ) : null}
         <div
           className="server-hero-banner hero-image-wrapper"
           role="img"

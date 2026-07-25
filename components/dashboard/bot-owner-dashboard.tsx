@@ -53,7 +53,8 @@ import { LinkButton } from "@/components/ui/link-button";
 import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { BOT_CATEGORIES, BOT_LISTING_TAGS } from "@/lib/data/categories";
 import { formatCount, initials } from "@/lib/format";
-import type { BotCommand, BotDashboardListing, ListingStatus } from "@/lib/types";
+import type { AnalyticsRange, BotCommand, BotDashboardListing, ListingStatus } from "@/lib/types";
+import { useListingAnalytics } from "@/lib/use-listing-analytics";
 
 const METRICS = [
   { key: "listingViews", label: "Listing Views", icon: Eye, color: "text-[#629BF8]" },
@@ -63,6 +64,12 @@ const METRICS = [
 ] as const;
 
 const statusColor = (status: ListingStatus) => status === "Live" ? "success" as const : status.includes("Review") ? "warning" as const : "default" as const;
+
+function ownerListingPath(listing: BotDashboardListing) {
+  return listing.status === "Live"
+    ? listing.publicPath
+    : listing.ownerPreviewPath ?? listing.publicPath;
+}
 
 type BotEditorPanel = "all" | "details" | "commands" | "links" | "media";
 
@@ -133,7 +140,21 @@ export function BotOwnerDashboard({
   const [deleteSelectorOpen, setDeleteSelectorOpen] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<Set<string>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>("30d");
   const bot = useMemo(() => rows.find((item) => item.id === selectedId) ?? rows[0], [rows, selectedId]);
+  const analyticsDays = analyticsRange === "7d" ? 7 : analyticsRange === "90d" ? 90 : 30;
+  const {data: liveAnalytics, loading: analyticsLoading, error: analyticsError} = useListingAnalytics(bot?.id, analyticsDays);
+  const discoveryHistory = useMemo(() => ({
+    "7d": [],
+    "30d": [],
+    "90d": [],
+    [analyticsRange]: (liveAnalytics?.series ?? []).map((point) => ({
+      date: new Date(`${point.date}T00:00:00Z`).toLocaleDateString("en", {month: "short", day: "numeric", timeZone: "UTC"}),
+      listingViews: point.views,
+      inviteClicks: point.inviteClicks,
+      votes: point.votes,
+    })),
+  }), [analyticsRange, liveAnalytics?.series]);
 
   useEffect(() => {
     setRows(listings);
@@ -281,7 +302,13 @@ export function BotOwnerDashboard({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {METRICS.map((metric) => {
             const Icon = metric.icon;
-            const value = bot.analytics[metric.key];
+            const value = metric.key === "listingViews"
+              ? liveAnalytics?.totals.views ?? bot.analytics.listingViews
+              : metric.key === "inviteClicks"
+                ? liveAnalytics?.totals.inviteClicks ?? bot.analytics.inviteClicks
+                : metric.key === "votes"
+                  ? liveAnalytics?.totals.votes ?? bot.analytics.votes
+                  : bot.analytics[metric.key];
             const change = bot.analytics.percentageChanges[metric.key];
             const display = formatCount(value);
             return <Card key={metric.key} className="nexus-card gap-2 p-4"><div className="flex items-center justify-between gap-3"><p className="text-xs font-medium text-muted">{metric.label}</p><Icon className={`size-4 ${metric.color}`} /></div><p className="text-2xl font-bold tracking-tight text-foreground">{display}</p><p className={`text-xs font-medium ${change >= 0 ? "text-emerald-500" : "text-red-400"}`}>{change >= 0 ? "+" : ""}{change.toFixed(1)}% <span className="font-normal text-muted">vs previous 30 days</span></p></Card>;
@@ -290,24 +317,29 @@ export function BotOwnerDashboard({
       </section>
 
       <AnalyticsLineChart
-        title="Server growth"
-        description="Track reported server additions over time. Removed-server tracking is coming soon."
-        history={bot.analytics.history}
+        title="Discovery performance"
+        description="Real listing views, invite clicks, and votes recorded by Nexbiy."
+        history={discoveryHistory}
+        range={analyticsRange}
+        onRangeChange={setAnalyticsRange}
         series={[
-          { key: "newServers", label: "New Servers", color: "#34D399" },
-          { key: "removedServers", label: "Removed Servers", color: "#F87171", comingSoon: true },
+          { key: "listingViews", label: "Listing Views", color: "#629BF8" },
+          { key: "inviteClicks", label: "Invite Clicks", color: "#9B8AFB" },
+          { key: "votes", label: "Votes", color: "#34D399" },
         ]}
       />
+      {analyticsLoading ? <p className="text-sm text-muted">Loading live analytics…</p> : null}
+      {analyticsError ? <p className="text-sm text-red-400">{analyticsError}</p> : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className="nexus-card gap-4"><Card.Header><Card.Title>Discovery</Card.Title><Card.Description>How people move from your Nexbiy listing to Discord.</Card.Description></Card.Header><Card.Content className="space-y-3"><FunnelRow label="Listing Views" value={bot.analytics.listingViews} /><FunnelRate label="View to Invite Click" value={(bot.analytics.inviteClicks / bot.analytics.listingViews) * 100} /><FunnelRow label="Invite Clicks" value={bot.analytics.inviteClicks} /></Card.Content></Card>
+        <Card className="nexus-card gap-4"><Card.Header><Card.Title>Discovery</Card.Title><Card.Description>How people move from your Nexbiy listing to Discord.</Card.Description></Card.Header><Card.Content className="space-y-3"><FunnelRow label="Listing Views" value={liveAnalytics?.totals.views ?? bot.analytics.listingViews} /><FunnelRate label="View to Invite Click" value={(liveAnalytics?.totals.views ?? bot.analytics.listingViews) ? ((liveAnalytics?.totals.inviteClicks ?? bot.analytics.inviteClicks) / (liveAnalytics?.totals.views ?? bot.analytics.listingViews)) * 100 : 0} /><FunnelRow label="Invite Clicks" value={liveAnalytics?.totals.inviteClicks ?? bot.analytics.inviteClicks} /></Card.Content></Card>
         <Card className="nexus-card gap-4"><Card.Header><Card.Title>Server growth</Card.Title><Card.Description>Net server movement during this period.</Card.Description></Card.Header><Card.Content className="space-y-3"><GrowthRow label="Active Servers" value={bot.analytics.activeServers} /><GrowthRow label="New Servers" value={bot.analytics.newServers} tone="positive" /><GrowthRow label="Removed Servers" value={bot.analytics.removedServers} comingSoon /><GrowthRow label="Net Growth" value={bot.analytics.newServers - bot.analytics.removedServers} tone="positive" /></Card.Content></Card>
       </div>
 
       <ListingHealth bot={bot} />
       <BotTable rows={rows} onPreview={(row) => { setSelectedId(row.id); setPreviewOpen(true); }} onEdit={(row) => openEditor("all", row)} onToggle={toggleStatus} onDelete={requestSingleDelete} />
 
-      <Modal.Backdrop isOpen={previewOpen} onOpenChange={setPreviewOpen}><Modal.Container><Modal.Dialog className="sm:max-w-lg"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>Preview · {bot.name}</Modal.Heading></Modal.Header><Modal.Body><p className="text-sm leading-relaxed text-muted">{bot.description}</p></Modal.Body><Modal.Footer><Button slot="close" variant="secondary">Close</Button><LinkButton href={bot.publicPath}>Open public page</LinkButton></Modal.Footer></Modal.Dialog></Modal.Container></Modal.Backdrop>
+      <Modal.Backdrop isOpen={previewOpen} onOpenChange={setPreviewOpen}><Modal.Container><Modal.Dialog className="sm:max-w-lg"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>Preview · {bot.name}</Modal.Heading></Modal.Header><Modal.Body><p className="text-sm leading-relaxed text-muted">{bot.description}</p></Modal.Body><Modal.Footer><Button slot="close" variant="secondary">Close</Button><LinkButton href={ownerListingPath(bot)} target="_blank">Open owner preview</LinkButton></Modal.Footer></Modal.Dialog></Modal.Container></Modal.Backdrop>
       <BotEditorModal panel={editorPanel} draft={editorDraft} onPanelChange={setEditorPanel} onDraftChange={setEditorDraft} onClose={() => setEditorPanel(null)} onSave={saveEditor} />
       <Modal.Backdrop isOpen={deleteSelectorOpen} onOpenChange={setDeleteSelectorOpen}><Modal.Container><Modal.Dialog className="sm:max-w-lg"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>Select bot projects</Modal.Heading></Modal.Header><Modal.Body className="space-y-2"><p className="mb-3 text-sm text-muted">Choose one or multiple projects to permanently delete.</p>{rows.map((row) => <Checkbox key={row.id} isSelected={selectedForDelete.has(row.id)} onChange={() => toggleDeleteSelection(row.id)}><Checkbox.Content className="w-full rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><BotAvatar bot={row} className="size-9" /><span className="min-w-0"><span className="block font-medium text-foreground">{row.name}</span><span className="block text-xs text-muted">{row.category} · {row.status}</span></span></Checkbox.Content></Checkbox>)}</Modal.Body><Modal.Footer><Button slot="close" variant="tertiary">Cancel</Button><Button variant="danger" isDisabled={!selectedForDelete.size} onPress={() => { setDeleteSelectorOpen(false); setDeleteConfirmOpen(true); }}><Trash2 className="size-4" />Continue</Button></Modal.Footer></Modal.Dialog></Modal.Container></Modal.Backdrop>
       <AlertDialog isOpen={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}><AlertDialog.Backdrop><AlertDialog.Container><AlertDialog.Dialog className="sm:max-w-[420px]"><AlertDialog.CloseTrigger /><AlertDialog.Header><AlertDialog.Icon status="danger" /><AlertDialog.Heading>Delete selected bot projects?</AlertDialog.Heading></AlertDialog.Header><AlertDialog.Body><p>This permanently removes {selectedForDelete.size} selected {selectedForDelete.size === 1 ? "project" : "projects"} from this mock dashboard. This action cannot be undone.</p></AlertDialog.Body><AlertDialog.Footer><Button slot="close" variant="tertiary">Cancel</Button><Button slot="close" variant="danger" onPress={deleteSelectedProjects}><Trash2 className="size-4" />Delete projects</Button></AlertDialog.Footer></AlertDialog.Dialog></AlertDialog.Container></AlertDialog.Backdrop></AlertDialog>
@@ -318,7 +350,7 @@ export function BotOwnerDashboard({
 }
 
 function BotSummary({ bot, rows, selectedId, onSelect, onPreview, onEdit }: { bot: BotDashboardListing; rows: BotDashboardListing[]; selectedId: string; onSelect: (id: string) => void; onPreview: () => void; onEdit: () => void }) {
-  return <Card className="nexus-card gap-0"><Card.Content className="p-4 sm:p-5"><div className="flex flex-col gap-5 xl:flex-row xl:items-center"><div className="flex min-w-0 flex-1 items-start gap-3.5"><BotAvatar bot={bot} className="size-14 sm:size-16" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-foreground">{bot.name}</h2><Chip size="sm" color="accent" variant="soft"><Chip.Label>BOT</Chip.Label></Chip><Chip size="sm" variant="soft" color={statusColor(bot.status)}><Chip.Label>{bot.status}</Chip.Label></Chip></div><p className="mt-0.5 text-xs font-medium text-muted">{bot.category} · Prefix {bot.prefix} · {formatCount(bot.analytics.activeServers)} active servers · Updated {bot.updated}</p><p className="mt-2 max-w-2xl text-sm text-muted">{bot.description}</p></div></div><div className="flex flex-col gap-3 xl:items-end"><Select className="w-full sm:w-56" selectedKey={selectedId} onSelectionChange={(key) => onSelect(String(key))}><Label>Selected bot</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{rows.map((item) => <ListBox.Item key={item.id} id={item.id} textValue={item.name}>{item.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover></Select><div className="flex flex-wrap items-center gap-2"><Button variant="secondary" onPress={onEdit}><Pencil className="size-4" />Edit</Button><Button variant="secondary" onPress={onPreview}><Eye className="size-4" />Preview</Button><LinkButton href={bot.publicPath} target="_blank" variant="secondary"><ExternalLink className="size-4" />Public page</LinkButton><Dropdown><Dropdown.Trigger aria-label={`More actions for ${bot.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => key === "pause" && toast.info("Bot listing paused")}><Dropdown.Item id="pause" textValue="Pause listing">Pause listing</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></div></div></Card.Content></Card>;
+  return <Card className="nexus-card gap-0"><Card.Content className="p-4 sm:p-5"><div className="flex flex-col gap-5 xl:flex-row xl:items-center"><div className="flex min-w-0 flex-1 items-start gap-3.5"><BotAvatar bot={bot} className="size-14 sm:size-16" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-foreground">{bot.name}</h2><Chip size="sm" color="accent" variant="soft"><Chip.Label>BOT</Chip.Label></Chip><Chip size="sm" variant="soft" color={statusColor(bot.status)}><Chip.Label>{bot.status}</Chip.Label></Chip></div><p className="mt-0.5 text-xs font-medium text-muted">{bot.category} · Prefix {bot.prefix} · {formatCount(bot.analytics.activeServers)} active servers · Updated {bot.updated}</p><p className="mt-2 max-w-2xl text-sm text-muted">{bot.description}</p></div></div><div className="flex flex-col gap-3 xl:items-end"><Select className="w-full sm:w-56" selectedKey={selectedId} onSelectionChange={(key) => onSelect(String(key))}><Label>Selected bot</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{rows.map((item) => <ListBox.Item key={item.id} id={item.id} textValue={item.name}>{item.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover></Select><div className="flex flex-wrap items-center gap-2"><Button variant="secondary" onPress={onEdit}><Pencil className="size-4" />Edit</Button><Button variant="secondary" onPress={onPreview}><Eye className="size-4" />Preview</Button><LinkButton href={ownerListingPath(bot)} target="_blank" variant="secondary"><ExternalLink className="size-4" />{bot.status === "Live" ? "Public page" : "Owner preview"}</LinkButton><Dropdown><Dropdown.Trigger aria-label={`More actions for ${bot.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => key === "pause" && toast.info("Bot listing paused")}><Dropdown.Item id="pause" textValue="Pause listing">Pause listing</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></div></div></Card.Content></Card>;
 }
 
 function DeveloperControls({ onOpen }: { onOpen: (panel: BotEditorPanel) => void }) {
@@ -360,7 +392,7 @@ function ListingHealth({ bot }: { bot: BotDashboardListing }) {
 }
 
 function BotTable({ rows, onPreview, onEdit, onToggle, onDelete }: { rows: BotDashboardListing[]; onPreview: (row: BotDashboardListing) => void; onEdit: (row: BotDashboardListing) => void; onToggle: (row: BotDashboardListing) => void; onDelete: (row: BotDashboardListing) => void }) {
-  return <section className="space-y-4" aria-labelledby="bot-listings-heading"><div><h2 id="bot-listings-heading" className="text-xl font-bold text-foreground">Bot listings</h2><p className="mt-1 text-sm text-muted">Manage your projects and open developer settings.</p></div><Table><Table.ScrollContainer><Table.Content aria-label="Bot listings" className="min-w-[980px]"><Table.Header><Table.Column isRowHeader>Bot</Table.Column><Table.Column>Status</Table.Column><Table.Column>Listing Views</Table.Column><Table.Column>Invite Clicks</Table.Column><Table.Column>Active Servers</Table.Column><Table.Column>Votes</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="text-end">Actions</Table.Column></Table.Header><Table.Body>{rows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><BotAvatar bot={row} className="size-9" /><div><p className="font-medium">{row.name}</p><p className="text-xs text-muted">{row.category}</p></div></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={statusColor(row.status)}><Chip.Label>{row.status}</Chip.Label></Chip></Table.Cell><Table.Cell>{formatCount(row.analytics.listingViews)}</Table.Cell><Table.Cell>{formatCount(row.analytics.inviteClicks)}</Table.Cell><Table.Cell>{formatCount(row.analytics.activeServers)}</Table.Cell><Table.Cell>{formatCount(row.analytics.votes)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><Button isIconOnly size="sm" variant="ghost" aria-label={`Edit ${row.name}`} onPress={() => onEdit(row)}><Pencil className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label={`Preview ${row.name}`} onPress={() => onPreview(row)}><Eye className="size-4" /></Button><Dropdown><Dropdown.Trigger aria-label={`Actions for ${row.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => { if (key === "public") window.open(row.publicPath, "_blank", "noopener,noreferrer"); if (key === "toggle") onToggle(row); if (key === "delete") onDelete(row); }}><Dropdown.Item id="public" textValue="View public page"><ExternalLink className="size-4" />View public page</Dropdown.Item><Dropdown.Item id="toggle" textValue={row.status === "Paused" ? "Resume" : "Pause"}>{row.status === "Paused" ? "Resume" : "Pause"}</Dropdown.Item><Dropdown.Item id="delete" textValue="Delete" variant="danger">Delete</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table></section>;
+  return <section className="space-y-4" aria-labelledby="bot-listings-heading"><div><h2 id="bot-listings-heading" className="text-xl font-bold text-foreground">Bot listings</h2><p className="mt-1 text-sm text-muted">Manage your projects and open developer settings.</p></div><Table><Table.ScrollContainer><Table.Content aria-label="Bot listings" className="min-w-[980px]"><Table.Header><Table.Column isRowHeader>Bot</Table.Column><Table.Column>Status</Table.Column><Table.Column>Listing Views</Table.Column><Table.Column>Invite Clicks</Table.Column><Table.Column>Active Servers</Table.Column><Table.Column>Votes</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="text-end">Actions</Table.Column></Table.Header><Table.Body>{rows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><BotAvatar bot={row} className="size-9" /><div><p className="font-medium">{row.name}</p><p className="text-xs text-muted">{row.category}</p></div></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={statusColor(row.status)}><Chip.Label>{row.status}</Chip.Label></Chip></Table.Cell><Table.Cell>{formatCount(row.analytics.listingViews)}</Table.Cell><Table.Cell>{formatCount(row.analytics.inviteClicks)}</Table.Cell><Table.Cell>{formatCount(row.analytics.activeServers)}</Table.Cell><Table.Cell>{formatCount(row.analytics.votes)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><Button isIconOnly size="sm" variant="ghost" aria-label={`Edit ${row.name}`} onPress={() => onEdit(row)}><Pencil className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label={`Preview ${row.name}`} onPress={() => onPreview(row)}><Eye className="size-4" /></Button><Dropdown><Dropdown.Trigger aria-label={`Actions for ${row.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => { if (key === "public") window.open(ownerListingPath(row), "_blank", "noopener,noreferrer"); if (key === "toggle") onToggle(row); if (key === "delete") onDelete(row); }}><Dropdown.Item id="public" textValue="Open listing"><ExternalLink className="size-4" />{row.status === "Live" ? "View public page" : "Open owner preview"}</Dropdown.Item><Dropdown.Item id="toggle" textValue={row.status === "Paused" ? "Resume" : "Pause"}>{row.status === "Paused" ? "Resume" : "Pause"}</Dropdown.Item><Dropdown.Item id="delete" textValue="Delete" variant="danger">Delete</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table></section>;
 }
 
 const EDITOR_PANELS: Array<{ id: BotEditorPanel; label: string }> = [

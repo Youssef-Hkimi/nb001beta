@@ -599,7 +599,7 @@ export default function NewListingPage() {
       ];
       if (media.length) await uploadListingMedia(listing.id, media);
       setBot((current) => ({...current, statusLabel: "Pending Review"}));
-      setPublishedBotPath(`/bots/${listing.slug}`);
+      setPublishedBotPath(`/dashboard/preview/${listing.id}`);
       setReviewOpen(false);
       setPublishSuccess("bot");
       toast.success("Bot submitted for review");
@@ -705,7 +705,7 @@ export default function NewListingPage() {
         ...(serverMediaFiles.banner ? [{kind: "banner" as const, file: serverMediaFiles.banner}] : []),
       ];
       if (media.length) await uploadListingMedia(listing.id, media);
-      setPublishedServerPath(`/server/${listing.slug}`);
+      setPublishedServerPath(`/dashboard/preview/${listing.id}`);
       removeWidgetSetupReminder(server.guildId.trim());
       setServerVerificationState("success");
       toast.success("Server submitted for review");
@@ -753,7 +753,7 @@ export default function NewListingPage() {
         members: String(memberCount),
         online: String(memberCount),
       }));
-      setPublishedServerPath(`/server/${listing.slug}`);
+      setPublishedServerPath(`/dashboard/preview/${listing.id}`);
       addWidgetSetupReminder({guildId, serverName: listing.name, memberCount, createdAt: Date.now()});
       setServerVerificationState("success_unverified");
       toast.success("Server submitted with widget setup pending");
@@ -1666,13 +1666,16 @@ export default function NewListingPage() {
               </div>
               <div className="rounded-xl border border-border bg-default/25 p-3">
                 <TextField isReadOnly value={publishedBotPath || `/bots/${slugify(bot.name)}`}>
-                  <Label>Reserved public link</Label>
+                  <Label>Owner preview</Label>
                   <Input />
                 </TextField>
               </div>
             </Modal.Body>
             <Modal.Footer className="flex-wrap border-t border-border/70 pt-4">
-              <Button variant="secondary" onPress={() => { const url = new URL(publishedBotPath || `/bots/${slugify(bot.name)}`, window.location.origin).toString(); void navigator.clipboard?.writeText(url); toast.success("Public link copied"); }}><Copy className="size-4" />Copy link</Button>
+              <Button variant="secondary" onPress={() => { const url = new URL(publishedBotPath || `/bots/${slugify(bot.name)}`, window.location.origin).toString(); void navigator.clipboard?.writeText(url); toast.success("Preview link copied"); }}><Copy className="size-4" />Copy preview link</Button>
+              <LinkButton href={publishedBotPath || `/bots/${slugify(bot.name)}`} target="_blank">
+                View owner preview
+              </LinkButton>
               <LinkButton href="/dashboard">
                 <LayoutDashboard className="size-4" />
                 Back to dashboard

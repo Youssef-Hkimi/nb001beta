@@ -17,3 +17,15 @@ export async function getPublicListing(type: "server" | "bot", slug: string) {
   if (error) throw error;
   return data ? addPublicMediaUrls(data) as ApiListing : null;
 }
+
+export async function getOwnerListing(id: string, ownerId: string) {
+  const {data, error} = await getSupabaseAdmin()
+    .from("listings")
+    .select("*,listing_media(*),profiles!listings_owner_id_fkey(username,display_name,avatar_url)")
+    .eq("id", id)
+    .eq("owner_id", ownerId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? addPublicMediaUrls(data) as ApiListing : null;
+}

@@ -104,9 +104,10 @@ Security foundations include restrictive RLS, server-only secret access, origin 
 
 ### Overview
 
-- Summary metrics, performance chart, listings table, collapsible Tips & Getting Started, inbox, and verification promotion.
+- Summary metrics, performance chart, listings table, and onboarding progress now load from the authenticated owner's Supabase listings and analytics events.
+- Empty/new accounts display zero values instead of inherited demo totals.
 - Verification Learn More opens `/verification` in a new tab.
-- Quick actions and table actions are fully clickable mock interactions.
+- Listing table actions open the real public page when live and the private owner preview while review is pending.
 
 ### My Servers
 
@@ -149,20 +150,22 @@ Security foundations include restrictive RLS, server-only secret access, origin 
 
 ## Admin dashboard
 
-`/admin` is staff-gated and intentionally dense. Live RBAC/MFA/audit APIs now back moderation actions; portions of its presentation data remain demo placeholders pending final UI wiring.
+`/admin` is staff-gated and intentionally dense. Core operations now load from Supabase and use server-enforced RBAC, MFA challenges, and audit records.
 
 - Overview metrics, time ranges, traffic status, export simulation, moderation urgency queue, and quick controls.
 - Listings: inspect/edit/status/verification/Safe reputation badge/featured placement/pause/suspend/delete.
 - Featured placement uses search, not a fixed select.
 - Manual vote adjustment is capped at +10 and shown as 2FA-protected.
-- Users: identity, role, status, listings, activity, history, Hammer action menu, freeze/notify/suspend/delete simulations.
+- Users: identity, role, status, listings, activity, history, and live Hammer actions for freeze, notify, suspend, restore, ban, and deletion.
 - Staff notifications accept custom text.
 - Reports: reporter, target, listing, reason, severity, notify, pass, dismiss.
 - Pending Review: separate server/bot queue with inspect, accept, reject, and moderation notes.
 - Rewards: points issued, referrals, balances, risk review, adjustment/suspension controls.
 - Featured servers and recommended bots are managed separately.
 - Moderators, limited permissions, support tickets, announcements, site health, and audit-log simulations.
-- Permanent/destructive actions are documented as RBAC + 2FA requirements for production.
+- Permanent/destructive actions require a real authenticator challenge.
+- First-time super-admin bootstrapping is supported through the server-only `SUPER_ADMIN_DISCORD_IDS` environment variable; the next Discord login creates the reviewed staff record.
+- The admin control center provides an in-app authenticator enrollment flow before protected actions can be used.
 
 ## Important compatibility decisions
 
@@ -179,4 +182,4 @@ Security foundations include restrictive RLS, server-only secret access, origin 
 - `npm run build`: passing.
 - `npm audit --omit=dev`: 0 vulnerabilities after safe dependency overrides.
 - Supabase security advisor: 0 findings.
-- Vercel production deployment is intentionally blocked until the owner rotates the exposed Discord secret and provides the Supabase server secret.
+- The beta repository is isolated from the preserved mock backup and deploys only from `nb001beta`.

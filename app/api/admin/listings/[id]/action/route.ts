@@ -10,6 +10,13 @@ export const runtime = "nodejs";
 
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
+    action: z.literal("edit_listing"),
+    name: z.string().trim().min(2).max(100),
+    shortDescription: z.string().trim().min(10).max(240),
+    category: z.string().trim().min(2).max(80),
+    reason: z.string().trim().min(3).max(2000),
+  }),
+  z.object({
     action: z.literal("set_status"),
     status: z.enum(["pending_review", "live", "paused", "suspended", "rejected", "deleted"]),
     reason: z.string().trim().min(3).max(2000),
@@ -37,10 +44,18 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
     const db = getSupabaseAdmin();
     let patch: Record<string, unknown> = {};
 
-    if (input.action === "set_status") {
+    if (input.action === "edit_listing") {
+      patch = {
+        name: input.name,
+        short_description: input.shortDescription,
+        category: input.category,
+      };
+    } else if (input.action === "set_status") {
       if (input.status === "deleted") {
         if (!["admin", "super_admin"].includes(session.role)) throw new ApiError(403, "admin_required");
         await requireAdminChallenge(request, session, "delete_listing");
+      } else if (input.status === "rejected") {
+        await requireAdminChallenge(request, session, "reject_listing");
       }
       patch = {
         status: input.status,

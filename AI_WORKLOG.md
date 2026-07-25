@@ -307,3 +307,16 @@ Only listing cards/grid — not navbar, not filters redesign, not bots cards unl
 - Added live listing create/read/update/delete/pause/review, media normalization/storage, public discovery, six-hour votes, event ingestion, reports, widget verification, rewards, referral attribution, moderation, and protected admin endpoints.
 - Added origin protection, database-backed request rate limiting, CSP/security headers, TOTP challenges, and dependency overrides; production build passes and the production dependency audit reports zero vulnerabilities.
 - Permanent release rule: do not deploy until the previously exposed Discord client secret is rotated and a Supabase server secret is supplied through environment variables.
+
+---
+
+## 2026-07-25 — Live beta dashboard and moderation wiring
+
+- Replaced the creator overview totals, chart series, onboarding progress, and listing table with authenticated Supabase data.
+- Added owner-only preview routes for pending listings so a newly submitted server or bot always has a usable page before staff approval.
+- Wired server and bot owner analytics to stored listing events and removed invented totals for unavailable metrics.
+- Replaced the main admin overview, time-range analytics, listing moderation, user Hammer actions, report triage, and review queue with live APIs.
+- Protected verification, Safe reputation, featured placement, vote adjustment, user deletion/ban, listing deletion, and review rejection with real TOTP challenges.
+- Added `SUPER_ADMIN_DISCORD_IDS` as a server-only first-admin bootstrap. On the next Discord login it promotes only configured Discord IDs and creates their staff record.
+- Added staff 2FA status and enrollment UI so a newly bootstrapped administrator can enable protected actions without manual database edits.
+- Production checks pass with Next.js 16.2.11: `npx tsc --noEmit` and `npm run build`.
