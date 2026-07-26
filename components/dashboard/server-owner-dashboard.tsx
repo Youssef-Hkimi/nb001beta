@@ -818,5 +818,5 @@ function EditSection({ title, description, children }: {
 
 function ServerAvatar({ server, className }: { server: ServerDashboardListing; className: string }) {
   const hue = Number(server.bannerHue);
-  return <Avatar className={`shrink-0 rounded-xl ${className}`}><Avatar.Fallback className="rounded-xl text-sm font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${hue} 72% 58%),hsl(${hue + 28} 68% 46%))` }}>{initials(server.name)}</Avatar.Fallback></Avatar>;
+  return <Avatar className={`shrink-0 rounded-xl ${className}`}>{server.iconUrl ? <Avatar.Image src={server.iconUrl} alt="" className="rounded-xl object-cover" /> : null}<Avatar.Fallback className="rounded-xl text-sm font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${hue} 72% 58%),hsl(${hue + 28} 68% 46%))` }}>{initials(server.name)}</Avatar.Fallback></Avatar>;
 }

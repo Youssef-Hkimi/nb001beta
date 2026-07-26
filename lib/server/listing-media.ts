@@ -5,6 +5,16 @@ import sharp from "sharp";
 import {bufferToStorageBlob} from "@/lib/server/storage-upload";
 import {getSupabaseAdmin} from "@/lib/server/supabase-admin";
 
+export function getListingMediaPublicUrl(media: {
+  id?: string;
+  bucket: string;
+  object_path: string;
+}) {
+  const db = getSupabaseAdmin();
+  const publicUrl = db.storage.from(media.bucket).getPublicUrl(media.object_path).data.publicUrl;
+  return media.id ? `${publicUrl}?v=${encodeURIComponent(media.id)}` : publicUrl;
+}
+
 export async function importDiscordGuildIcon(input: {
   userId: string;
   listingId: string;
@@ -60,7 +70,11 @@ export async function importDiscordGuildIcon(input: {
     .select("id")
     .single();
   if (mediaError) throw mediaError;
-  return `/api/media/${media.id}`;
+  return getListingMediaPublicUrl({
+    id: media.id,
+    bucket: "listing-icons",
+    object_path: objectPath,
+  });
 }
 
 export function addPublicMediaUrls<
@@ -68,16 +82,11 @@ export function addPublicMediaUrls<
 >(
   listing: T,
 ) {
-  const db = getSupabaseAdmin();
   return {
     ...listing,
     listing_media: (listing.listing_media || []).map((media) => ({
       ...media,
-      // Route media through Nexbiy so browser/CDN policy changes cannot break
-      // owner uploads that are valid in Supabase Storage.
-      url: media.id
-        ? `/api/media/${media.id}`
-        : db.storage.from(media.bucket).getPublicUrl(media.object_path).data.publicUrl,
+      url: getListingMediaPublicUrl(media),
     })),
   };
 }

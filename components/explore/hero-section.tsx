@@ -2,6 +2,7 @@
 
 import { Button, SearchField } from "@heroui/react";
 import { Search } from "lucide-react";
+import {useRouter} from "next/navigation";
 import { useEffect, useState } from "react";
 
 import chillDark from "@/ChillDark.webp";
@@ -16,7 +17,9 @@ const ARTWORKS = [
 ] as const;
 
 export function HeroSection() {
+  const router = useRouter();
   const [activeArtwork, setActiveArtwork] = useState(0);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const syncArtwork = () => {
@@ -30,6 +33,11 @@ export function HeroSection() {
 
     return () => window.clearInterval(interval);
   }, []);
+
+  const submitSearch = () => {
+    const value = query.trim();
+    router.push(value ? `/server?q=${encodeURIComponent(value)}` : "/server");
+  };
 
   return (
     <section className="relative isolate">
@@ -70,19 +78,25 @@ export function HeroSection() {
           Join communities, find tools, and level up your server.
         </p>
 
-        <div className="mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:items-center">
-          <SearchField aria-label="Search communities" className="w-full flex-1">
+        <form
+          className="mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:items-center"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitSearch();
+          }}
+        >
+          <SearchField aria-label="Search communities" className="w-full flex-1" value={query} onChange={setQuery}>
             <SearchField.Group>
               <SearchField.SearchIcon />
               <SearchField.Input placeholder="Search servers, bots, tags..." />
               <SearchField.ClearButton />
             </SearchField.Group>
           </SearchField>
-          <Button className="shrink-0 sm:h-10">
+          <Button className="shrink-0 sm:h-10" type="submit">
             <Search className="size-4" />
             Search
           </Button>
-        </div>
+        </form>
       </div>
     </section>
   );

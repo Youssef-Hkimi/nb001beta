@@ -132,15 +132,6 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
             <Eye className="size-4" />View
           </LinkButton>
         )}
-        {isPreview ? (
-          <Button variant="tertiary" onPress={() => toast.info("Voting is available on the public bot page")}>
-            <ThumbsUp className="size-4" />Vote
-          </Button>
-        ) : (
-          <LinkButton variant="tertiary" href={`/bots/${bot.slug}`}>
-            <ThumbsUp className="size-4" />Vote
-          </LinkButton>
-        )}
       </Card.Footer>
     </Card>
   );

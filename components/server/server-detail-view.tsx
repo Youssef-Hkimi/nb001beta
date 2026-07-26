@@ -317,25 +317,34 @@ export function ServerDetailView({
             </Card.Content>
           </Card>
 
-          <Card className="nexus-card-elevated gap-3">
-            <Card.Header>
-              <Card.Title className="text-base">Listed by</Card.Title>
-            </Card.Header>
-            <Card.Content className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="size-12">
-                  <Avatar.Fallback className="bg-accent/15 font-semibold text-accent">
+          <Card className="nexus-card-elevated gap-0 overflow-hidden">
+            <Card.Content className="p-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-11 shrink-0 rounded-xl ring-1 ring-border">
+                  {server.owner.avatarUrl ? (
+                    <Avatar.Image
+                      src={server.owner.avatarUrl}
+                      alt={`${server.owner.name} Discord avatar`}
+                      className="rounded-xl object-cover"
+                    />
+                  ) : null}
+                  <Avatar.Fallback className="rounded-xl bg-accent/15 text-sm font-semibold text-accent">
                     {initials(server.owner.name)}
                   </Avatar.Fallback>
                 </Avatar>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-foreground">{server.owner.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+                    Listed by
+                  </p>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {server.owner.name}
+                    </p>
                     {server.owner.verified ? (
-                      <VerifiedBadgeIcon className="size-4 text-accent" />
+                      <VerifiedBadgeIcon className="size-3.5 shrink-0 text-accent" />
                     ) : null}
                   </div>
-                  <p className="text-xs text-muted">{server.owner.handle}</p>
+                  <p className="truncate text-xs text-muted">{server.owner.handle}</p>
                 </div>
               </div>
             </Card.Content>

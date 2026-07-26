@@ -292,7 +292,7 @@ function VerificationQuickAction({
           <Card className="verification-server-card nexus-card group gap-0 p-4 shadow-lg shadow-black/10 backdrop-blur">
             <Button isIconOnly size="sm" variant="ghost" aria-label="Close current listing preview" className="absolute top-2 right-2 z-10" onPress={onCloseListing}><X className="size-4" /></Button>
             <div className="flex items-center gap-3 pr-7">
-              <Avatar className="size-12 rounded-2xl"><Avatar.Fallback className="rounded-2xl text-sm font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${listing.bannerHue} 72% 56%),hsl(${Number(listing.bannerHue) + 30} 70% 42%))` }}>{initials(listing.name)}</Avatar.Fallback></Avatar>
+              <Avatar className="size-12 rounded-2xl">{listing.iconUrl ? <Avatar.Image src={listing.iconUrl} alt="" className="rounded-2xl object-cover" /> : null}<Avatar.Fallback className="rounded-2xl text-sm font-bold text-white" style={{ background: `linear-gradient(135deg,hsl(${listing.bannerHue} 72% 56%),hsl(${Number(listing.bannerHue) + 30} 70% 42%))` }}>{initials(listing.name)}</Avatar.Fallback></Avatar>
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-foreground">{listing.name}<VerifiedBadgeIcon className="size-4 shrink-0 text-accent transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" /></p>
                 <p className="mt-0.5 truncate text-xs text-muted">{listing.category} · {listing.type === "server" ? "Server listing" : "Bot listing"}</p>

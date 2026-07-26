@@ -2,6 +2,7 @@ import {NextRequest} from "next/server";
 import sharp from "sharp";
 
 import {apiErrorResponse, ApiError, requireSession} from "@/lib/server/auth";
+import {getListingMediaPublicUrl} from "@/lib/server/listing-media";
 import {enforceRateLimit} from "@/lib/server/security";
 import {bufferToStorageBlob} from "@/lib/server/storage-upload";
 import {getSupabaseAdmin} from "@/lib/server/supabase-admin";
@@ -88,7 +89,17 @@ export async function POST(request: NextRequest, context: {params: Promise<{id: 
       .select("*")
       .single();
     if (mediaError) throw mediaError;
-    return Response.json({media, url: `/api/media/${media.id}`}, {status: 201});
+    return Response.json(
+      {
+        media,
+        url: getListingMediaPublicUrl({
+          id: media.id,
+          bucket: config.bucket,
+          object_path: objectPath,
+        }),
+      },
+      {status: 201},
+    );
   } catch (error) {
     return apiErrorResponse(error);
   }

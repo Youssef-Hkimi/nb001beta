@@ -1,6 +1,7 @@
 import {NextRequest} from "next/server";
 
 import {apiErrorResponse, ApiError, requireSession} from "@/lib/server/auth";
+import {fetchDiscordApplicationServerCount} from "@/lib/server/discord-application";
 import {verifyDiscordWidget} from "@/lib/server/discord-widget";
 import {createListingSchema, createSlug} from "@/lib/server/listing-schema";
 import {addPublicMediaUrls, importDiscordGuildIcon} from "@/lib/server/listing-media";
@@ -15,6 +16,12 @@ export async function GET(request: NextRequest) {
     const db = getSupabaseAdmin();
     const mine = request.nextUrl.searchParams.get("mine") === "1";
     const type = request.nextUrl.searchParams.get("type");
+    const search = request.nextUrl.searchParams
+      .get("q")
+      ?.replace(/[%_,()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80);
     const limit = Math.min(Math.max(Number(request.nextUrl.searchParams.get("limit")) || 12, 1), 40);
     let query = db
       .from("listings")
@@ -32,6 +39,11 @@ export async function GET(request: NextRequest) {
         .is("deleted_at", null);
     }
     if (type === "server" || type === "bot") query = query.eq("type", type);
+    if (search) {
+      query = query.or(
+        `name.ilike.%${search}%,short_description.ilike.%${search}%,category.ilike.%${search}%`,
+      );
+    }
     const {data, error} = await query;
     if (error) throw error;
     return Response.json(
@@ -61,6 +73,7 @@ export async function POST(request: NextRequest) {
     let widgetStatus: "unverified" | "verified" | "disabled" = "unverified";
     let onlineCount = 0;
     let memberCount = 0;
+    let activeServerCount = 0;
     let managedIconHash: string | null = null;
 
     if (input.type === "server") {
@@ -86,6 +99,8 @@ export async function POST(request: NextRequest) {
       } else {
         return Response.json({error: widget.error}, {status: widget.status});
       }
+    } else {
+      activeServerCount = await fetchDiscordApplicationServerCount(input.discordId);
     }
 
     const {data, error} = await db
@@ -116,6 +131,8 @@ export async function POST(request: NextRequest) {
         widget_verified_at: widgetStatus === "verified" ? new Date().toISOString() : null,
         member_count: memberCount,
         online_count: onlineCount,
+        active_server_count: activeServerCount,
+        active_server_count_updated_at: input.type === "bot" ? new Date().toISOString() : null,
       })
       .select("*")
       .single();

@@ -13,7 +13,15 @@ const userActionSchema = z.discriminatedUnion("action", [
     action: z.literal("notify"),
     title: z.string().trim().min(1).max(140),
     message: z.string().trim().min(1).max(2000),
-    actionUrl: z.string().url().max(500).optional(),
+    actionUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (value) => /^\/(?!\/)/.test(value) || /^https?:\/\//i.test(value),
+        "invalid_action_url",
+      )
+      .optional(),
   }),
   z.object({
     action: z.enum(["suspend", "freeze_listings", "unfreeze_listings", "flag"]),

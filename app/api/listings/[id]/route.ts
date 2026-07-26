@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest, context: {params: Promise<{id: 
     let query = getSupabaseAdmin()
       .from("listings")
       .select("*,listing_media(*),profiles!listings_owner_id_fkey(username,display_name,avatar_url)")
-      .eq("status", "live")
+      .in("status", ["live", "pending_review"])
       .eq("visibility", "public")
       .is("deleted_at", null);
     query = /^[0-9a-f-]{36}$/i.test(id) ? query.eq("id", id) : query.eq("slug", id);

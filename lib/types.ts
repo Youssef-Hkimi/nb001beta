@@ -37,6 +37,7 @@ export type ServerOwner = {
   name: string;
   handle: string;
   verified: boolean;
+  avatarUrl?: string | null;
 };
 
 export type ServerStats = {
@@ -105,6 +106,7 @@ export type BotDeveloper = {
   name: string;
   handle: string;
   verified: boolean;
+  avatarUrl?: string | null;
 };
 
 export type BotTrustStatus = {

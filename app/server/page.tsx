@@ -12,6 +12,7 @@ import {
   toast,
 } from "@heroui/react";
 import { Filter, Plus, SlidersHorizontal } from "lucide-react";
+import {useSearchParams} from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { ServerCard } from "@/components/cards/server-card";
@@ -50,7 +51,12 @@ function sizeBucket(members: number) {
 }
 
 export default function ServerPage() {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+
+  useEffect(() => {
+    setSearch(searchParams.get("q") ?? "");
+  }, [searchParams]);
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("trending");
   const [filters, setFilters] = useState<FilterState>(defaultFilters);

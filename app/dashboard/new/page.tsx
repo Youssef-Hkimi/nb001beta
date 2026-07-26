@@ -318,7 +318,8 @@ export default function NewListingPage() {
   const [botMediaFiles, setBotMediaFiles] = useState<{
     icon: File | null;
     banner: File | null;
-  }>({icon: null, banner: null});
+    gallery: File[];
+  }>({icon: null, banner: null, gallery: []});
 
   const [typeModalOpen, setTypeModalOpen] = useState(true);
   const [pendingType, setPendingType] = useState<ListingType | null>(null);
@@ -596,6 +597,11 @@ export default function NewListingPage() {
       const media = [
         ...(botMediaFiles.icon ? [{kind: "icon" as const, file: botMediaFiles.icon}] : []),
         ...(botMediaFiles.banner ? [{kind: "banner" as const, file: botMediaFiles.banner}] : []),
+        ...botMediaFiles.gallery.map((file, position) => ({
+          kind: "gallery" as const,
+          file,
+          position,
+        })),
       ];
       if (media.length) await uploadListingMedia(listing.id, media);
       setBot((current) => ({...current, statusLabel: "Pending Review"}));
@@ -1238,9 +1244,11 @@ export default function NewListingPage() {
                   clearBotFieldError("clientId");
                 }}
               >
-                <Label>Bot client ID</Label>
+                <Label>Discord Bot ID</Label>
                 <Input placeholder="From Discord Developer Portal" />
-                <Description>Found in the Discord Developer Portal application page.</Description>
+                <Description>
+                  Paste your bot&apos;s Application ID from the Discord Developer Portal.
+                </Description>
                 {botFieldErrors.clientId ? <FieldError>{botFieldErrors.clientId}</FieldError> : null}
               </TextField>
             </div>
@@ -1513,19 +1521,45 @@ export default function NewListingPage() {
                   title="Preview gallery"
                   hint="Add up to 6 images"
                   sizeHint="Recommended 1200×675"
-                  selectedLabel={bot.galleryImages.length ? `${bot.galleryImages.length}/6 mock previews added` : undefined}
-                  onPress={() => setBot((current) => {
-                    if (current.galleryImages.length >= 6) {
+                  accept="image/*"
+                  multiple
+                  selectedLabel={bot.galleryImages.length ? `${bot.galleryImages.length}/6 images added` : undefined}
+                  onFiles={(files) => {
+                    const remaining = 6 - bot.galleryImages.length;
+                    if (remaining <= 0) {
                       toast.warning("You can add up to 6 gallery images.");
-                      return current;
+                      return;
                     }
-                    return { ...current, galleryImages: [...current.galleryImages, getBotGalleryImageUrl(current.name || "Bot", current.galleryImages.length, current.bannerHue)] };
-                  })}
+                    const accepted = files.slice(0, remaining);
+                    const previews = accepted.map((file) => URL.createObjectURL(file));
+                    setBot((current) => ({
+                      ...current,
+                      galleryImages: [...current.galleryImages, ...previews].slice(0, 6),
+                    }));
+                    setBotMediaFiles((current) => ({
+                      ...current,
+                      gallery: [...current.gallery, ...accepted].slice(0, 6),
+                    }));
+                  }}
                 />
               </div>
               {bot.galleryImages.length ? (
                 <div className="mt-3 flex justify-end">
-                  <Button size="sm" variant="ghost" onPress={() => setBot((current) => ({ ...current, galleryImages: current.galleryImages.slice(0, -1) }))}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => {
+                      setBot((current) => {
+                        const removed = current.galleryImages.at(-1);
+                        if (removed?.startsWith("blob:")) URL.revokeObjectURL(removed);
+                        return {...current, galleryImages: current.galleryImages.slice(0, -1)};
+                      });
+                      setBotMediaFiles((current) => ({
+                        ...current,
+                        gallery: current.gallery.slice(0, -1),
+                      }));
+                    }}
+                  >
                     <Trash2 className="size-3.5" />Remove last preview
                   </Button>
                 </div>

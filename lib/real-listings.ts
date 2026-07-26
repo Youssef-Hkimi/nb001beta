@@ -174,6 +174,7 @@ export function apiListingToServerDetail(listing: ApiListing): ServerDetail {
       name: displayName,
       handle: `@${listing.profiles?.username || "owner"}`,
       verified: listing.verified_badge,
+      avatarUrl: listing.profiles?.avatar_url || null,
     },
     stats: {
       monthlyGrowth: 0,
@@ -226,6 +227,7 @@ export function apiListingToBot(listing: ApiListing): BotListing {
       name: developerName,
       handle: `@${listing.profiles?.username || "developer"}`,
       verified: listing.verified_badge,
+      avatarUrl: listing.profiles?.avatar_url || null,
     },
     avatar,
     banner,

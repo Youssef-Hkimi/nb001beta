@@ -134,7 +134,38 @@ export function BotDetailView({
             { label: "Servers", value: formatCount(bot.servers), icon: Server }, { label: "Votes", value: formatCount(vote.voteCount), icon: ThumbsUp }, { label: "Monthly Growth", value: `+${bot.monthlyGrowth}%`, icon: TrendingUp }, { label: "Commands", value: String(bot.commands.length), icon: TerminalSquare }, { label: "Created", value: bot.createdAt, icon: CalendarDays },
           ].map((stat) => { const Icon = stat.icon; return <div key={stat.label} className="flex items-center gap-3 rounded-xl bg-default/40 p-3"><Icon className="size-4 shrink-0 text-accent" /><span className="min-w-0 flex-1 text-xs text-muted">{stat.label}</span><span className="text-right text-sm font-semibold text-foreground">{stat.value}</span></div>; })}</Card.Content></Card>
 
-          <Card className="nexus-card gap-4"><Card.Header><Card.Title className="text-base">Developer</Card.Title></Card.Header><Card.Content className="flex items-center gap-3"><Avatar className="size-11 rounded-xl"><Avatar.Fallback className="rounded-xl bg-accent/15 text-sm font-semibold text-accent">{initials(bot.developer.name)}</Avatar.Fallback></Avatar><span><span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">{bot.developer.name}{bot.developer.verified ? <VerifiedBadgeIcon className="size-3.5 text-accent" /> : null}</span><span className="block text-xs text-muted">{bot.developer.handle}</span></span></Card.Content></Card>
+          <Card className="nexus-card gap-0 overflow-hidden">
+            <Card.Content className="p-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-11 shrink-0 rounded-xl ring-1 ring-border">
+                  {bot.developer.avatarUrl ? (
+                    <Avatar.Image
+                      src={bot.developer.avatarUrl}
+                      alt={`${bot.developer.name} Discord avatar`}
+                      className="rounded-xl object-cover"
+                    />
+                  ) : null}
+                  <Avatar.Fallback className="rounded-xl bg-accent/15 text-sm font-semibold text-accent">
+                    {initials(bot.developer.name)}
+                  </Avatar.Fallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+                    Developer
+                  </p>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {bot.developer.name}
+                    </p>
+                    {bot.developer.verified ? (
+                      <VerifiedBadgeIcon className="size-3.5 shrink-0 text-accent" />
+                    ) : null}
+                  </div>
+                  <p className="truncate text-xs text-muted">{bot.developer.handle}</p>
+                </div>
+              </div>
+            </Card.Content>
+          </Card>
 
           {links.length ? <Card className="nexus-card gap-3"><Card.Header><Card.Title className="text-base">Links</Card.Title></Card.Header><Card.Content className="space-y-2">{links.map((link) => { const Icon = link.icon; return <ListingActionGuard status={bot.safetyStatus} key={link.label} variant="ghost" className="w-full justify-between" onPress={() => openExternal(link.url)}><span className="inline-flex items-center gap-2"><Icon className="size-4 text-accent" />{link.label}</span><ExternalLink className="size-3.5 text-muted" /></ListingActionGuard>; })}</Card.Content></Card> : null}
 

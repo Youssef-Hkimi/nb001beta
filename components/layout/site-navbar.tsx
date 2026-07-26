@@ -19,7 +19,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DiscordMark } from "@/components/ui/discord-mark";
@@ -56,6 +56,8 @@ export function SiteNavbar() {
     read_at: string | null;
   }>>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const knownNotificationIds = useRef<Set<string>>(new Set());
+  const notificationFeedLoaded = useRef(false);
   const { user, isAuthenticated, isReady, logout } = useAuth();
   const accountName = user?.displayName ?? user?.username;
   const inboxEnabled = user?.inboxNotifications !== false;
@@ -68,21 +70,54 @@ export function SiteNavbar() {
     if (!isAuthenticated || !inboxEnabled) {
       setNotifications([]);
       setUnreadCount(0);
+      knownNotificationIds.current.clear();
+      notificationFeedLoaded.current = false;
       return;
     }
-    const controller = new AbortController();
-    void fetch("/api/notifications", {cache: "no-store", signal: controller.signal})
-      .then(async (response) => {
-        if (!response.ok) return;
+
+    let active = true;
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch("/api/notifications", {cache: "no-store"});
+        if (!response.ok || !active) return;
         const result = await response.json() as {
           notifications?: typeof notifications;
           unreadCount?: number;
         };
-        setNotifications(result.notifications || []);
+        const nextNotifications = result.notifications || [];
+
+        if (notificationFeedLoaded.current && "Notification" in window && Notification.permission === "granted") {
+          nextNotifications
+            .filter((item) => !item.read_at && !knownNotificationIds.current.has(item.id))
+            .forEach((item) => {
+              const browserNotification = new Notification(item.title, {
+                body: item.body,
+                icon: "/nexus-logo.jpg",
+                tag: `nexbiy-${item.id}`,
+              });
+              browserNotification.onclick = () => {
+                window.focus();
+                if (item.action_url?.startsWith("/")) router.push(item.action_url);
+                browserNotification.close();
+              };
+            });
+        }
+
+        knownNotificationIds.current = new Set(nextNotifications.map((item) => item.id));
+        notificationFeedLoaded.current = true;
+        setNotifications(nextNotifications);
         setUnreadCount(result.unreadCount || 0);
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
+      } catch {
+        // Keep the last successful inbox state during a temporary network failure.
+      }
+    };
+
+    void loadNotifications();
+    const interval = window.setInterval(() => void loadNotifications(), 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [inboxEnabled, isAuthenticated]);
 
   function notificationIcon(type: string) {

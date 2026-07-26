@@ -101,6 +101,24 @@ export function UserSettings() {
     setProfile((current) => ({...current, notifications: {...current.notifications, [key]: value}}));
   };
 
+  const updateInboxNotifications = async (selected: boolean) => {
+    if (selected && "Notification" in window) {
+      const permission = Notification.permission === "default"
+        ? await Notification.requestPermission()
+        : Notification.permission;
+
+      if (permission !== "granted") {
+        updateField("inboxNotifications", false);
+        toast.warning("Browser notifications are blocked", {
+          description: "Allow notifications for Nexbiy in your browser, then enable this setting again.",
+        });
+        return;
+      }
+    }
+
+    updateField("inboxNotifications", selected);
+  };
+
   const saveProfile = async () => {
     try {
       await updateUser({
@@ -195,7 +213,7 @@ export function UserSettings() {
             <SectionHeader description="Choose which listing activity appears in your header inbox." icon={<Bell className="size-5" />} title="Inbox notifications" />
           </Card.Header>
           <Card.Content className="grid gap-3 p-5">
-            <SettingsSwitch description="Keep important Nexbiy activity available from the site header." isSelected={profile.inboxNotifications} title="Enable inbox notifications" onChange={(selected) => updateField("inboxNotifications", selected)} />
+            <SettingsSwitch description="Keep important Nexbiy activity available from the site header and receive browser alerts." isSelected={profile.inboxNotifications} title="Enable inbox notifications" onChange={(selected) => void updateInboxNotifications(selected)} />
             <Separator className="my-1" />
             <SettingsSwitch description="Review decisions, suspensions, and listing status changes." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.listingUpdates} title="Listing updates" onChange={(selected) => updateNotification("listingUpdates", selected)} />
             <SettingsSwitch description="Celebrate when a listing reaches a new vote milestone." isDisabled={!profile.inboxNotifications} isSelected={profile.notifications.likeMilestones} title="Vote milestones" onChange={(selected) => updateNotification("likeMilestones", selected)} />

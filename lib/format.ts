@@ -12,11 +12,19 @@ export function formatCount(n: number | null | undefined): string {
 }
 
 export function initials(name: string): string {
-  return name
+  const parts = name
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
     .split(/\s+/)
+    .filter(Boolean);
+
+  return (
+    parts
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
+    .join("") || "U"
+  );
 }
 
 export function bannerStyle(hue: string): CSSProperties {
