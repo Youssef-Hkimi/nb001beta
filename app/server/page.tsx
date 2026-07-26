@@ -13,7 +13,7 @@ import {
 } from "@heroui/react";
 import { Filter, Plus, SlidersHorizontal } from "lucide-react";
 import {useSearchParams} from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { ServerCard } from "@/components/cards/server-card";
 import { CategoryChips } from "@/components/filters/category-chips";
@@ -50,7 +50,7 @@ function sizeBucket(members: number) {
   return "Huge";
 }
 
-export default function ServerPage() {
+function ServerPageContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
 
@@ -365,5 +365,13 @@ export default function ServerPage() {
         </Drawer.Backdrop>
       </Drawer>
     </div>
+  );
+}
+
+export default function ServerPage() {
+  return (
+    <Suspense fallback={<div className="theme-surface min-h-screen" />}>
+      <ServerPageContent />
+    </Suspense>
   );
 }
