@@ -84,7 +84,7 @@ export type BotListing = ListingSafetyFields & {
   tags: string[];
   botFeatures: string[];
   commands: BotCommand[];
-  servers: number;
+  servers: number | null;
   votes: number;
   monthlyGrowth: number;
   createdAt: string;
@@ -242,7 +242,7 @@ export type BotAnalytics = {
   listingId: string;
   listingViews: number;
   inviteClicks: number;
-  activeServers: number;
+  activeServers: number | null;
   newServers: number;
   removedServers: number;
   votes: number;

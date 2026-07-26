@@ -95,7 +95,7 @@ export default function BotsPage() {
     if (sort === "votes") {
       list.sort((a, b) => b.votes - a.votes);
     } else if (sort === "members") {
-      list.sort((a, b) => b.servers - a.servers);
+      list.sort((a, b) => (b.servers ?? -1) - (a.servers ?? -1));
     } else if (sort === "newest") {
       list.reverse();
     }

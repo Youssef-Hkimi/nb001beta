@@ -344,7 +344,7 @@ const INITIAL_LISTINGS: AdminListing[] = [
     safeBadge: Boolean(listing.safeBadge),
     featured: Boolean(listing.rank && listing.rank <= 3),
     placement: listing.rank && listing.rank <= 3 ? listing.rank : null,
-    reach: listing.servers,
+    reach: listing.servers ?? 0,
     trust: listing.verified ? 94 - index : 71 + index,
     created: `Apr ${String(8 + index).padStart(2, "0")}, 2026`,
     updated: index % 2 ? "1 hr ago" : "11 min ago",

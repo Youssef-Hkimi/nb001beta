@@ -12,7 +12,7 @@ import lightBanner from "@/lightbanner.webp";
 export function ExploreSidebar() {
   const {listings, loading, error} = usePublicBotListings();
   const topBots = [...listings]
-    .sort((a, b) => b.servers - a.servers || b.votes - a.votes)
+    .sort((a, b) => (b.servers ?? -1) - (a.servers ?? -1) || b.votes - a.votes)
     .slice(0, 5);
 
   return (
@@ -54,7 +54,9 @@ export function ExploreSidebar() {
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{bot.name}</p>
-                <p className="text-xs text-muted">{formatCount(bot.servers)} servers</p>
+                <p className="text-xs text-muted">
+                  {bot.servers == null ? "Server count pending" : `${formatCount(bot.servers)} servers`}
+                </p>
               </div>
               <Bot className="size-4 shrink-0 text-muted" />
             </div>

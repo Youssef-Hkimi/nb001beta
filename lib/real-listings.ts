@@ -41,7 +41,8 @@ export type ApiListing = {
   widget_status: "unverified" | "verified" | "disabled";
   member_count: number;
   online_count: number;
-  active_server_count: number;
+  active_server_count: number | null;
+  active_server_count_updated_at?: string | null;
   votes_count: number;
   views_count: number;
   clicks_count: number;
@@ -216,7 +217,7 @@ export function apiListingToBot(listing: ApiListing): BotListing {
       id: `${listing.id}-${index}`,
       ...command,
     })),
-    servers: Number(listing.active_server_count),
+    servers: listing.active_server_count == null ? null : Number(listing.active_server_count),
     votes: Number(listing.votes_count),
     monthlyGrowth: 0,
     createdAt: new Date(listing.created_at).toLocaleDateString("en", {
@@ -325,7 +326,7 @@ export function apiListingToBotDashboard(listing: ApiListing): BotDashboardListi
       listingId: listing.id,
       listingViews: Number(listing.views_count),
       inviteClicks: Number(listing.clicks_count),
-      activeServers: Number(listing.active_server_count),
+      activeServers: listing.active_server_count == null ? null : Number(listing.active_server_count),
       newServers: 0,
       removedServers: 0,
       votes: Number(listing.votes_count),

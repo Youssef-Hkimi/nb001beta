@@ -22,11 +22,13 @@ import {
 import {
   Clock,
   Code2,
+  Copy,
   ExternalLink,
   Eye,
   GitBranch,
   Globe,
   Link as LinkIcon,
+  KeyRound,
   MessagesSquare,
   MoreHorizontal,
   MousePointerClick,
@@ -64,6 +66,10 @@ const METRICS = [
 ] as const;
 
 const statusColor = (status: ListingStatus) => status === "Live" ? "success" as const : status.includes("Review") ? "warning" as const : "default" as const;
+
+function formatServerCount(value: number | null) {
+  return value == null ? "Awaiting report" : formatCount(value);
+}
 
 function ownerListingPath(listing: BotDashboardListing) {
   return listing.status === "Live"
@@ -141,6 +147,16 @@ export function BotOwnerDashboard({
   const [selectedForDelete, setSelectedForDelete] = useState<Set<string>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>("30d");
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsToken, setStatsToken] = useState<string | null>(null);
+  const [statsStatus, setStatsStatus] = useState<{
+    connected: boolean;
+    credentialCreated: boolean;
+    tokenPrefix: string | null;
+    lastReportedAt: string | null;
+    serverCount: number | null;
+  } | null>(null);
   const bot = useMemo(() => rows.find((item) => item.id === selectedId) ?? rows[0], [rows, selectedId]);
   const analyticsDays = analyticsRange === "7d" ? 7 : analyticsRange === "90d" ? 90 : 30;
   const {data: liveAnalytics, loading: analyticsLoading, error: analyticsError} = useListingAnalytics(bot?.id, analyticsDays);
@@ -277,6 +293,45 @@ export function BotOwnerDashboard({
     setDeleteConfirmOpen(true);
   };
 
+  async function openStatsReporting() {
+    if (!bot) return;
+    setStatsOpen(true);
+    setStatsToken(null);
+    setStatsLoading(true);
+    try {
+      const response = await fetch(`/api/listings/${bot.id}/bot-stats-token`, {cache: "no-store"});
+      if (!response.ok) throw new Error("stats_status_failed");
+      setStatsStatus(await response.json());
+    } catch {
+      toast.danger("Server count reporting status could not be loaded");
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
+  async function generateStatsToken() {
+    if (!bot) return;
+    setStatsLoading(true);
+    try {
+      const response = await fetch(`/api/listings/${bot.id}/bot-stats-token`, {method: "POST"});
+      if (!response.ok) throw new Error("stats_token_failed");
+      const payload = await response.json();
+      setStatsToken(payload.token);
+      setStatsStatus((current) => ({
+        connected: false,
+        credentialCreated: true,
+        tokenPrefix: payload.token.slice(0, 12),
+        lastReportedAt: current?.lastReportedAt ?? null,
+        serverCount: current?.serverCount ?? null,
+      }));
+      toast.success("Reporting token created");
+    } catch {
+      toast.danger("Reporting token could not be created");
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
   return (
     <div id="bots" className="scroll-mt-28 space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -295,7 +350,7 @@ export function BotOwnerDashboard({
       ) : (
         <>
       <BotSummary bot={bot} rows={rows} selectedId={selectedId} onSelect={setSelectedId} onPreview={() => setPreviewOpen(true)} onEdit={() => openEditor("all")} />
-      <DeveloperControls onOpen={(panel) => openEditor(panel)} />
+      <DeveloperControls onOpen={(panel) => openEditor(panel)} onOpenStats={openStatsReporting} />
 
       <section className="space-y-4" aria-labelledby="bot-performance-heading">
         <div><h2 id="bot-performance-heading" className="text-xl font-bold text-foreground">Bot performance</h2><p className="mt-1 text-sm text-muted">Reliable discovery and server-growth analytics for {bot.name}.</p></div>
@@ -310,7 +365,9 @@ export function BotOwnerDashboard({
                   ? liveAnalytics?.totals.votes ?? bot.analytics.votes
                   : bot.analytics[metric.key];
             const change = bot.analytics.percentageChanges[metric.key];
-            const display = formatCount(value);
+            const display = metric.key === "activeServers"
+              ? formatServerCount(value as number | null)
+              : formatCount(value as number);
             return <Card key={metric.key} className="nexus-card gap-2 p-4"><div className="flex items-center justify-between gap-3"><p className="text-xs font-medium text-muted">{metric.label}</p><Icon className={`size-4 ${metric.color}`} /></div><p className="text-2xl font-bold tracking-tight text-foreground">{display}</p><p className={`text-xs font-medium ${change >= 0 ? "text-emerald-500" : "text-red-400"}`}>{change >= 0 ? "+" : ""}{change.toFixed(1)}% <span className="font-normal text-muted">vs previous 30 days</span></p></Card>;
           })}
         </div>
@@ -341,6 +398,52 @@ export function BotOwnerDashboard({
 
       <Modal.Backdrop isOpen={previewOpen} onOpenChange={setPreviewOpen}><Modal.Container><Modal.Dialog className="sm:max-w-lg"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>Preview · {bot.name}</Modal.Heading></Modal.Header><Modal.Body><p className="text-sm leading-relaxed text-muted">{bot.description}</p></Modal.Body><Modal.Footer><Button slot="close" variant="secondary">Close</Button><LinkButton href={ownerListingPath(bot)} target="_blank">Open owner preview</LinkButton></Modal.Footer></Modal.Dialog></Modal.Container></Modal.Backdrop>
       <BotEditorModal panel={editorPanel} draft={editorDraft} onPanelChange={setEditorPanel} onDraftChange={setEditorDraft} onClose={() => setEditorPanel(null)} onSave={saveEditor} />
+      <Modal.Backdrop isOpen={statsOpen} onOpenChange={setStatsOpen}>
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-2xl">
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>Server count reporting · {bot.name}</Modal.Heading></Modal.Header>
+            <Modal.Body className="space-y-4">
+              <p className="text-sm leading-relaxed text-muted">
+                Connect your bot process to Nexbiy with a listing-specific token. Nexbiy never asks for or stores your Discord bot token.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted">Connection</p><p className="mt-1 font-semibold">{statsLoading ? "Loading…" : statsStatus?.connected ? "Reporting" : "Not connected"}</p></div>
+                <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted">Reported servers</p><p className="mt-1 font-semibold">{statsStatus?.serverCount == null ? "Pending" : formatCount(statsStatus.serverCount)}</p></div>
+                <div className="rounded-xl border border-border p-3"><p className="text-xs text-muted">Last report</p><p className="mt-1 font-semibold">{statsStatus?.lastReportedAt ? new Date(statsStatus.lastReportedAt).toLocaleString() : "Never"}</p></div>
+              </div>
+              <div className="rounded-xl border border-border bg-default/40 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div><p className="font-semibold">Reporting token</p><p className="text-xs text-muted">{statsStatus?.credentialCreated ? `Configured · ${statsStatus.tokenPrefix ?? "hidden"}…` : "Create a token to connect your bot."}</p></div>
+                  <Button variant="secondary" isPending={statsLoading} onPress={generateStatsToken}><KeyRound className="size-4" />{statsStatus?.credentialCreated ? "Rotate token" : "Create token"}</Button>
+                </div>
+                {statsToken ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-accent/30 bg-background p-3">
+                      <code className="min-w-0 flex-1 break-all text-xs">{statsToken}</code>
+                      <Button isIconOnly size="sm" variant="ghost" aria-label="Copy reporting token" onPress={async () => { await navigator.clipboard.writeText(statsToken); toast.success("Token copied"); }}><Copy className="size-4" /></Button>
+                    </div>
+                    <p className="text-xs font-medium text-warning">Copy it now. For security, this token is shown only once.</p>
+                  </div>
+                ) : null}
+              </div>
+              <div className="rounded-xl border border-border p-4">
+                <p className="mb-2 text-sm font-semibold">Report from your bot</p>
+                <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-default p-3 text-xs leading-relaxed text-muted">{`await fetch("https://YOUR_NEXBIY_DOMAIN/api/bot-stats", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_REPORTING_TOKEN",
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({ serverCount: client.guilds.cache.size })
+});`}</pre>
+                <p className="mt-2 text-xs text-muted">Send a report after your bot is ready and periodically afterward. Requests are rate-limited and stored as owner-reported data.</p>
+              </div>
+            </Modal.Body>
+            <Modal.Footer><Button slot="close" variant="secondary">Done</Button></Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
       <Modal.Backdrop isOpen={deleteSelectorOpen} onOpenChange={setDeleteSelectorOpen}><Modal.Container><Modal.Dialog className="sm:max-w-lg"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>Select bot projects</Modal.Heading></Modal.Header><Modal.Body className="space-y-2"><p className="mb-3 text-sm text-muted">Choose one or multiple projects to permanently delete.</p>{rows.map((row) => <Checkbox key={row.id} isSelected={selectedForDelete.has(row.id)} onChange={() => toggleDeleteSelection(row.id)}><Checkbox.Content className="w-full rounded-xl border border-border p-3"><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control><BotAvatar bot={row} className="size-9" /><span className="min-w-0"><span className="block font-medium text-foreground">{row.name}</span><span className="block text-xs text-muted">{row.category} · {row.status}</span></span></Checkbox.Content></Checkbox>)}</Modal.Body><Modal.Footer><Button slot="close" variant="tertiary">Cancel</Button><Button variant="danger" isDisabled={!selectedForDelete.size} onPress={() => { setDeleteSelectorOpen(false); setDeleteConfirmOpen(true); }}><Trash2 className="size-4" />Continue</Button></Modal.Footer></Modal.Dialog></Modal.Container></Modal.Backdrop>
       <AlertDialog isOpen={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}><AlertDialog.Backdrop><AlertDialog.Container><AlertDialog.Dialog className="sm:max-w-[420px]"><AlertDialog.CloseTrigger /><AlertDialog.Header><AlertDialog.Icon status="danger" /><AlertDialog.Heading>Delete selected bot projects?</AlertDialog.Heading></AlertDialog.Header><AlertDialog.Body><p>This permanently removes {selectedForDelete.size} selected {selectedForDelete.size === 1 ? "project" : "projects"} from this mock dashboard. This action cannot be undone.</p></AlertDialog.Body><AlertDialog.Footer><Button slot="close" variant="tertiary">Cancel</Button><Button slot="close" variant="danger" onPress={deleteSelectedProjects}><Trash2 className="size-4" />Delete projects</Button></AlertDialog.Footer></AlertDialog.Dialog></AlertDialog.Container></AlertDialog.Backdrop></AlertDialog>
         </>
@@ -350,10 +453,10 @@ export function BotOwnerDashboard({
 }
 
 function BotSummary({ bot, rows, selectedId, onSelect, onPreview, onEdit }: { bot: BotDashboardListing; rows: BotDashboardListing[]; selectedId: string; onSelect: (id: string) => void; onPreview: () => void; onEdit: () => void }) {
-  return <Card className="nexus-card gap-0"><Card.Content className="p-4 sm:p-5"><div className="flex flex-col gap-5 xl:flex-row xl:items-center"><div className="flex min-w-0 flex-1 items-start gap-3.5"><BotAvatar bot={bot} className="size-14 sm:size-16" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-foreground">{bot.name}</h2><Chip size="sm" color="accent" variant="soft"><Chip.Label>BOT</Chip.Label></Chip><Chip size="sm" variant="soft" color={statusColor(bot.status)}><Chip.Label>{bot.status}</Chip.Label></Chip></div><p className="mt-0.5 text-xs font-medium text-muted">{bot.category} · Prefix {bot.prefix} · {formatCount(bot.analytics.activeServers)} active servers · Updated {bot.updated}</p><p className="mt-2 max-w-2xl text-sm text-muted">{bot.description}</p></div></div><div className="flex flex-col gap-3 xl:items-end"><Select className="w-full sm:w-56" selectedKey={selectedId} onSelectionChange={(key) => onSelect(String(key))}><Label>Selected bot</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{rows.map((item) => <ListBox.Item key={item.id} id={item.id} textValue={item.name}>{item.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover></Select><div className="flex flex-wrap items-center gap-2"><Button variant="secondary" onPress={onEdit}><Pencil className="size-4" />Edit</Button><Button variant="secondary" onPress={onPreview}><Eye className="size-4" />Preview</Button><LinkButton href={ownerListingPath(bot)} target="_blank" variant="secondary"><ExternalLink className="size-4" />{bot.status === "Live" ? "Public page" : "Owner preview"}</LinkButton><Dropdown><Dropdown.Trigger aria-label={`More actions for ${bot.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => key === "pause" && toast.info("Bot listing paused")}><Dropdown.Item id="pause" textValue="Pause listing">Pause listing</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></div></div></Card.Content></Card>;
+  return <Card className="nexus-card gap-0"><Card.Content className="p-4 sm:p-5"><div className="flex flex-col gap-5 xl:flex-row xl:items-center"><div className="flex min-w-0 flex-1 items-start gap-3.5"><BotAvatar bot={bot} className="size-14 sm:size-16" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold text-foreground">{bot.name}</h2><Chip size="sm" color="accent" variant="soft"><Chip.Label>BOT</Chip.Label></Chip><Chip size="sm" variant="soft" color={statusColor(bot.status)}><Chip.Label>{bot.status}</Chip.Label></Chip></div><p className="mt-0.5 text-xs font-medium text-muted">{bot.category} · Prefix {bot.prefix} · {formatServerCount(bot.analytics.activeServers)} · Updated {bot.updated}</p><p className="mt-2 max-w-2xl text-sm text-muted">{bot.description}</p></div></div><div className="flex flex-col gap-3 xl:items-end"><Select className="w-full sm:w-56" selectedKey={selectedId} onSelectionChange={(key) => onSelect(String(key))}><Label>Selected bot</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{rows.map((item) => <ListBox.Item key={item.id} id={item.id} textValue={item.name}>{item.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover></Select><div className="flex flex-wrap items-center gap-2"><Button variant="secondary" onPress={onEdit}><Pencil className="size-4" />Edit</Button><Button variant="secondary" onPress={onPreview}><Eye className="size-4" />Preview</Button><LinkButton href={ownerListingPath(bot)} target="_blank" variant="secondary"><ExternalLink className="size-4" />{bot.status === "Live" ? "Public page" : "Owner preview"}</LinkButton><Dropdown><Dropdown.Trigger aria-label={`More actions for ${bot.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => key === "pause" && toast.info("Bot listing paused")}><Dropdown.Item id="pause" textValue="Pause listing">Pause listing</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></div></div></Card.Content></Card>;
 }
 
-function DeveloperControls({ onOpen }: { onOpen: (panel: BotEditorPanel) => void }) {
+function DeveloperControls({ onOpen, onOpenStats }: { onOpen: (panel: BotEditorPanel) => void; onOpenStats: () => void }) {
   const tools = [
     { label: "Listing details", description: "Name, descriptions, category, and tags", icon: Pencil, panel: "details" },
     { label: "Commands & features", description: "Commands, capabilities, and premium options", icon: Code2, panel: "commands" },
@@ -363,7 +466,7 @@ function DeveloperControls({ onOpen }: { onOpen: (panel: BotEditorPanel) => void
   return (
     <section className="space-y-3" aria-labelledby="developer-controls-heading">
       <div><h2 id="developer-controls-heading" className="text-xl font-bold text-foreground">Developer controls</h2><p className="mt-1 text-sm text-muted">Configure the selected bot without mixing settings into analytics.</p></div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {tools.map((tool) => {
           const Icon = tool.icon;
           return (
@@ -373,6 +476,10 @@ function DeveloperControls({ onOpen }: { onOpen: (panel: BotEditorPanel) => void
             </Button>
           );
         })}
+        <Button variant="secondary" className="h-auto justify-start rounded-2xl p-4 text-left" onPress={onOpenStats}>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><KeyRound className="size-4" /></span>
+          <span className="min-w-0"><span className="block text-sm font-semibold text-foreground">Server count reporting</span><span className="mt-0.5 block whitespace-normal text-xs font-normal leading-relaxed text-muted">Securely report how many servers use your bot</span></span>
+        </Button>
       </div>
     </section>
   );
@@ -392,7 +499,7 @@ function ListingHealth({ bot }: { bot: BotDashboardListing }) {
 }
 
 function BotTable({ rows, onPreview, onEdit, onToggle, onDelete }: { rows: BotDashboardListing[]; onPreview: (row: BotDashboardListing) => void; onEdit: (row: BotDashboardListing) => void; onToggle: (row: BotDashboardListing) => void; onDelete: (row: BotDashboardListing) => void }) {
-  return <section className="space-y-4" aria-labelledby="bot-listings-heading"><div><h2 id="bot-listings-heading" className="text-xl font-bold text-foreground">Bot listings</h2><p className="mt-1 text-sm text-muted">Manage your projects and open developer settings.</p></div><Table><Table.ScrollContainer><Table.Content aria-label="Bot listings" className="min-w-[980px]"><Table.Header><Table.Column isRowHeader>Bot</Table.Column><Table.Column>Status</Table.Column><Table.Column>Listing Views</Table.Column><Table.Column>Invite Clicks</Table.Column><Table.Column>Active Servers</Table.Column><Table.Column>Votes</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="text-end">Actions</Table.Column></Table.Header><Table.Body>{rows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><BotAvatar bot={row} className="size-9" /><div><p className="font-medium">{row.name}</p><p className="text-xs text-muted">{row.category}</p></div></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={statusColor(row.status)}><Chip.Label>{row.status}</Chip.Label></Chip></Table.Cell><Table.Cell>{formatCount(row.analytics.listingViews)}</Table.Cell><Table.Cell>{formatCount(row.analytics.inviteClicks)}</Table.Cell><Table.Cell>{formatCount(row.analytics.activeServers)}</Table.Cell><Table.Cell>{formatCount(row.analytics.votes)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><Button isIconOnly size="sm" variant="ghost" aria-label={`Edit ${row.name}`} onPress={() => onEdit(row)}><Pencil className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label={`Preview ${row.name}`} onPress={() => onPreview(row)}><Eye className="size-4" /></Button><Dropdown><Dropdown.Trigger aria-label={`Actions for ${row.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => { if (key === "public") window.open(ownerListingPath(row), "_blank", "noopener,noreferrer"); if (key === "toggle") onToggle(row); if (key === "delete") onDelete(row); }}><Dropdown.Item id="public" textValue="Open listing"><ExternalLink className="size-4" />{row.status === "Live" ? "View public page" : "Open owner preview"}</Dropdown.Item><Dropdown.Item id="toggle" textValue={row.status === "Paused" ? "Resume" : "Pause"}>{row.status === "Paused" ? "Resume" : "Pause"}</Dropdown.Item><Dropdown.Item id="delete" textValue="Delete" variant="danger">Delete</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table></section>;
+  return <section className="space-y-4" aria-labelledby="bot-listings-heading"><div><h2 id="bot-listings-heading" className="text-xl font-bold text-foreground">Bot listings</h2><p className="mt-1 text-sm text-muted">Manage your projects and open developer settings.</p></div><Table><Table.ScrollContainer><Table.Content aria-label="Bot listings" className="min-w-[980px]"><Table.Header><Table.Column isRowHeader>Bot</Table.Column><Table.Column>Status</Table.Column><Table.Column>Listing Views</Table.Column><Table.Column>Invite Clicks</Table.Column><Table.Column>Active Servers</Table.Column><Table.Column>Votes</Table.Column><Table.Column>Updated</Table.Column><Table.Column className="text-end">Actions</Table.Column></Table.Header><Table.Body>{rows.map((row) => <Table.Row key={row.id} id={row.id}><Table.Cell><div className="flex items-center gap-2.5"><BotAvatar bot={row} className="size-9" /><div><p className="font-medium">{row.name}</p><p className="text-xs text-muted">{row.category}</p></div></div></Table.Cell><Table.Cell><Chip size="sm" variant="soft" color={statusColor(row.status)}><Chip.Label>{row.status}</Chip.Label></Chip></Table.Cell><Table.Cell>{formatCount(row.analytics.listingViews)}</Table.Cell><Table.Cell>{formatCount(row.analytics.inviteClicks)}</Table.Cell><Table.Cell>{formatServerCount(row.analytics.activeServers)}</Table.Cell><Table.Cell>{formatCount(row.analytics.votes)}</Table.Cell><Table.Cell className="text-muted">{row.updated}</Table.Cell><Table.Cell><div className="flex min-w-[7.5rem] shrink-0 items-center justify-end gap-1"><Button isIconOnly size="sm" variant="ghost" aria-label={`Edit ${row.name}`} onPress={() => onEdit(row)}><Pencil className="size-4" /></Button><Button isIconOnly size="sm" variant="ghost" aria-label={`Preview ${row.name}`} onPress={() => onPreview(row)}><Eye className="size-4" /></Button><Dropdown><Dropdown.Trigger aria-label={`Actions for ${row.name}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-default focus-visible:ring-2 focus-visible:ring-accent"><MoreHorizontal className="size-4 shrink-0" /></Dropdown.Trigger><Dropdown.Popover placement="bottom end"><Dropdown.Menu onAction={(key) => { if (key === "public") window.open(ownerListingPath(row), "_blank", "noopener,noreferrer"); if (key === "toggle") onToggle(row); if (key === "delete") onDelete(row); }}><Dropdown.Item id="public" textValue="Open listing"><ExternalLink className="size-4" />{row.status === "Live" ? "View public page" : "Open owner preview"}</Dropdown.Item><Dropdown.Item id="toggle" textValue={row.status === "Paused" ? "Resume" : "Pause"}>{row.status === "Paused" ? "Resume" : "Pause"}</Dropdown.Item><Dropdown.Item id="delete" textValue="Delete" variant="danger">Delete</Dropdown.Item></Dropdown.Menu></Dropdown.Popover></Dropdown></div></Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table></section>;
 }
 
 const EDITOR_PANELS: Array<{ id: BotEditorPanel; label: string }> = [
@@ -464,4 +571,4 @@ function MediaControl({ title, detail, onPress }: { title: string; detail: strin
 function BotAvatar({ bot, className }: { bot: BotDashboardListing; className: string }) { return <Avatar className={`shrink-0 rounded-xl ${className}`}>{bot.avatar ? <Avatar.Image src={bot.avatar} alt="" /> : null}<Avatar.Fallback className="rounded-xl bg-accent/15 text-sm font-bold text-accent">{initials(bot.name)}</Avatar.Fallback></Avatar>; }
 function FunnelRow({ label, value }: { label: string; value: number }) { return <div className="flex items-center justify-between rounded-xl bg-default px-4 py-3"><span className="text-sm text-muted">{label}</span><span className="font-bold text-foreground">{formatCount(value)}</span></div>; }
 function FunnelRate({ label, value }: { label: string; value: number }) { return <div className="flex items-center justify-center gap-2 text-xs text-muted"><TrendingUp className="size-3.5 text-accent" />{label}: <span className="font-semibold text-foreground">{value.toFixed(1)}%</span></div>; }
-function GrowthRow({ label, value, tone, comingSoon = false }: { label: string; value: number; tone?: "positive" | "negative"; comingSoon?: boolean }) { return <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"><span className="flex flex-wrap items-center gap-2 text-sm text-muted">{label}{comingSoon ? <Chip size="sm" variant="soft"><Chip.Label>Coming Soon</Chip.Label></Chip> : null}</span><span className={`font-bold ${tone === "positive" ? "text-emerald-500" : tone === "negative" ? "text-red-400" : "text-foreground"}`}>{comingSoon ? "—" : <>{tone === "positive" ? "+" : tone === "negative" ? "−" : ""}{formatCount(value)}</>}</span></div>; }
+function GrowthRow({ label, value, tone, comingSoon = false }: { label: string; value: number | null; tone?: "positive" | "negative"; comingSoon?: boolean }) { return <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"><span className="flex flex-wrap items-center gap-2 text-sm text-muted">{label}{comingSoon ? <Chip size="sm" variant="soft"><Chip.Label>Coming Soon</Chip.Label></Chip> : null}</span><span className={`font-bold ${tone === "positive" ? "text-emerald-500" : tone === "negative" ? "text-red-400" : "text-foreground"}`}>{comingSoon ? "—" : value == null ? "Awaiting report" : <>{tone === "positive" ? "+" : tone === "negative" ? "−" : ""}{formatCount(value)}</>}</span></div>; }

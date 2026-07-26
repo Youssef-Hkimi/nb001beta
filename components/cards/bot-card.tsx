@@ -102,7 +102,7 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1">
             <Server className="size-3.5" />
-            {formatCount(bot.servers)} servers
+            {bot.servers == null ? "Server count pending" : `${formatCount(bot.servers)} servers`}
           </span>
           <span className="inline-flex items-center gap-1">
             <ThumbsUp className="size-3.5" />
@@ -156,7 +156,7 @@ export function BotPreviewCard({
   category: string;
   tags: string[];
   botFeatures: string[];
-  servers: number;
+  servers: number | null;
   votes: number;
   verified?: boolean;
   avatar?: string | null;
@@ -169,7 +169,7 @@ export function BotPreviewCard({
     slug: "preview",
     name: name || "Bot name",
     shortDescription: description || "Your short description will appear here.",
-    servers: servers || 0,
+    servers: servers ?? null,
     votes: votes || 0,
     category: category || "Utility",
     tags: tags.length ? tags : ["Feature"],
