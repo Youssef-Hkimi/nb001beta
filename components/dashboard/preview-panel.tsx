@@ -37,7 +37,7 @@ type BotPreviewPanelProps = {
     shortDescription: string;
     category: string;
     tags: string[];
-    servers: number;
+    servers: number | null;
     votes: number;
     verified: boolean;
     botFeatures: string[];

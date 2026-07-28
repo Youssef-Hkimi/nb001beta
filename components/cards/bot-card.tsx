@@ -100,10 +100,12 @@ export function BotCard({ bot, isPreview = false }: { bot: BotCardModel; isPrevi
 
       <Card.Content className="space-y-3 px-4 pb-3">
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-          <span className="inline-flex items-center gap-1">
-            <Server className="size-3.5" />
-            {bot.servers == null ? "Server count pending" : `${formatCount(bot.servers)} servers`}
-          </span>
+            {bot.servers != null ? (
+              <span className="inline-flex items-center gap-1">
+                <Server className="size-3.5" />
+                {formatCount(bot.servers)} servers
+              </span>
+            ) : null}
           <span className="inline-flex items-center gap-1">
             <ThumbsUp className="size-3.5" />
             {formatCount(bot.votes)} votes

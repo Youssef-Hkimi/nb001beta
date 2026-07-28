@@ -35,7 +35,7 @@ export type BotPagePreviewModel = {
   commands: BotCommand[];
   botFeatures: string[];
   verified: boolean;
-  servers: number;
+  servers: number | null;
   votes: number;
   monthlyGrowth: number;
   createdAt: string;
@@ -96,7 +96,9 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
         <div className="flex flex-wrap gap-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1"><Hash className="size-3.5" />ID: {model.clientId || "—"}</span>
           <span className="inline-flex items-center gap-1"><TerminalSquare className="size-3.5" />Prefix {model.prefix || "/"}</span>
-          <span className="inline-flex items-center gap-1"><Server className="size-3.5" />{formatCount(model.servers)} servers</span>
+          {model.servers != null ? (
+            <span className="inline-flex items-center gap-1"><Server className="size-3.5" />{formatCount(model.servers)} servers</span>
+          ) : null}
           <span className="inline-flex items-center gap-1"><ThumbsUp className="size-3.5" />{formatCount(model.votes)} votes</span>
         </div>
 
@@ -140,7 +142,9 @@ export function BotPagePreview({ model }: { model: BotPagePreviewModel }) {
           <p className="text-xs font-semibold text-foreground">Bot Stats</p>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: "Servers", value: formatCount(model.servers), icon: Server },
+              ...(model.servers != null
+                ? [{ label: "Servers", value: formatCount(model.servers), icon: Server }]
+                : []),
               { label: "Votes", value: formatCount(model.votes), icon: ThumbsUp },
               { label: "Growth", value: `+${model.monthlyGrowth}%`, icon: TrendingUp },
               { label: "Commands", value: String(commands.length), icon: TerminalSquare },

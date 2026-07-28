@@ -54,9 +54,9 @@ export function ExploreSidebar() {
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{bot.name}</p>
-                <p className="text-xs text-muted">
-                  {bot.servers == null ? "Server count pending" : `${formatCount(bot.servers)} servers`}
-                </p>
+                {bot.servers != null ? (
+                  <p className="text-xs text-muted">{formatCount(bot.servers)} servers</p>
+                ) : null}
               </div>
               <Bot className="size-4 shrink-0 text-muted" />
             </div>

@@ -75,7 +75,9 @@ export function BotDetailView({
                 </div>
                 <p className="max-w-2xl text-sm leading-relaxed text-muted md:text-base">{bot.shortDescription}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-                  <span className="inline-flex items-center gap-1.5"><Server className="size-4 text-accent" />{formatCount(bot.servers)} servers</span>
+                  {bot.servers != null ? (
+                    <span className="inline-flex items-center gap-1.5"><Server className="size-4 text-accent" />{formatCount(bot.servers)} servers</span>
+                  ) : null}
                   <span className="inline-flex items-center gap-1.5"><ThumbsUp className="size-4" />{formatCount(vote.voteCount)} votes</span>
                   <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" />{bot.createdAt}</span>
                   <span className="inline-flex items-center gap-1.5 font-mono"><TerminalSquare className="size-4" />Prefix {bot.prefix}</span>
@@ -131,7 +133,7 @@ export function BotDetailView({
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card className="nexus-card-elevated gap-4"><Card.Header><Card.Title className="text-base">Bot Stats</Card.Title></Card.Header><Card.Content className="space-y-3">{[
-            { label: "Servers", value: formatCount(bot.servers), icon: Server }, { label: "Votes", value: formatCount(vote.voteCount), icon: ThumbsUp }, { label: "Monthly Growth", value: `+${bot.monthlyGrowth}%`, icon: TrendingUp }, { label: "Commands", value: String(bot.commands.length), icon: TerminalSquare }, { label: "Created", value: bot.createdAt, icon: CalendarDays },
+            ...(bot.servers != null ? [{ label: "Servers", value: formatCount(bot.servers), icon: Server }] : []), { label: "Votes", value: formatCount(vote.voteCount), icon: ThumbsUp }, { label: "Monthly Growth", value: `+${bot.monthlyGrowth}%`, icon: TrendingUp }, { label: "Commands", value: String(bot.commands.length), icon: TerminalSquare }, { label: "Created", value: bot.createdAt, icon: CalendarDays },
           ].map((stat) => { const Icon = stat.icon; return <div key={stat.label} className="flex items-center gap-3 rounded-xl bg-default/40 p-3"><Icon className="size-4 shrink-0 text-accent" /><span className="min-w-0 flex-1 text-xs text-muted">{stat.label}</span><span className="text-right text-sm font-semibold text-foreground">{stat.value}</span></div>; })}</Card.Content></Card>
 
           <Card className="nexus-card gap-0 overflow-hidden">
