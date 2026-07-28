@@ -189,6 +189,7 @@ export type DashboardListing = ListingSafetyFields & {
   description: string;
   bannerHue: string;
   iconUrl?: string | null;
+  bannerUrl?: string | null;
   publicPath?: string;
   ownerPreviewPath?: string;
   mediaComplete?: boolean;
@@ -268,6 +269,7 @@ export type BotDashboardListing = Omit<DashboardListing, "type"> & {
   publicPath: string;
   prefix: string;
   avatar: string | null;
+  galleryImages: string[];
   analytics: BotAnalytics;
   listingHealth: {
     reviewStatus: string;

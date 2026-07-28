@@ -52,7 +52,9 @@ import { AnalyticsLineChart } from "@/components/dashboard/analytics-line-chart"
 import { BotFeatureSelect } from "@/components/forms/bot-feature-select";
 import { RichDescriptionEditor } from "@/components/forms/rich-description-editor";
 import { TagMultiSelect } from "@/components/forms/tag-multi-select";
+import { UploadBox } from "@/components/forms/upload-box";
 import { LinkButton } from "@/components/ui/link-button";
+import { uploadListingMedia } from "@/lib/client-listing-media";
 import { DEFAULT_BOT_FEATURE_IDS } from "@/lib/data/bot-features";
 import { BOT_CATEGORIES, BOT_LISTING_TAGS } from "@/lib/data/categories";
 import { formatCount, initials } from "@/lib/format";
@@ -91,9 +93,9 @@ type BotEditorDraft = {
   supportUrl: string;
   websiteUrl: string;
   githubUrl: string;
-  hasAvatar: boolean;
-  hasBanner: boolean;
-  galleryCount: number;
+  iconPreview: string | null;
+  bannerPreview: string | null;
+  galleryImages: string[];
   visibility: string;
 };
 
@@ -116,9 +118,9 @@ function draftFor(bot: BotDashboardListing): BotEditorDraft {
     supportUrl: bot.listingHealth.supportConnected ? "https://discord.gg/support" : "",
     websiteUrl: bot.listingHealth.websiteConnected ? `https://${bot.id}.example.com` : "",
     githubUrl: bot.listingHealth.githubConnected ? `https://github.com/nexbiy/${bot.id}` : "",
-    hasAvatar: Boolean(bot.avatar),
-    hasBanner: true,
-    galleryCount: 3,
+    iconPreview: bot.avatar,
+    bannerPreview: bot.bannerUrl ?? null,
+    galleryImages: bot.galleryImages,
     visibility: "Public",
   };
 }
@@ -137,6 +139,10 @@ export function BotOwnerDashboard({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editorPanel, setEditorPanel] = useState<BotEditorPanel | null>(null);
   const [editorDraft, setEditorDraft] = useState<BotEditorDraft | null>(null);
+  const [editorIconFile, setEditorIconFile] = useState<File | null>(null);
+  const [editorBannerFile, setEditorBannerFile] = useState<File | null>(null);
+  const [editorGalleryFiles, setEditorGalleryFiles] = useState<Array<{file: File; preview: string}>>([]);
+  const [editorSaving, setEditorSaving] = useState(false);
   const [savedDrafts, setSavedDrafts] = useState<Record<string, BotEditorDraft>>(() =>
     Object.fromEntries(listings.map((item) => [item.id, draftFor(item)])),
   );
@@ -172,9 +178,7 @@ export function BotOwnerDashboard({
 
   useEffect(() => {
     setRows(listings);
-    setSavedDrafts((current) => ({
-      ...Object.fromEntries(listings.map((item) => [item.id, current[item.id] ?? draftFor(item)])),
-    }));
+    setSavedDrafts(Object.fromEntries(listings.map((item) => [item.id, draftFor(item)])));
     if (!listings.some((item) => item.id === selectedId)) setSelectedId(listings[0]?.id ?? "");
   }, [listings, selectedId]);
 
@@ -196,55 +200,78 @@ export function BotOwnerDashboard({
 
   function openEditor(panel: BotEditorPanel, target = bot) {
     if (!target) return;
+    editorGalleryFiles.forEach(({preview}) => URL.revokeObjectURL(preview));
+    setEditorIconFile(null);
+    setEditorBannerFile(null);
+    setEditorGalleryFiles([]);
     setSelectedId(target.id);
     setEditorDraft(savedDrafts[target.id] ?? draftFor(target));
     setEditorPanel(panel);
   }
 
+  function closeEditor() {
+    setEditorPanel(null);
+    setEditorIconFile(null);
+    setEditorBannerFile(null);
+    setEditorGalleryFiles((current) => {
+      current.forEach(({preview}) => URL.revokeObjectURL(preview));
+      return [];
+    });
+  }
+
+  function addEditorGalleryFiles(files: FileList | null) {
+    if (!files || !editorDraft) return;
+    const remaining = Math.max(0, 6 - editorDraft.galleryImages.length - editorGalleryFiles.length);
+    const selected = Array.from(files).slice(0, remaining);
+    if (selected.length < files.length) toast.info("Bot galleries support up to 6 images");
+    setEditorGalleryFiles((current) => [
+      ...current,
+      ...selected.map((file) => ({file, preview: URL.createObjectURL(file)})),
+    ]);
+  }
+
   async function saveEditor() {
     if (!bot || !editorDraft) return;
-    const response = await fetch(`/api/listings/${bot.id}`, {
-      method: "PATCH",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        name: editorDraft.name.trim(),
-        shortDescription: editorDraft.description.trim(),
-        longDescription: editorDraft.fullDescription.trim(),
-        category: editorDraft.category,
-        tags: editorDraft.tags,
-        botPrefix: editorDraft.prefix.trim(),
-        botCommands: editorDraft.commands.map(({name, description}) => ({name, description})),
-        featureIds: editorDraft.botFeatures,
-        premium: editorDraft.premium,
-        inviteUrl: editorDraft.inviteUrl.trim(),
-        supportUrl: editorDraft.supportUrl.trim(),
-        websiteUrl: editorDraft.websiteUrl.trim(),
-        githubUrl: editorDraft.githubUrl.trim(),
-      }),
-    });
-    if (!response.ok) {
+    setEditorSaving(true);
+    try {
+      const response = await fetch(`/api/listings/${bot.id}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          name: editorDraft.name.trim(),
+          shortDescription: editorDraft.description.trim(),
+          longDescription: editorDraft.fullDescription.trim(),
+          category: editorDraft.category,
+          tags: editorDraft.tags,
+          botPrefix: editorDraft.prefix.trim(),
+          botCommands: editorDraft.commands.map(({name, description}) => ({name, description})),
+          featureIds: editorDraft.botFeatures,
+          premium: editorDraft.premium,
+          inviteUrl: editorDraft.inviteUrl.trim(),
+          supportUrl: editorDraft.supportUrl.trim(),
+          websiteUrl: editorDraft.websiteUrl.trim(),
+          githubUrl: editorDraft.githubUrl.trim(),
+        }),
+      });
+      if (!response.ok) throw new Error("listing_update_failed");
+
+      await uploadListingMedia(bot.id, [
+        ...(editorIconFile ? [{kind: "icon" as const, file: editorIconFile}] : []),
+        ...(editorBannerFile ? [{kind: "banner" as const, file: editorBannerFile}] : []),
+        ...editorGalleryFiles.map(({file}, index) => ({
+          kind: "gallery" as const,
+          file,
+          position: editorDraft.galleryImages.length + index,
+        })),
+      ]);
+      await onRefresh();
+      closeEditor();
+      toast.success("Bot settings updated", {description: `${editorDraft.name} was saved successfully.`});
+    } catch {
       toast.danger("Bot settings could not be saved");
-      return;
+    } finally {
+      setEditorSaving(false);
     }
-    await onRefresh();
-    setSavedDrafts((current) => ({ ...current, [bot.id]: editorDraft }));
-    setRows((current) => current.map((item) => item.id === bot.id ? {
-      ...item,
-      name: editorDraft.name.trim() || item.name,
-      description: editorDraft.description.trim() || item.description,
-      category: editorDraft.category,
-      prefix: editorDraft.prefix.trim() || item.prefix,
-      avatar: editorDraft.hasAvatar ? item.avatar : null,
-      listingHealth: {
-        ...item.listingHealth,
-        inviteConnected: Boolean(editorDraft.inviteUrl.trim()),
-        supportConnected: Boolean(editorDraft.supportUrl.trim()),
-        websiteConnected: Boolean(editorDraft.websiteUrl.trim()),
-        githubConnected: Boolean(editorDraft.githubUrl.trim()),
-      },
-    } : item));
-    setEditorPanel(null);
-    toast.success("Bot settings updated", { description: `${editorDraft.name} was saved successfully.` });
   }
 
   function toggleDeleteSelection(id: string) {
@@ -420,7 +447,37 @@ export function BotOwnerDashboard({
       <BotTable rows={rows} onPreview={(row) => { setSelectedId(row.id); setPreviewOpen(true); }} onEdit={(row) => openEditor("all", row)} onToggle={toggleStatus} onDelete={requestSingleDelete} />
 
       <Modal.Backdrop isOpen={previewOpen} onOpenChange={setPreviewOpen}><Modal.Container><Modal.Dialog className="sm:max-w-lg"><Modal.CloseTrigger /><Modal.Header><Modal.Heading>Preview · {bot.name}</Modal.Heading></Modal.Header><Modal.Body><p className="text-sm leading-relaxed text-muted">{bot.description}</p></Modal.Body><Modal.Footer><Button slot="close" variant="secondary">Close</Button><LinkButton href={ownerListingPath(bot)} target="_blank">Open owner preview</LinkButton></Modal.Footer></Modal.Dialog></Modal.Container></Modal.Backdrop>
-      <BotEditorModal panel={editorPanel} draft={editorDraft} onPanelChange={setEditorPanel} onDraftChange={setEditorDraft} onClose={() => setEditorPanel(null)} onSave={saveEditor} />
+      <BotEditorModal
+        panel={editorPanel}
+        draft={editorDraft}
+        saving={editorSaving}
+        pendingGallery={editorGalleryFiles}
+        onPanelChange={setEditorPanel}
+        onDraftChange={setEditorDraft}
+        onIconFile={(file, preview) => {
+          setEditorIconFile(file);
+          setEditorDraft((current) => current ? {...current, iconPreview: preview} : current);
+        }}
+        onBannerFile={(file, preview) => {
+          setEditorBannerFile(file);
+          setEditorDraft((current) => current ? {...current, bannerPreview: preview} : current);
+        }}
+        onGalleryFiles={addEditorGalleryFiles}
+        onClearIcon={() => {
+          setEditorIconFile(null);
+          setEditorDraft((current) => current ? {...current, iconPreview: bot.avatar} : current);
+        }}
+        onClearBanner={() => {
+          setEditorBannerFile(null);
+          setEditorDraft((current) => current ? {...current, bannerPreview: bot.bannerUrl ?? null} : current);
+        }}
+        onClearGallery={() => setEditorGalleryFiles((current) => {
+          current.forEach(({preview}) => URL.revokeObjectURL(preview));
+          return [];
+        })}
+        onClose={closeEditor}
+        onSave={saveEditor}
+      />
       <Modal.Backdrop isOpen={statsOpen} onOpenChange={setStatsOpen}>
         <Modal.Container>
           <Modal.Dialog className="sm:max-w-2xl">
@@ -562,7 +619,37 @@ const EDITOR_PANELS: Array<{ id: BotEditorPanel; label: string }> = [
   { id: "media", label: "Media & settings" },
 ];
 
-function BotEditorModal({ panel, draft, onPanelChange, onDraftChange, onClose, onSave }: { panel: BotEditorPanel | null; draft: BotEditorDraft | null; onPanelChange: (panel: BotEditorPanel) => void; onDraftChange: (draft: BotEditorDraft) => void; onClose: () => void; onSave: () => void }) {
+function BotEditorModal({
+  panel,
+  draft,
+  saving,
+  pendingGallery,
+  onPanelChange,
+  onDraftChange,
+  onIconFile,
+  onBannerFile,
+  onGalleryFiles,
+  onClearIcon,
+  onClearBanner,
+  onClearGallery,
+  onClose,
+  onSave,
+}: {
+  panel: BotEditorPanel | null;
+  draft: BotEditorDraft | null;
+  saving: boolean;
+  pendingGallery: Array<{file: File; preview: string}>;
+  onPanelChange: (panel: BotEditorPanel) => void;
+  onDraftChange: (draft: BotEditorDraft) => void;
+  onIconFile: (file: File, preview: string) => void;
+  onBannerFile: (file: File, preview: string) => void;
+  onGalleryFiles: (files: FileList | null) => void;
+  onClearIcon: () => void;
+  onClearBanner: () => void;
+  onClearGallery: () => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
   if (!draft) return null;
   const update = <K extends keyof BotEditorDraft>(key: K, value: BotEditorDraft[K]) => onDraftChange({ ...draft, [key]: value });
   const show = (section: BotEditorPanel) => panel === "all" || panel === section;
@@ -602,11 +689,53 @@ function BotEditorModal({ panel, draft, onPanelChange, onDraftChange, onClose, o
             </EditorSection> : null}
 
             {show("media") ? <EditorSection title="Media & settings" description="Update marketplace media and control listing visibility.">
-              <div className="grid gap-3 sm:grid-cols-3"><MediaControl title="Bot avatar" detail={draft.hasAvatar ? "Avatar ready" : "No avatar"} onPress={() => update("hasAvatar", !draft.hasAvatar)} /><MediaControl title="Bot banner" detail={draft.hasBanner ? "Banner ready" : "No banner"} onPress={() => update("hasBanner", !draft.hasBanner)} /><MediaControl title="Gallery" detail={`${draft.galleryCount}/6 images`} onPress={() => update("galleryCount", draft.galleryCount >= 6 ? 0 : draft.galleryCount + 1)} /></div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <UploadBox title="Bot avatar" hint="Drag & drop or click" sizeHint="Recommended 512×512" variant="icon" previewUrl={draft.iconPreview} onFile={onIconFile} onClear={onClearIcon} />
+                <UploadBox title="Bot banner" hint="Drag & drop or click" sizeHint="Recommended 960×320" variant="banner" previewUrl={draft.bannerPreview} onFile={onBannerFile} onClear={onClearBanner} />
+              </div>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Gallery</p>
+                    <p className="text-xs text-muted">{draft.galleryImages.length + pendingGallery.length}/6 images</p>
+                  </div>
+                  <label className={`inline-flex cursor-pointer items-center gap-2 rounded-full bg-default px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-default/80 ${draft.galleryImages.length + pendingGallery.length >= 6 ? "pointer-events-none opacity-50" : ""}`}>
+                    <Upload className="size-4" />
+                    Add images
+                    <input
+                      className="sr-only"
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      disabled={draft.galleryImages.length + pendingGallery.length >= 6}
+                      onChange={(event) => {
+                        onGalleryFiles(event.currentTarget.files);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                {draft.galleryImages.length + pendingGallery.length ? (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {draft.galleryImages.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`Gallery image ${index + 1}`} className="aspect-video w-full rounded-xl border border-border object-cover" />)}
+                    {pendingGallery.map(({preview}, index) => <img key={preview} src={preview} alt={`New gallery image ${draft.galleryImages.length + index + 1}`} className="aspect-video w-full rounded-xl border border-border object-cover" />)}
+                  </div>
+                ) : <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-xs text-muted">No gallery images yet.</p>}
+                {pendingGallery.length ? <Button size="sm" variant="ghost" onPress={onClearGallery}>Clear new images</Button> : null}
+              </div>
               <Select selectedKey={draft.visibility} onSelectionChange={(key) => update("visibility", String(key))}><Label>Listing visibility</Label><Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger><Select.Popover><ListBox>{["Public", "Unlisted", "Private"].map((value) => <ListBox.Item key={value} id={value} textValue={value}>{value}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover></Select>
             </EditorSection> : null}
           </Modal.Body>
-          <Modal.Footer><Button slot="close" variant="tertiary">Cancel</Button><Button onPress={onSave}><Save className="size-4" />Save changes</Button></Modal.Footer>
+          <Modal.Footer>
+            <Button variant="tertiary" isDisabled={saving} onPress={onClose}>Cancel</Button>
+            <Button
+              isPending={saving}
+              isDisabled={saving || !draft.name.trim() || !draft.description.trim() || !draft.category.trim() || !draft.inviteUrl.trim()}
+              onPress={onSave}
+            >
+              <Save className="size-4" />Save changes
+            </Button>
+          </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
@@ -615,10 +744,6 @@ function BotEditorModal({ panel, draft, onPanelChange, onDraftChange, onClose, o
 
 function EditorSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return <section className="space-y-4 rounded-2xl border border-border p-4 sm:p-5"><div><h3 className="font-semibold text-foreground">{title}</h3><p className="mt-1 text-xs text-muted">{description}</p></div>{children}</section>;
-}
-
-function MediaControl({ title, detail, onPress }: { title: string; detail: string; onPress: () => void }) {
-  return <Button variant="secondary" className="h-auto justify-start rounded-2xl p-4 text-left" onPress={onPress}><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><Upload className="size-4" /></span><span><span className="block text-sm font-semibold text-foreground">{title}</span><span className="block text-xs font-normal text-muted">{detail}</span></span></Button>;
 }
 
 function BotAvatar({ bot, className }: { bot: BotDashboardListing; className: string }) { return <Avatar className={`shrink-0 rounded-xl ${className}`}>{bot.avatar ? <Avatar.Image src={bot.avatar} alt="" /> : null}<Avatar.Fallback className="rounded-xl bg-accent/15 text-sm font-bold text-accent">{initials(bot.name)}</Avatar.Fallback></Avatar>; }

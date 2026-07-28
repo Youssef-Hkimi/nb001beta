@@ -52,6 +52,7 @@ import { VerifiedBadgeIcon } from "@/components/ui/verified-badge-icon";
 import { EXPLORE_CATEGORIES, LANGUAGES, SERVER_LISTING_TAGS } from "@/lib/data/categories";
 import { DEFAULT_COMMUNITY_FEATURE_IDS } from "@/lib/data/community-features";
 import { formatCount, initials } from "@/lib/format";
+import { uploadListingMedia } from "@/lib/client-listing-media";
 import { LISTING_STATUS_CONFIG } from "@/lib/listing-safety";
 import type { AnalyticsRange, ListingStatus, ServerDashboardListing } from "@/lib/types";
 import { useListingAnalytics } from "@/lib/use-listing-analytics";
@@ -157,6 +158,9 @@ export function ServerOwnerDashboard({
   const [editServer, setEditServer] = useState<EditableServerListing | null>(null);
   const [editForm, setEditForm] = useState<ServerEditForm>(EMPTY_EDIT_FORM);
   const [editExpanded, setEditExpanded] = useState(false);
+  const [editIconFile, setEditIconFile] = useState<File | null>(null);
+  const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
   const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
   const [deletePickerOpen, setDeletePickerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -239,6 +243,8 @@ export function ServerOwnerDashboard({
   function openEditServer(server: EditableServerListing) {
     setEditServer(server);
     setEditExpanded(false);
+    setEditIconFile(null);
+    setEditBannerFile(null);
     setEditForm({
       name: server.name,
       shortDescription: server.description,
@@ -257,8 +263,8 @@ export function ServerOwnerDashboard({
       visibility: server.visibility ?? "Public",
       featured: server.featured ?? false,
       communityFeatures: server.communityFeatures ?? [...DEFAULT_COMMUNITY_FEATURE_IDS],
-      iconPreview: server.iconPreview ?? null,
-      bannerPreview: server.bannerPreview ?? null,
+      iconPreview: server.iconUrl ?? null,
+      bannerPreview: server.bannerUrl ?? null,
     });
   }
 
@@ -269,28 +275,40 @@ export function ServerOwnerDashboard({
     const category = editForm.category.trim();
     if (!name || !shortDescription || !editForm.fullDescription.trim() || !category || !editForm.inviteUrl.trim()) return;
 
-    const response = await fetch(`/api/listings/${editServer.id}`, {
-      method: "PATCH",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        name,
-        shortDescription,
-        longDescription: editForm.fullDescription.trim(),
-        category,
-        tags: editForm.tags,
-        language: editForm.language,
-        region: editForm.region,
-        inviteUrl: editForm.inviteUrl.trim(),
-        featureIds: editForm.communityFeatures,
-      }),
-    });
-    if (!response.ok) {
+    setEditSaving(true);
+    try {
+      const response = await fetch(`/api/listings/${editServer.id}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          name,
+          shortDescription,
+          longDescription: editForm.fullDescription.trim(),
+          category,
+          tags: editForm.tags,
+          language: editForm.language,
+          region: editForm.region,
+          inviteUrl: editForm.inviteUrl.trim(),
+          featureIds: editForm.communityFeatures,
+        }),
+      });
+      if (!response.ok) throw new Error("listing_update_failed");
+
+      await uploadListingMedia(editServer.id, [
+        ...(editIconFile ? [{kind: "icon" as const, file: editIconFile}] : []),
+        ...(editBannerFile ? [{kind: "banner" as const, file: editBannerFile}] : []),
+      ]);
+
+      await onRefresh();
+      setEditServer(null);
+      setEditIconFile(null);
+      setEditBannerFile(null);
+      setShowUpdateSuccess(true);
+    } catch {
       toast.danger("Server changes could not be saved");
-      return;
+    } finally {
+      setEditSaving(false);
     }
-    await onRefresh();
-    setEditServer(null);
-    setShowUpdateSuccess(true);
   }
 
   function openDeletePicker() {
@@ -494,8 +512,14 @@ export function ServerOwnerDashboard({
                     sizeHint="Recommended 512×512"
                     variant="icon"
                     previewUrl={editForm.iconPreview}
-                    onFile={(_, iconPreview) => setEditForm((form) => ({ ...form, iconPreview }))}
-                    onClear={() => setEditForm((form) => ({ ...form, iconPreview: null }))}
+                    onFile={(file, iconPreview) => {
+                      setEditIconFile(file);
+                      setEditForm((form) => ({ ...form, iconPreview }));
+                    }}
+                    onClear={() => {
+                      setEditIconFile(null);
+                      setEditForm((form) => ({ ...form, iconPreview: editServer?.iconUrl ?? null }));
+                    }}
                   />
                   <UploadBox
                     title="Server banner"
@@ -503,8 +527,14 @@ export function ServerOwnerDashboard({
                     sizeHint="Recommended 960×320"
                     variant="banner"
                     previewUrl={editForm.bannerPreview}
-                    onFile={(_, bannerPreview) => setEditForm((form) => ({ ...form, bannerPreview }))}
-                    onClear={() => setEditForm((form) => ({ ...form, bannerPreview: null }))}
+                    onFile={(file, bannerPreview) => {
+                      setEditBannerFile(file);
+                      setEditForm((form) => ({ ...form, bannerPreview }));
+                    }}
+                    onClear={() => {
+                      setEditBannerFile(null);
+                      setEditForm((form) => ({ ...form, bannerPreview: editServer?.bannerUrl ?? null }));
+                    }}
                   />
                 </div>
               </EditSection>
@@ -517,9 +547,10 @@ export function ServerOwnerDashboard({
               </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button slot="close" variant="secondary">Cancel</Button>
+              <Button slot="close" variant="secondary" isDisabled={editSaving}>Cancel</Button>
               <Button
-                isDisabled={!editForm.name.trim() || !editForm.category.trim() || !editForm.inviteUrl.trim() || !editForm.shortDescription.trim() || !editForm.fullDescription.trim()}
+                isPending={editSaving}
+                isDisabled={editSaving || !editForm.name.trim() || !editForm.category.trim() || !editForm.inviteUrl.trim() || !editForm.shortDescription.trim() || !editForm.fullDescription.trim()}
                 onPress={saveServerChanges}
               >
                 Update Server

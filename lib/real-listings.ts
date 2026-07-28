@@ -265,6 +265,7 @@ export function apiListingToDashboard(listing: ApiListing): DashboardListing {
     description: listing.short_description,
     bannerHue: "220",
     iconUrl,
+    bannerUrl,
     publicPath: listing.type === "server" ? `/server/${listing.slug}` : `/bots/${listing.slug}`,
     ownerPreviewPath: `/dashboard/preview/${listing.id}`,
     mediaComplete: Boolean(iconUrl && bannerUrl),
@@ -322,6 +323,7 @@ export function apiListingToBotDashboard(listing: ApiListing): BotDashboardListi
     publicPath: `/bots/${listing.slug}`,
     prefix: listing.bot_prefix || "/",
     avatar: media(listing, "icon")[0]?.url || null,
+    galleryImages: media(listing, "gallery").map((item) => item.url),
     analytics: {
       listingId: listing.id,
       listingViews: Number(listing.views_count),
