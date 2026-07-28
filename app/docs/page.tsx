@@ -3,9 +3,9 @@ import type {Metadata} from "next";
 import {DocsLanding} from "@/components/docs/docs-landing";
 
 export const metadata: Metadata = {
-  title: "Developer Docs | Nexbiy",
+  title: "Bot Stats Reporting Docs | Nexbiy",
   description:
-    "Nexbiy API and SDK documentation for Discord bot integrations.",
+    "Connect a Discord bot to Nexbiy with secure server-count reporting guides for discord.js, discord.py, REST, and sharded bots.",
 };
 
 export default function DocsPage() {
